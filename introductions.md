@@ -10,6 +10,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
 * JGG: Not currently (unfortunately). I lived with dogs for most of my life but not since moving to Charlottesville (the land of small “garden-level” apartments and no-pets lease clauses). A dog is hopefully inbound in the not-too-far-off future.
+* MC: So many animals! Currently 3 dogs, 2 cats, and 3 chickens. Plus, we recently dug a frog pond in our yard and have verified a few new tenants.
 
 3. What other questions would you suggest we ask?
 
