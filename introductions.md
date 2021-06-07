@@ -4,6 +4,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 1. Do you play any musical instruments? If so, tell us more! If not, what instrument(s) do you love to hear or would choose to learn if you had infinite time?
 
+MC: Yes, I've been learning mandolin for the last 12 years! And I just got a banjo!
+
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an aninmal companion, what animal(s) do youyou hope to one day know?
 
