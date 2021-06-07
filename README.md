@@ -10,6 +10,7 @@ A repo for equity center research fellows to practice with GitHub!
 * [Udacity tutorial](https://www.udacity.com/blog/2015/06/a-beginners-git-github-tutorial.html)
 * [GitHub Desktop](https://desktop.github.com/) (this is supposed to make using git/github easier by avoiding the command line; I've not used it, though others are welcome to do so)
 * [GitHub Guides](https://guides.github.com/) (these go into more detail and will become more useful once you're comfortable with some basics)
+* [Happy Git with R](https://happygitwithr.com/) (R czar Jenny Bryan's concise e-book on using GitHub with R/RStudio - JGG)
 
 ## Git resources
 
