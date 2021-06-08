@@ -9,6 +9,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * LL: I started taking piano lessons a little while ago. I am definitely still a beginner, but it has given me something fun to do during the pandemic and I am very grateful for that!
 * ML: I've been playing the flute for about 12 years, and in the last few years, I've been teaching myself guitar and ukulele.
 * CD: Unfortunately, I have no musical talent, but I would love to learn to play the piano or violin!
+* HL: I play the piano, guitar, and ukulele quite a bit:) I also played the trumpet and trombone in elementary school and would love to try again if I ever get a chance..!
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
