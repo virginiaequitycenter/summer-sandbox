@@ -10,6 +10,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * ML: I've been playing the flute for about 12 years, and in the last few years, I've been teaching myself guitar and ukulele.
 * CD: Unfortunately, I have no musical talent, but I would love to learn to play the piano or violin!
 * HL: I play the piano, guitar, and ukulele quite a bit:) I also played the trumpet and trombone in elementary school and would love to try again if I ever get a chance..!
+* KK: Unfortunately I am very musically challenged, but I love hearing pianos and violins and would love to eventually learn!
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
@@ -19,7 +20,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * ML: My family got two kittens at the beginning of the pandemic, and they are adorable! Their names are Bunsen and Beaker, and they are currently obsessed with "hunting" cicadas (aka meowing at them and getting paw prints all over the window).
 * CD: My family has two dogs: Lilly and Harley! Lilly is a 14-year-old yellow lab/pitbull mix. She's the sweetest thing!  Harley is a 6-year-old black lab who is still a puppy at heart.
 * HL: We are actually taking care of a teammate's Boa constrictor right now haha Quite a unique experience I must say!
-
+* KK: No animals currently, but the coolest pet I've ever had was a pet monkey when I lived in Sierra Leone!
  
 3. What other questions would you suggest we ask?
 
@@ -28,4 +29,4 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * ML: Is there anything that you hope others on this team can help you with?
 * CD: Do you like to listen to music while you work? If so, drop links to those playlists! More practically, what do you think are some code documentation best practices? What do you like to do when documenting your own code or what do you find most helpful when reading through a file that isn't your own?
 * HL: Would people be comfortable setting up group meetings outside of the scheduled meeting times on Mondays to work together!?
-
+* KK: What exactly each of our coding experience is and how to best facilitate learning
