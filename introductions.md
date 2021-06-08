@@ -18,6 +18,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * LL: I have an adorable and wise cat named Flop. My family adopted her when I was in middle school, so she's an old friend. I am always happy to share any of the __thousands__ of photos I have of her!
 * ML: My family got two kittens at the beginning of the pandemic, and they are adorable! Their names are Bunsen and Beaker, and they are currently obsessed with "hunting" cicadas (aka meowing at them and getting paw prints all over the window).
 * CD: My family has two dogs: Lilly and Harley! Lilly is a 14-year-old yellow lab/pitbull mix. She's the sweetest thing!  Harley is a 6-year-old black lab who is still a puppy at heart.
+* HL: We are actually taking care of a teammate's Boa constrictor right now haha Quite a unique experience I must say!
+
  
 3. What other questions would you suggest we ask?
 
@@ -25,3 +27,5 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * LL: What are you already most comfortable/proficient doing in R (or whatever language you use), and what are you most eager to gain more practice doing? 
 * ML: Is there anything that you hope others on this team can help you with?
 * CD: Do you like to listen to music while you work? If so, drop links to those playlists! More practically, what do you think are some code documentation best practices? What do you like to do when documenting your own code or what do you find most helpful when reading through a file that isn't your own?
+* HL: Would people be comfortable setting up group meetings outside of the scheduled meeting times on Mondays to work together!?
+
