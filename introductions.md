@@ -11,6 +11,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * CD: Unfortunately, I have no musical talent, but I would love to learn to play the piano or violin!
 * HL: I play the piano, guitar, and ukulele quite a bit:) I also played the trumpet and trombone in elementary school and would love to try again if I ever get a chance..!
 * TO: I tried learning the piano as a kid but my brain doesn't like my left hand doing different things from my right hand so I never went past playing with one hand. I picked up the guitar in college but couldn't get any good cause my teacher graduated. If I had infinite time I'd learn the piano, guitar, and bass guitar (I have always wanted to be the girl playing bass in red heels and lipstick.)
+* KK: no instruments, but I love piano and violin
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
