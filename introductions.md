@@ -32,4 +32,5 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * CD: Do you like to listen to music while you work? If so, drop links to those playlists! More practically, what do you think are some code documentation best practices? What do you like to do when documenting your own code or what do you find most helpful when reading through a file that isn't your own?
 * HL: Would people be comfortable setting up group meetings outside of the scheduled meeting times on Mondays to work together!?
 * TO: Do you work at random times at night or have insomnia? Do you like working beside others without actually talking to them? Can we set up meetings if you are in this category to work together alone? Lastly, if you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord. (this is not mine just an example but I'd love to hear everyones)
+
 KK: How do you learn best? What are you passionate about?
