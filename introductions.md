@@ -22,6 +22,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * CD: My family has two dogs: Lilly and Harley! Lilly is a 14-year-old yellow lab/pitbull mix. She's the sweetest thing!  Harley is a 6-year-old black lab who is still a puppy at heart.
 * HL: We are actually taking care of a teammate's Boa constrictor right now haha Quite a unique experience I must say!
 * TO: Never had my own pet but lived with dogs with two ex SO's. I love dogs and whenever I decide to get one it will probably be a Husky or Husky mix of some kind, maybe a malamute.
+* KK : no pets
 
 3. What other questions would you suggest we ask?
 
