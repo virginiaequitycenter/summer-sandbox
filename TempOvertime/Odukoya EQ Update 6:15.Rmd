@@ -1,0 +1,137 @@
+---
+title: "Odukoya Equity Center Update 6/15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Temperature Overtime 
+
+  I worked on familiarizing myself with the show your stripes website, climate tracking, NOAA, the berkeley earth project, and all things related to climate data that I didn't know about.  I also learned the SF package, github desktop and using github from R. Lastly, I learned about shapefiles, using ArcGIS, extracting and plotting shapefiles. 
+  
+### Guiding questions 
+* Can we access them readily, and how (download, api, etc.)? If it can be called directly from the source into R (or Python), that’s our preferred approach.
+
+* What’s the smallest spatial scale available? What format are they in (csv, json, excel, etc; or for spatial data, raster or vector)? What time period/years are present?
+
+* Could we use them to measure what we think we can? What attributes/variables are available? How have they been used in related work?
+
+* How are they generated, where do they come from (e.g., processed from instruments/satellite, derived from surveys, modeled from multiple sources, etc.)?
+
+* key regions (FIPS): 
+The larger Charlottesville area: Charlottesville City (51540), Albemarle County (51003), Fluvanna (51065), Greene (51079), Louisa (51109), Nelson (51125)
+The Eastern Shore area: Accomack (51001), Northhampton (51131)
+
+## Show your Stripes and Berkeley Earth
+  
+* The image is only available for state data and the raw data is not available through the site. We can download the completed graphics and use another source (https://creativecommons.org/use-remix/) to build on the graphics and reuse them if necessary. 
+  
+* Berkeley earth also only has state level sources. We can download a txt file for virginia as a whole but not county level data.
+  
+## ArcGIS
+
+* The images are available for county data but the raw data is not available through the site. I downloaded the completed graphics for the key regions. 
+
+  + Charlottesville City (51540)
+![](images/51540-tavg.png)
+
+  + Albemarle County (51003)
+![](images/51003-tavg.png) 
+  + Fluvanna (51065)
+![](images/51065-tavg.png) 
+
+  + Greene (51079)
+![](images/51079-tavg.png)  
+
+  + Louisa (51109)
+![](images/51109-tavg.png)  
+   
+  + Nelson (51125)
+![](images/51125-tavg.png)   
+
+  + Accomack (51001)
+![](images/51001-tavg.png) 
+
+  + Northhampton (51131)
+![](images/51131-tavg.png) 
+
+
+## Forecast Scenarios
+
+  The UCAR Climate Change Forecast Scenarios page (https://gisclimatechange.ucar.edu/gis-climatedata) allows downloads of data for a particular county as long as you can draw the location on the map using the box tool. It can forecast from 2006 up to year 2100 but it is only possible to download up to 10 years as shapefiles for each scenario. However, it is possible can download the full forecast as txt files. Please let me know if you would like me to download the data for the key regions and for what date ranges and scenarios. For shapefiles, I can download a 100 year forecast in 10 downloads if that is preferred to txt files.
+  
+  I found two other forecast tools but they are not as good as the UCAR website. 
+  
+  + The CREAT CLimate Scenarios Projection Map (https://www.arcgis.com/apps/MapSeries/index.html?appid=3805293158d54846a29f750d63c6890e) can show forecasts for year 2035 and 2060 for temperature, percipitation, storms, extreme heat, and sea levels. It is possible to get county forecast by zooming into the map and clicking on the county of interest. However, it is not possible to download the data.
+  
+  + The NOAA CM2.X dataset contains the results of two models run by the NOAA’s Geophysical Fluid Dynamics Laboratory (GFDL). They show general climate conditions during the 20th century and projections into the 21st century based on various climate scenarios. It can be downloaded at (https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/cm2-global-coupled-climate-models-cm2x). While it does not show the map of the forecasts, we can download the data and create our own. This is also a global forecast so chances of extracting county level data might be slim. It covers January 1, 1901 to April 21, 2300. 
+  
+## NOAA Data
+
+  NOAA has data that covers county, regional, state, country, and global levels. NOAA data is extractable in txt format and through API for date ranges 1895-2021.
+  
+  + Monthly readings for each county measuring 
+    + 01 = Precipitation
+    + 02 = Average Temperature
+    + 27 = Maximum Temperature
+    + 28 = Minimum Temperature
+
+  + The data is used to calculate the state temperature which is then used in regional and country-wide calculations. Minimum and Maximum would be useful if we wanted to run our own calculations but the average temperature is usually a standard measurement of temperature overtime.
+
+  The nClimDiv dataset contains the county information that we are looking to access from NOAA. The dataset is derived from the station information in the daily Global Historical Climatology Network (GHCN) dataset. Therefore, the nClimDiv is the processed data format of the GHCN and would be more useful to us than getting raw GHCN data. 
+  
+  My NOAA script so far is: 
+  
+```{r libs, message=FALSE, warning=FALSE}
+library(knitr)
+library(dplyr)
+library(tidyverse)
+library(pscl)
+library(plotly)
+library(itsmr)
+library(forecast)
+library(gridExtra)
+library(urca)
+library(vars)
+library(stargazer)
+library(sf)
+```
+
+  This was to load the average temperature data 
+```{r, load new data}
+climcounty <- read.table(file = "climdiv-tmpccy-v1.0.0-20210604.txt", header = TRUE)
+head(climcounty)
+```
+
+This was to load the county data with shapefiles
+```{r, load new data shp}
+ccshape <- st_read("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Data/counties")
+```
+
+This was to filter the county data to the counties of interest
+```{r, filter}
+ccshape1 <- ccshape %>% filter(FIPS %in% c(51540, 51003, 51065, 51079, 51109, 51125, 51001, 51131))
+```
+
+This was my first run at ploting the data. It is very bland.
+```{r, ggplot}
+ggplot() + 
+  geom_sf(data = ccshape1, size = 3, color = "black", fill = "orange") + 
+  ggtitle("Virginia Counties Plot") + 
+  coord_sf()
+```
+
+
+### Goals for this week 
+
+* Get NOAA data, clean it, and explore the observations (distributions across spatial units, summaries by spatial units, etc.) 
+
+* Learn lovelace and other ploting skills for shapefiles in R
+
+* Practice GitHub from terminal instead of GitHub desktop which is much more easy for me to use.
+  
+* Lastly, a gif of my life this week 
+
+    ![](https://media.giphy.com/media/3o7TKJ7stEm0x8LYOc/giphy.gif)
