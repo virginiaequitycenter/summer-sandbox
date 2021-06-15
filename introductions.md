@@ -8,9 +8,13 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * KK: I use Spotify and when I work/study, my usual go-tos are the Mac Miller, Noname, SZA, or Bob Marley radios; or the public playlist "park hangs" or this playlist I made for a class a few semester ago! https://open.spotify.com/playlist/4xMwWiZ0nXjj0RS4q2Yi6h?si=847fe5141ee14ce5
 
+* TO: I used to enjoy listening to music when I work but I found that I spent more time dancing in my chair and singing the songs than actually working. When I am in a loud environment though, I will turn on music to keep myself focused. Got into bi-neural beats for neurodiverse people like myself, turns out Mario and other gaming soundtracks work wonders for us. https://open.spotify.com/playlist/3Imf8Js69c1wSHDj837XDa?si=0216b33008a94b86
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
 
 * KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
+
+* TO: I would make all charging ports work at 30 percent capacity. So, charging a phone will take like 6-8 hours instead of 1 and you would have to pay to upgrade to a higher charge rate/capacity. Or (this is from a friend and I loved it) I would randomize food tastes. So, you would bite into an apple and it would taste like pizza but tomorrow an apple from the same batch could taste like pineapples. So you would never know what any food would taste like because it changes daily. (My addition to the idea) you could pay me daily to get a list of what different foods will taste like that day but only for 7 food items.
 
 # June 7
 
