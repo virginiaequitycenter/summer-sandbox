@@ -6,7 +6,11 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 1. Do you like to listen to music while you work? If so, drop links to those playlists!
 
+* KK: I use Spotify and when I work/study, my usual go-tos are the Mac Miller, Noname, SZA, or Bob Marley radios; or the public playlist "park hangs" or this playlist I made for a class a few semester ago! https://open.spotify.com/playlist/4xMwWiZ0nXjj0RS4q2Yi6h?si=847fe5141ee14ce5
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
+
+* KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
 
 # June 7
 
