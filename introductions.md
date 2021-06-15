@@ -12,6 +12,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * HL: I play the piano, guitar, and ukulele quite a bit:) I also played the trumpet and trombone in elementary school and would love to try again if I ever get a chance..!
 * TO: I tried learning the piano as a kid but my brain doesn't like my left hand doing different things from my right hand so I never went past playing with one hand. I picked up the guitar in college but couldn't get any good cause my teacher graduated. If I had infinite time I'd learn the piano, guitar, and bass guitar (I have always wanted to be the girl playing bass in red heels and lipstick.)
 * KK: I am very musically challenged, but I love hearing the piano and violin and would say they are my favorite instruments
+* AGC: Kind of! I played piano for about 4 years in elementary school, so I still semi-know how to do it and how to read music. I just learn to play songs I like occassionally! I also learned a little bit of guitar at one point. 
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
@@ -23,6 +24,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * HL: We are actually taking care of a teammate's Boa constrictor right now haha Quite a unique experience I must say!
 * TO: Never had my own pet but lived with dogs with two ex SO's. I love dogs and whenever I decide to get one it will probably be a Husky or Husky mix of some kind, maybe a malamute.
 * KK : Unfortunately no pets at the moment, but the coolest pet I've ever had was a monkey when I lived in Sierra Leone!
+* AGC: Yes! I have a five year old doggy named Louie! We got him from the SPCA after fostering him - they told us he's a jack russel terrier mix, but the vet didn't know what he is, so we just call him a special mix. He's very cuddly and loves to go on walks.
 
 3. What other questions would you suggest we ask?
 
@@ -34,3 +36,4 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * TO: Do you work at random times at night or have insomnia? Do you like working beside others without actually talking to them? Can we set up meetings if you are in this category to work together alone? Lastly, if you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord. (this is not mine just an example but I'd love to hear everyones)
 
 KK: How do you learn best? What are you passionate about?
+* AGC:  What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)? 
