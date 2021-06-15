@@ -2,6 +2,14 @@
 
 This is just a markdown file -- you can learn more about markdown [here](https://guides.github.com/features/mastering-markdown/). Once you have your github account set up (and git installed on your computer), clone this repository to your computer, answer the questions in a markdown file, add/commit the changes, and push it back up.
 
+# June 15
+
+1. Do you like to listen to music while you work? If so, drop links to those playlists!
+
+2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
+
+# June 7
+
 1. Do you play any musical instruments? If so, tell us more! If not, what instrument(s) do you love to hear or would choose to learn if you had infinite time?
 
 * MC: Yes, I've been learning mandolin for the last 12 years! And I just got a banjo!
@@ -12,7 +20,7 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * HL: I play the piano, guitar, and ukulele quite a bit:) I also played the trumpet and trombone in elementary school and would love to try again if I ever get a chance..!
 * TO: I tried learning the piano as a kid but my brain doesn't like my left hand doing different things from my right hand so I never went past playing with one hand. I picked up the guitar in college but couldn't get any good cause my teacher graduated. If I had infinite time I'd learn the piano, guitar, and bass guitar (I have always wanted to be the girl playing bass in red heels and lipstick.)
 * KK: I am very musically challenged, but I love hearing the piano and violin and would say they are my favorite instruments
-* AGC: Kind of! I played piano for about 4 years in elementary school, so I still semi-know how to do it and how to read music. I just learn to play songs I like occassionally! I also learned a little bit of guitar at one point. 
+* AGC: Kind of! I played piano for about 4 years in elementary school, so I still semi-know how to do it and how to read music. I just learn to play songs I like occassionally! I also learned a little bit of guitar at one point.
 
 2. Do you have any animals in your life? If you haven't had the pleasure of an animal companion, what animal(s) do you hope to one day know?
 
@@ -34,6 +42,5 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * CD: Do you like to listen to music while you work? If so, drop links to those playlists! More practically, what do you think are some code documentation best practices? What do you like to do when documenting your own code or what do you find most helpful when reading through a file that isn't your own?
 * HL: Would people be comfortable setting up group meetings outside of the scheduled meeting times on Mondays to work together!?
 * TO: Do you work at random times at night or have insomnia? Do you like working beside others without actually talking to them? Can we set up meetings if you are in this category to work together alone? Lastly, if you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord. (this is not mine just an example but I'd love to hear everyones)
-
-KK: How do you learn best? What are you passionate about?
-* AGC:  What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)? 
+* KK: How do you learn best? What are you passionate about?
+* AGC:  What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)?
