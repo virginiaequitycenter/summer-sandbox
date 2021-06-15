@@ -6,7 +6,7 @@ A repo for equity center research fellows to practice with GitHub!
 
 (If you find/have one you like, add it here!)
 
-* GitHub just started sending me emails about the deprecation of authentication using a password, so soon I'll know more about the newer [token-based authentication}https://github.blog/2020-12-15-token-authentication-requirements-for-git-operations/) and
+* GitHub just started sending me emails about the deprecation of authentication using a password, so soon I'll know more about the newer [token-based authentication](https://github.blog/2020-12-15-token-authentication-requirements-for-git-operations/) and
 
 <p align="center">
 <img src="https://media.giphy.com/media/oPaMc7VgynwOY/giphy.gif" width="300">
