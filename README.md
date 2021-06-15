@@ -8,7 +8,9 @@ A repo for equity center research fellows to practice with GitHub!
 
 * GitHub just started sending me emails about the deprecation of authentication using a password, so soon I'll know more about the newer [token-based authentication}https://github.blog/2020-12-15-token-authentication-requirements-for-git-operations/) and
 
-<img align="center" src="https://media.giphy.com/media/oPaMc7VgynwOY/giphy.gif" width="300">
+<p align="center">
+<img src="https://media.giphy.com/media/oPaMc7VgynwOY/giphy.gif" width="300">
+</p>
 
 * [Karl Broman's tutorial](https://kbroman.org/github_tutorial/) (a favorite of mine, especially for setting up ssh; but GitHub now recommends authenticating using HTTPS and access tokens, so probably worth following [this](https://docs.github.com/en/github/getting-started-with-github/quickstart/set-up-git) for the git set up)
 * [Udacity tutorial](https://www.udacity.com/blog/2015/06/a-beginners-git-github-tutorial.html)
