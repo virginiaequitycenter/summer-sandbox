@@ -10,11 +10,15 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * TO: I used to enjoy listening to music when I work but I found that I spent more time dancing in my chair and singing the songs than actually working. When I am in a loud environment though, I will turn on music to keep myself focused. Got into bi-neural beats for neurodiverse people like myself, turns out Mario and other gaming soundtracks work wonders for us. https://open.spotify.com/playlist/3Imf8Js69c1wSHDj837XDa?si=0216b33008a94b86
 
+* ML: For the most part, I can't listen to music while I work because it's super distracting (even instrumental music is distracting - as a former band kid, I can't help but focus on which instruments are playing). Occasionally, when I'm in a super loud place, I'll listen to some low-key piano music, but I don't have a specific playlist I like.
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
 
 * KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
 
 * TO: I would make all charging ports work at 30 percent capacity. So, charging a phone will take like 6-8 hours instead of 1 and you would have to pay to upgrade to a higher charge rate/capacity. Or (this is from a friend and I loved it) I would randomize food tastes. So, you would bite into an apple and it would taste like pizza but tomorrow an apple from the same batch could taste like pineapples. So you would never know what any food would taste like because it changes daily. (My addition to the idea) you could pay me daily to get a list of what different foods will taste like that day but only for 7 food items.
+
+* ML: I would make it so that all music was ice-cream-truck music. Alarms, Spotify playlists, radios, etc. would only play the songs you hear on the ice cream truck. People would be allowed to turn off the music anytime they want, but anytime they wanted to listen to music, it would only be the annoying ice cream truck songs.
 
 # June 7
 
