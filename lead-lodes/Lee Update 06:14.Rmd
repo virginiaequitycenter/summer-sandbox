@@ -1,0 +1,89 @@
+---
+title: "Lee Equity Center Weekly Updates"
+output: html_document
+---
+
+# June 14
+
+I familiarized myself with the following datasources: Low-Income Energy Affordability Data (LEAD) Tool and Longitudinal Employer-Household Dynamics Origin-Destination Employment Statistics (LODES). The structure for each dataset is shown below. I also used [Jacob's handy-dandy function](https://github.com/jacob-gg/manager) to check for missing data! In instances where there were no missing data, I removed that line of code. Everything shown below is based on the csv's available for download from each of these sources---I've done no data cleaning or re-formatting.
+
+## LEAD
+Four different data files are available for the state of VA: (1) Census tracts energy data with Area Median Income (AMI), (2) Census tracts energy data with % Federal Poverty Level (FPL), (3) State, counties, and cities energy data with AMI, and (3) State, counties, and cities energy dat with % FPL. Below, I show the structures and missing data information for datasets 1 ("leaddat1") and 3 ("leaddat3"). 
+
+#### Abridged data dictionary:
+* FIP: state, county, or city
+* TEN: Owner or renter
+* YBL6: Year of building construction
+* BLD: Number of units in the building
+* HFL INDEX: Primary heating fuel type
+* AMI68: % Area Median Income
+* FPL15: % Federal Poverty Level
+* SMI68: % State Median Income 
+* HINCP: Avg. Annual household income ($/year)
+* ELEP: Avg. household annnual electricity expenditure ($/year)
+* GASP: Avg. household annual gas expenditure ($/year)
+* FULP: Avg. household annual other fuel expenditure ($/year)
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+source('https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_missingness_monster.R')
+setwd("/Users/Carlson/Desktop/Equity Center Data Exploration")
+leaddat1 <- read.csv("VA AMI Census Tracts 2018.csv")
+leaddat3 <- read.csv("VA SMI State, Counties, Cities 2018.csv")
+lodesOD <- read.csv("va_od_aux_JT00_2002.csv")
+lodesRAC <- read.csv("va_rac_S000_JT00_2002.csv")
+lodesWAC <- read.csv("va_wac_S000_JT00_2002.csv")
+```
+
+``` {r eval=TRUE, echo = TRUE}
+str(leaddat1)
+loch_missingness_monster(leaddat1)
+str(leaddat3)
+loch_missingness_monster(leaddat3)
+```
+
+## LODES
+Per the website, "Data files are state-based and organized into three types: Origin-Destination (OD), Residence Area Characteristics (RAC), and Workplace Area Characteristics (WAC), all at census block geographic detail. Data is available for most states for the years 2002–2018." There are two versions of each of these---one using 2000 census blocks and one using 2010 census blocks. Below, I show the structures and missing data information for the 2010 versions for each dataset---OD ("lodesOD), RAC ("lodesRAC""), and WAC ("lodesRAC").
+
+### Origin-Destination (OD)
+#### Abridged data dictionary:
+* S000: Total # of jobs
+* SA01--SA03: # of jobs for different age groups
+* SE01--SE03: # of jobs with different earnings per month
+* S101--S103: # of jobs in different industries 
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesOD)
+```
+
+### Residence Area Characteristics (RAC)
+#### Abridged data dictionary:
+* C000: Total # of jobs
+* CA01--CA03: # of jobs for different age groups
+* CE01--CE03: # of jobs with different earnings per month
+* CNS01--CNS20: # of jobs in different NAICS sectors
+* CR01--CR07: # of jobs for workers with different races
+* CT01--CT02: # of jobs for Hispanic and non-Hispanic workers
+* CD01--CD04: # of jobs by educational attainment
+* CS01--CS02: # of jobs by sex
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesRAC[,1:10])
+```
+
+### Workplace Area Characteristics (WAC)
+#### Abridged data dictionary:
+* First 42 columns: All of the same data as the RAC datafile
+* CFA01--CFA05: # of jobs by firm age
+* CFS01--CFS05: # of jobs by firm size 
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesWAC[,1:10])
+```
+
+#### And, I learned that you can embed gifs in R Markdown! Huzzah! 
+![](https://media.giphy.com/media/PLHdpauwfN2MvHcHxL/giphy.gif)
+
+
+
+
