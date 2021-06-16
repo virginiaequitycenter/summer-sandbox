@@ -16,6 +16,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * HL: Depends on what kind of work! I love listening to alternative or other lowkey music when it's not distracting. Find it hard to listen to music when writing or doing research though.
 
+* JGG: Yes (a lot of the time)! While working, I tend toward instrumental music; I find vocals a bit distracting. Most of the time, it winds up being either jazz or relaxed electronic music. For jazz, some frequent suspects are [Brian Blade and the Fellowship Band](https://open.spotify.com/album/5InHDZVvNbDDvq917BmMgT?si=hSQScJGsQq-VBcae_Vj6Ew&dl_branch=1), [Paul Desmond](https://open.spotify.com/album/620p4tcAC1PAmDUY8Vk5KT?si=28uxbTJXQZSb-Y7MJVZ8qA&dl_branch=1), and [Wes Montgomery](https://open.spotify.com/album/77eTceYYxRjaRMTxSwiLtV?si=T0P-FlDoR5Kp8RLmjVDPvQ&dl_branch=1). Sometimes, a bit of 80s-infused electronic music can be [just the thing](https://www.youtube.com/watch?v=0QKQlf8r7ls).
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
 
 * KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
@@ -27,6 +29,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * LL: I would make it impossible to use Apple Maps, Google Maps, Waze, etc. just to see how many people don't know how to get places they go regularly because they rely on maps so much.
 
 * HL: I would make all phones fall asleep for an hour for every hour of use to see if people would become more social.
+
+* JGG: "Sorry, folks, look like we're going to be stuck here on the tarmac for another hour or so unless you all break out the pocketbooks."
 
 # June 7
 

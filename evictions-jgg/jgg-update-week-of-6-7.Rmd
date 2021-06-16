@@ -1,0 +1,85 @@
+---
+title: "JGG update for the week of June 7, 2021"
+author: "Jacob Goldstein-Greenwood"
+date: "6/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In collaboration with a team at VCU, we're using [data scraped from Virginia district civil court filings](https://virginiacourtdata.org/) to study evictions in the state. The VCU group has previously done some work with these data, although it was all done in a GUI-heavy Excel+SPSS process. My focus as of late has been recreating the cleaning and analysis process as reproducible R code. Reproducibility is valuable on its own, but this effort also gives us an opportunity to reconsider---and ideally hone---decisions about how to aggregate/clean/etc. these data.
+
+For any given year of court filings, the data we have access to comes as a set of interlocking CSVs. For example, 2020 has 'cases.csv', 'defendants.csv', 'plaintiffs.csv', 'hearings.csv', and so on. We need to complete two primary steps to prepare the data for analysis. First, the data need to be *aggregated* up to the household level across all these files. Second, the data need to be deduplicated/deserialized. Regarding the first point, the files referenced above all have different row counts within the same year, making a straightforward merge of the data impossible; this is because in situations where there were multiple defendants/plaintiffs/etc. for a given case, each individual is listed separately. (E.g., if case 12345 had two defendants, one plaintiff, and three hearings, 'cases.csv' would have one corresponding row; 'defendants.csv' would have two; 'plaintiffs.csv' would have one; and 'hearings.csv' would have three.) I've been working to aggregate data such that we've got one row per case.
+
+From there, we prune *serial* cases. That is, when the same household is filed against multiple times by the same plaintiff, we only keep the most-recent case filing (and outcome), as that one reflects the practical, on-the-ground consequence of the eviction filing. (Say Jane Doe is filed against in Sept. 2020 and the case is dismissed, but she's then filed against again in Dec. 2020 and the plaintiff wins. Here, Jane Doe has, eventually, been forced to vacate her home, and that's the literal outcome we care about. Calling the score "1-1" doesn't make much sense.)
+
+Once the data are aggregated and deduplicated/deserialized, we merge. Unfortunately, I can't share data here (or, can't share it without needing to do a lot of blinding) because it contains the names/addresses of people who've been filed against, but the main functions I've been working on to achieve the aggregation and deserialization are below.
+
+
+#### Aggregation up to household/case level
+The various CSVs for each year are read in as 'cases20XX', 'defendants20XX', and so on. To aggregate data in these files up to the household/case level, I'm currently using:
+```{r, echo = T, eval = F}
+aggregater <- function(x, who) {
+  if (who == 'defendants') {
+    x <- x %>%
+      group_by(case_id) %>%
+      arrange(Name) %>%
+      transmute(def = paste0(Name, collapse = ' | '),
+                def_address = paste0(Address, collapse = ' | '),
+                def_attorney = paste0(Attorney, collapse = ' | '),
+                def_id = paste0(id, collapse = ' | '),
+                def_count = stri_count(def, regex = '(\\|)') + 1) %>%
+      ungroup()
+  }
+  if (who == 'plaintiffs') {
+    x <- x %>%
+      group_by(case_id) %>%
+      arrange(Name) %>%
+      transmute(pla = paste0(Name, collapse = ' | '),
+                pla_address = paste0(Address, collapse = ' | '),
+                pla_attorney = paste0(Attorney, collapse = ' | '),
+                pla_id = paste0(id, collapse = ' | '),
+                pla_count = stri_count(pla, regex = '(\\|)') + 1) %>%
+      ungroup()
+  }
+  if (who == 'hearings') {
+    x <- x %>%
+      select(id, Date, Result, case_id) %>%
+      group_by(case_id) %>%
+      transmute(latest_hearing_id = id,
+                latest_hearing_date = as.POSIXlt(Date, format = '%Y-%m-%d %H:%M:%S', tz = 'EST'),
+                latest_hearing_result = Result) %>%
+      filter(latest_hearing_date == max(latest_hearing_date)) %>%
+      filter(latest_hearing_id == max(latest_hearing_id)) %>%
+      ungroup()
+  }
+  distinct(x)
+}
+```
+
+#### Deserialization
+Once the aggregated data are merged (using a series of joins to combine, e.g., cases20XX and hearings20XX based on case IDs), I use the following to identify and remove all but the most-recent serial cases:
+```{r, echo = T, eval = F}
+deserializer <- function(x) {
+  x <- x %>%
+    mutate(date_filed = as.Date(FiledDate, "%Y-%m-%d")) %>%
+    group_by(def, pla, def_zip) %>%
+    filter(date_filed == max(date_filed)) %>%
+    filter(id == max(id)) %>%
+    ungroup()
+  x
+}
+```
+
+#### Next steps
+There's still much to improve in the above process. Immediate next steps include:
+- Doing a better job of automating as much of the process as possible
+  - Instead of reading in each CSV as a separate object, I'm going to rewrite things to read them in as element of a list
+  - Correspondingly, I'm going to adjust the functions so that they can be smoothly `lapply() `-ied thereto
+  - This'll eliminate a lot of currently unnecessary code-lines ([DRY!](https://en.wikipedia.org/wiki/Don't_repeat_yourself)), and it'll make it so that the cleaning and merging can be easily applied to data that we don't currently have in hand but might obtain going forward: As long as new data files are added to the initial list at the top of the code, they'll be fed downstream to the functions without needing the user to write explicit `deserializer(newdata2022)` statements
+- Learn why there are some odd dates listed in the files containing hearings data
+  - E.g., hearings2021 (the 'hearings.csv' file for 2021) contains some hearing dates listed before 2021 and some listed far in the future (e.g., 2024)
+
+Another step for the project writ large is to work on separating out, as best we can, residential defendants from commercial defendants. I've begun work on a set of regex search terms that we can use to flag likely commercial properties (e.g., 'llc', 'inc', 'church', 'industries', etc.). It's not that we don't care about evictions of non-residential defendants, but the primary focus of the project is to learn more about how people are removed from their homes, not how stores are booted from strip malls.
