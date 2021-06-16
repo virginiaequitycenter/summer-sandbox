@@ -1,0 +1,25 @@
+{
+    "id": "5531C0CD",
+    "path": "~/Box Sync/mpc/dataForDemocracy/climate/fema/getdata.R",
+    "project_path": "getdata.R",
+    "type": "r_source",
+    "hash": "2178525426",
+    "contents": "",
+    "dirty": false,
+    "created": 1623808975328.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "cursorPosition": "36,31",
+        "scrollLine": "16"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1623843926,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1623843926801,
+    "read_only": false,
+    "read_only_alternatives": []
+}
