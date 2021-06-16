@@ -1,11 +1,17 @@
 library(tidyverse)
 library(mosaic)
 
+# leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
+# download.file(url = leadurl, 
+#               destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
+# unzip("va2018lead.zip", exdir = getwd())
+
 ami <- read.csv("VA AMI State, Counties, Cities 2018.csv")
+cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
 
 #' Create new datasets for the whole region and each county individually
-cville_area = filter(ami, (FIP==51540 | FIP==51003 | FIP==51065 | FIP==51079 
-                           | FIP==51109 | FIP==51125) & HINCP!="NA")
+cville_area = filter(ami, FIP %in% cvlfips & HINCP!="NA")
+
 cville = filter(ami, FIP==51540 & HINCP!="NA")
 albemarle = filter(ami, FIP==51003 & HINCP!="NA")
 fluvanna = filter(ami, FIP==51065 & HINCP!="NA")
