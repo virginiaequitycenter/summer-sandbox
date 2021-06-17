@@ -1,11 +1,6 @@
 library(tidyverse)
 library(mosaic)
 
-# leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
-# download.file(url = leadurl, 
-#               destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
-# unzip("va2018lead.zip", exdir = getwd())
-
 ami <- read.csv("VA AMI State, Counties, Cities 2018.csv")
 cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
 
