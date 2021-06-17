@@ -1,2 +1,9 @@
 .DS_Store
 .Rhistory
+.zip
+.gz
+.csv
+.RData
+.rds
+
+# .gdb? shapefiles? what else?
