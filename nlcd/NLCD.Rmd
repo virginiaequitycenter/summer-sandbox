@@ -20,7 +20,7 @@ library(sf)
 vacounties <- counties(state="VA")
 
 cvl_alb <- vacounties %>%
-  filter(COUNTYFP %in% c("003", "540"))
+  filter(COUNTYFP %in% c("003", "540", "065", "079", "109", "125", "001", "131"))
 ```
 
 
@@ -35,6 +35,18 @@ Visualize
 * Impervious Surfaces Descriptor
 * Tree Canopy
 
+```{r, echo=TRUE, message=FALSE, warning=FALSE, figures-side, fig.show="hold", out.width="20%"}
+sp::plot(cvl_alb[1,5], col="blue", border=NA) 
+sp::plot(cvl_alb[2,5], col="blue", border=NA)
+sp::plot(cvl_alb[3,5], col="blue", border=NA)
+sp::plot(cvl_alb[4,5], col="blue", border=NA)
+sp::plot(cvl_alb[5,5], col="blue", border=NA)
+sp::plot(cvl_alb[6,5], col="blue", border=NA)
+sp::plot(cvl_alb[7,5], col="blue", border=NA)
+sp::plot(cvl_alb[8,5], col="blue", border=NA)
+
+```
+
 ### Land Cover
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
 # land cover ----
@@ -44,10 +56,9 @@ download.file(url = url,
               mode = "wb")
 ```
 
-```{r, echo=TRUE, message=FALSE, warning=FALSE, figures-side, fig.show="hold", out.width="30%"}
-sp::plot(cvl_alb[1,5], col="blue", border=NA) 
-sp::plot(cvl_alb[2,5], col="blue", border=NA)
-# download land cover
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.align='left', fig.show="hold", out.width="30%"}
 land <-
   get_nlcd(
     template = cvl_alb[1,5],
@@ -60,27 +71,145 @@ land2 <-
   get_nlcd(
     template = cvl_alb[2,5],
     dataset = "Land_Cover",
+    label = "Greene",
+    year = 2016,
+    landmass = "L48"
+  )
+land3 <-
+  get_nlcd(
+    template = cvl_alb[3,5],
+    dataset = "Land_Cover",
+    label = "Accomack",
+    year = 2016,
+    landmass = "L48"
+  )
+land3 <-
+  get_nlcd(
+    template = cvl_alb[4,5],
+    dataset = "Land_Cover",
     label = "Albemarle",
     year = 2016,
     landmass = "L48"
   )
-
-sp::plot(land, ann=FALSE)
-sp::plot(land2, ann=FALSE)
+land4 <-
+  get_nlcd(
+    template = cvl_alb[5,5],
+    dataset = "Land_Cover",
+    label = "Nelson",
+    year = 2016,
+    landmass = "L48"
+  )
+land5 <-
+  get_nlcd(
+    template = cvl_alb[6,5],
+    dataset = "Land_Cover",
+    label = "Fluvanna",
+    year = 2016,
+    landmass = "L48"
+  )
+land6 <-
+  get_nlcd(
+    template = cvl_alb[7,5],
+    dataset = "Land_Cover",
+    label = "Louisa",
+    year = 2016,
+    landmass = "L48"
+  )
+land7 <-
+  get_nlcd(
+    template = cvl_alb[8,5],
+    dataset = "Land_Cover",
+    label = "Northampton",
+    year = 2016,
+    landmass = "L48"
+  )
+sp::plot(land)
+sp::plot(land2)
+sp::plot(land3)
+sp::plot(land4)
+sp::plot(land5)
+sp::plot(land6)
+sp::plot(land7)
 ```
 
 
 
-
-### Land Cover Change Index
-
-```{r}
-
-```
 
 ### Impervious Surfaces
 
-### Impervious Surfaces Descriptor
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+url <- "/Users/helenamaylindsay/Desktop/Equity-Center/NLCD_Impervious_L48_20190405_full_zip.zip"
+download.file(url = url,
+              destfile = paste(getwd(), "/2016/", "land2016.zip", sep = ""),
+              mode = "wb")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.align='left', fig.show="hold", out.width="30%"}
+
+imperv <- get_nlcd(
+  template = cvl_alb[1,5],
+  label = "Charlottesville",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv2 <- get_nlcd(
+  template = cvl_alb[2,5],
+  label = "Greene",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv3 <- get_nlcd(
+  template = cvl_alb[3,5],
+  label = "Accomack",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv4 <- get_nlcd(
+  template = cvl_alb[4,5],
+  label = "Albemarle",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv5 <- get_nlcd(
+  template = cvl_alb[5,5],
+  label = "Nelson",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv6 <- get_nlcd(
+  template = cvl_alb[6,5],
+  label = "Fluvanna",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv7 <- get_nlcd(
+  template = cvl_alb[7,5],
+  label = "Louisa",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+imperv8 <- get_nlcd(
+  template = cvl_alb[8,5],
+  label = "Northampton",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+sp::plot(imperv)
+sp::plot(imperv2)
+sp::plot(imperv3)
+sp::plot(imperv4)
+sp::plot(imperv5)
+sp::plot(imperv6)
+sp::plot(imperv7)
+```
 
 ### Tree Canopy
 
