@@ -1,0 +1,87 @@
+---
+title: "NLCD"
+output: html_document
+---
+# Virginia Analysis using the National Land Cover Database
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(FedData) 
+library(tigris)
+library(sf)
+```
+
+
+```{r, echo=TRUE, include=FALSE}
+vacounties <- counties(state="VA")
+
+cvl_alb <- vacounties %>%
+  filter(COUNTYFP %in% c("003", "540"))
+```
+
+
+
+## {.tabset}
+
+Visualize 
+
+* Land Cover
+* Land Cover Change Index
+* Impervious Surfaces
+* Impervious Surfaces Descriptor
+* Tree Canopy
+
+### Land Cover
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# land cover ----
+url <- "/Users/helenamaylindsay/Desktop/Equity-Center/NLCD_2016_Land_Cover_L48_20190424.zip"
+download.file(url = url,
+              destfile = paste(getwd(), "/2016/", "land2016.zip", sep = ""),
+              mode = "wb")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, figures-side, fig.show="hold", out.width="30%"}
+sp::plot(cvl_alb[1,5], col="blue", border=NA) 
+sp::plot(cvl_alb[2,5], col="blue", border=NA)
+# download land cover
+land <-
+  get_nlcd(
+    template = cvl_alb[1,5],
+    dataset = "Land_Cover",
+    label = "Charlottesville",
+    year = 2016,
+    landmass = "L48"
+  )
+land2 <-
+  get_nlcd(
+    template = cvl_alb[2,5],
+    dataset = "Land_Cover",
+    label = "Albemarle",
+    year = 2016,
+    landmass = "L48"
+  )
+
+sp::plot(land, ann=FALSE)
+sp::plot(land2, ann=FALSE)
+```
+
+
+
+
+### Land Cover Change Index
+
+```{r}
+
+```
+
+### Impervious Surfaces
+
+### Impervious Surfaces Descriptor
+
+### Tree Canopy
+
+
