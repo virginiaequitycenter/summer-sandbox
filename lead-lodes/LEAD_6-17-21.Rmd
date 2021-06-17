@@ -1,0 +1,103 @@
+---
+title: "LEAD 6-17-21"
+author: "Marisa Lemma"
+date: "6/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(mosaic)
+
+leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
+download.file(url = leadurl,
+              destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
+unzip("va2018lead.zip", exdir = getwd())
+
+ami_census_tracts <- read_csv("VA AMI Census Tracts 2018.csv")
+
+# filter by area
+cville_area = filter(ami_census_tracts, (FIP%in%51540000201:51540001000 | FIP%in%51003010100:51003011400 | FIP%in%51065020101:51065020300 | FIP%in%51079030101:51079030200 | FIP%in%51109950100:51109950500 | FIP%in%51125950100:51125950300) & HINCP!="NA")
+cville = filter(cville_area, FIP%in%51540000201:51540001000)
+```
+
+## Energy Burden by Census Tract
+The first step was to recreate the energy burden metric at the census tract level. To do this, I downloaded the Area Median Income data, broken down into census tracts. The FIPS codes for each census tract can be found at https://www.fcc.gov/general/census-blocks-state. I then created subsamples for the Charlottesville area, and since this week's analysis will focus solely on Charlottesville, I created a subsample for Charlottesville city as well. 
+
+I also created a new variable within the Charlottesville subsample called "tract", which is labeled with the tract numbers. (This is just for ease of interpretation, since the 11-digit FIPS codes are hard to understand.) This is the code I used for that, although there may be an easier or more condensed way to do it:
+```{r}
+cville <- cville %>% 
+mutate(tract = ifelse(FIP==51540000201, "2.01", ifelse(FIP==51540000202, "2.02", ifelse(FIP==51540000302, "3.02", ifelse(FIP==51540000401, "4.01", ifelse(FIP==51540000402, "4.02", ifelse(FIP==51540000501, "5.01", ifelse(FIP==51540000502, "5.02", ifelse(FIP==51540000600, "6", ifelse(FIP==51540000700, "7", ifelse(FIP==51540000800, "8", ifelse(FIP==51540000900, "9", ifelse(FIP==51540001000, "10", no = "other")))))))))))))
+```
+
+Then I calculated the total Charlottesville income:
+```{r}
+income <- cville %>% summarize(totalinc = sum(HINCP*UNITS))
+```
+
+And the total expenditures on each type of energy:
+```{r}
+electric <- cville %>% summarize(totalelep = sum(ELEP*UNITS, na.rm = TRUE))
+gas <- cville %>% summarize(totalgas = sum(GASP*UNITS, na.rm = TRUE))
+other <- cville %>% summarize(totalother = sum(FULP*UNITS, na.rm = TRUE))
+```
+
+Then I calculated the average energy burden by dividing the total expenditures by the total income.
+```{r}
+average_energy_burden = (electric+gas+other)/income
+``` 
+
+The average energy burden for the city of Charlottesville is `r average_energy_burden*100`%.
+
+We can break this down further to find the average energy burden for each census tract in Charlottesville.
+```{r}
+tract_energy_burden <- cville %>% 
+  group_by(tract) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, echo=FALSE}
+knitr::kable(tract_energy_burden, align = "rrrrrr")
+```
+
+The goal of this was to produce numbers that are roughly similar to Chart 8 in C3's "Uncovering Energy Inequity" report. However, this calculation produces numbers that are all over the place: some are similar to the values calculated by C3, but most of them are much larger. I am not sure why there is such a difference between their numbers and mine.
+
+## Households with High Energy Burden
+We also want to look at the more individual level, and see how many individual households have high energy burdens. Here, I will use the same terminology as C3: high energy burden will mean 6% of income or higher; very high energy burden will mean 10% or higher; and extremely high will mean 20% or higher.
+
+Given that our data is already semi-aggregated, the best way I can think to approach this is to use HINCP, ELEP, GASP, and FULP, which measure average income and energy expenditures *per household*. I created two new variables, called `hh_energy_exp` and `hh_energy_burden`, which are numerical measures of household energy expenditures and household energy burden.
+
+```{r}
+cville <- cville %>% 
+  mutate(hh_energy_exp = ELEP+GASP+FULP) %>% 
+  mutate(hh_energy_burden = (hh_energy_exp/HINCP)*100)
+```
+
+I then created a categorical variable called `burden`, which is either "low", "high", "very high", or "extremely high", as explained above.
+```{r}
+cville %>% 
+mutate(burden = ifelse(hh_energy_burden<6, "low", ifelse(hh_energy_burden>=6 & hh_energy_burden<10, "high", ifelse(hh_energy_burden>=10 & hh_energy_burden<20, "very high", ifelse(hh_energy_burden>=20, "extremely high", no="other")))))
+```
+
+Then I created a table to show the percentage of households that falls in each category. From the table, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.
+
+This is the code I am currently troubleshooting. It works when I run it in R, but I keep getting errors when I knit my Markdown file.
+```
+burdentab <- xtabs(~burden, data=cville) 
+prop.table(burdentab) %>% 
+  round(digits = 2)
+```
+
+I then tried to break it down even further and find the percentage of households in each burden category in each census tract. This is the code I was trying, but I can't get it to run.
+```
+cville %>% group_by(tract) %>% 
+burdentab <- xtabs(~ burden) %>% 
+prop.table(burdentab) %>% 
+  round(digits = 2)
+```
