@@ -18,6 +18,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * JGG: Yes (a lot of the time)! While working, I tend toward instrumental music; I find vocals a bit distracting. Most of the time, it winds up being either jazz or relaxed electronic music. For jazz, some frequent suspects are [Brian Blade and the Fellowship Band](https://open.spotify.com/album/5InHDZVvNbDDvq917BmMgT?si=hSQScJGsQq-VBcae_Vj6Ew&dl_branch=1), [Paul Desmond](https://open.spotify.com/album/620p4tcAC1PAmDUY8Vk5KT?si=28uxbTJXQZSb-Y7MJVZ8qA&dl_branch=1), and [Wes Montgomery](https://open.spotify.com/album/77eTceYYxRjaRMTxSwiLtV?si=T0P-FlDoR5Kp8RLmjVDPvQ&dl_branch=1). Sometimes, a bit of 80s-infused electronic music can be [just the thing](https://www.youtube.com/watch?v=0QKQlf8r7ls).
 
+* MC: I used to listen to music in my office, but since I've been working from home -- in a shared space -- I've not  done so (I know I could wear headphones/earbuds or something, but find it uncomfortable for long periods). But I think I'd love some background music diluted by background coffee-house style noises, where I'd mostly tune it out but once in a while hone in on a lovely and new sound. That said, my past working music was heavy on the mandolin genre, often instrumental or with winding lyrics (the kind of thing Chris Thile does on the [Goat Rodeo](https://goatrodeo.lnk.to/notourfirstMW) series).
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
 
 * KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
@@ -31,6 +33,13 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * HL: I would make all phones fall asleep for an hour for every hour of use to see if people would become more social.
 
 * JGG: "Sorry, folks, look like we're going to be stuck here on the tarmac for another hour or so unless you all break out the pocketbooks."
+
+* MC: I'm pretty sure as I villain I'd end up more in the Doofenschmirtz camp ("it's an -inator"), like a machine I could point at a corporation's building that would attract a pack of friendly but very loud barking dogs to the premises until they paid my ransom (see, no one is hurt, but I can attest one cannot do anything in the presence of a pack of friendly, insistently barking dogs).
+
+<p align="center">
+<img src="https://media.giphy.com/media/11fFFMrKhR0Nt6/giphy.gif" width="300">
+</p>
+
 
 # June 7
 
