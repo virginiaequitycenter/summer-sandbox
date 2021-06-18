@@ -6,4 +6,5 @@
 .RData
 .rds
 
+/data/
 # .gdb? shapefiles? what else?
