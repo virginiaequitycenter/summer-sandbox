@@ -24,12 +24,12 @@ cville = filter(cville_area, FIP%in%51540000201:51540001000)
 ```
 
 ## Energy Burden by Census Tract
-The first step was to recreate the energy burden metric at the census tract level. To do this, I downloaded the Area Median Income data, broken down into census tracts. The FIPS codes for each census tract can be found at https://www.fcc.gov/general/census-blocks-state. I then created subsamples for the Charlottesville area, and since this week's analysis will focus solely on Charlottesville, I created a subsample for Charlottesville city as well. 
+The first step was to recreate the energy burden metric at the census tract level. To do this, I downloaded the Area Median Income (AMI) data, broken down into census tracts. The FIPS codes for each census tract can be found at https://www.fcc.gov/general/census-blocks-state. I then created subsamples for the Charlottesville area, and since this week's analysis will focus solely on Charlottesville, I created a subsample for Charlottesville city as well. 
 
-I also created a new variable within the Charlottesville subsample called "tract", which is labeled with the tract numbers. (This is just for ease of interpretation, since the 11-digit FIPS codes are hard to understand.) This is the code I used for that, although there may be an easier or more condensed way to do it:
+I also created a new variable within the Charlottesville subsample called `tract`, which is labeled with the tract numbers. (This is just for ease of interpretation, since the 11-digit FIPS codes are hard to understand.) This is the code I used for that, although there may be an easier or more condensed way to do it:
 ```{r}
 cville <- cville %>% 
-mutate(tract = ifelse(FIP==51540000201, "2.01", ifelse(FIP==51540000202, "2.02", ifelse(FIP==51540000302, "3.02", ifelse(FIP==51540000401, "4.01", ifelse(FIP==51540000402, "4.02", ifelse(FIP==51540000501, "5.01", ifelse(FIP==51540000502, "5.02", ifelse(FIP==51540000600, "6", ifelse(FIP==51540000700, "7", ifelse(FIP==51540000800, "8", ifelse(FIP==51540000900, "9", ifelse(FIP==51540001000, "10", no = "other")))))))))))))
+mutate(tract = ifelse(FIP==51540000201, "2.01", ifelse(FIP==51540000202, "2.02", ifelse(FIP==51540000302, "3.02", ifelse(FIP==51540000401, "4.01", ifelse(FIP==51540000402, "4.02", ifelse(FIP==51540000501, "5.01", ifelse(FIP==51540000502, "5.02", ifelse(FIP==51540000600, "6", ifelse(FIP==51540000700, "7", ifelse(FIP==51540000800, "8", ifelse(FIP==51540000900, "9", no = "10"))))))))))))
 ```
 
 Then I calculated the total Charlottesville income:
@@ -71,7 +71,7 @@ The goal of this was to produce numbers that are roughly similar to Chart 8 in C
 ## Households with High Energy Burden
 We also want to look at the more individual level, and see how many individual households have high energy burdens. Here, I will use the same terminology as C3: high energy burden will mean 6% of income or higher; very high energy burden will mean 10% or higher; and extremely high will mean 20% or higher.
 
-Given that our data is already semi-aggregated, the best way I can think to approach this is to use HINCP, ELEP, GASP, and FULP, which measure average income and energy expenditures *per household*. I created two new variables, called `hh_energy_exp` and `hh_energy_burden`, which are numerical measures of household energy expenditures and household energy burden.
+Given that our data is already semi-aggregated, the best way I can think to approach this is to use HINCP, ELEP, GASP, and FULP, which measure average income and energy expenditures *per household*. I created two new variables, called `hh_energy_exp` and `hh_energy_burden`, which are numerical measures of household energy expenditures (in dollars) and household energy burden (as a percentage of household income).
 
 ```{r}
 cville <- cville %>% 
@@ -81,14 +81,12 @@ cville <- cville %>%
 
 I then created a categorical variable called `burden`, which is either "low", "high", "very high", or "extremely high", as explained above.
 ```{r}
-cville %>% 
+cville <- cville %>% 
 mutate(burden = ifelse(hh_energy_burden<6, "low", ifelse(hh_energy_burden>=6 & hh_energy_burden<10, "high", ifelse(hh_energy_burden>=10 & hh_energy_burden<20, "very high", ifelse(hh_energy_burden>=20, "extremely high", no="other")))))
 ```
 
 Then I created a table to show the percentage of households that falls in each category. From the table, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.
-
-This is the code I am currently troubleshooting. It works when I run it in R, but I keep getting errors when I knit my Markdown file.
-```
+```{r}
 burdentab <- xtabs(~burden, data=cville) 
 prop.table(burdentab) %>% 
   round(digits = 2)
@@ -96,8 +94,25 @@ prop.table(burdentab) %>%
 
 I then tried to break it down even further and find the percentage of households in each burden category in each census tract. This is the code I was trying, but I can't get it to run.
 ```
-cville %>% group_by(tract) %>% 
-burdentab <- xtabs(~ burden) %>% 
-prop.table(burdentab) %>% 
+burdentab <- cville %>% group_by(tract) %>% 
+  xtabs(~burden, data=cville)
+prop.table(burdentab2) %>% 
   round(digits = 2)
 ```
+
+## Energy Burden by Area Median Income
+We can also look at energy burden by income bracket. The AMI data contains a categorical variable called `AMI68`, which shows household income as a percentage of the area's median income. There are five categories: 0-30%, 30-60%, 60-80%, 80-110%, and 100%+. To calculate average energy burden for each income range, I used the same process as with the census tracts above.
+```{r}
+energy_burden_ami <- cville %>% 
+  group_by(AMI68) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, echo=FALSE}
+knitr::kable(energy_burden_ami, align = "rrrrrr")
+```
+These results show that average energy burden ranges from 1.4% all the way to 19%, and that it decreases as income increases.
