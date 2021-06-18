@@ -1,5 +1,8 @@
 .DS_Store
 .Rhistory
+<<<<<<< HEAD
+.Rproj.user
+=======
 .zip
 .gz
 .csv
@@ -8,3 +11,4 @@
 
 /data/
 # .gdb? shapefiles? what else?
+>>>>>>> 5d741a4e8e510bc425bb1311d39f3b6ecd156913

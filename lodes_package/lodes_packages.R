@@ -14,6 +14,14 @@ cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
 # type: od (origin-destination), residence (aka rac), workplace (aka wac)
 # job_type: JT00=All Jobs, JT01=Primary Jobs, JT02=All Private Jobs, JT03=Private Primary Jobs, JT04=All Federal Jobs, JT05=Federal Primary Jobs 
 # NOTE: not entirely sure what the job_type distinctions mean...
+##### --> LL: Job type distinctions are based on "ownership status of the firm and the dominance of the job for the worker." The categories include:
+# All jobs -- All beginning-of-quarter (Q2) jobs from UI-covered employment (private and state and local government) plus OPM-sourced federal employment
+# Primary jobs -- Subset of All Jobs that are classified as "primary" or "dominant" jobs (not sure how this clarifies anything)
+# All private jobs -- Private sector only jobs from UI-covered employment
+# Private primary jobs -- Subset of all private jobs that are classified as "primary" or "dominant" jobs
+# All federal jobs -- OPM-sourced federal employment
+# Federal primary jobs -- Subset of all federal jobs that are classfied as "primary" or "dominant" jobs
+# ---- UI-covered jobs = covered by state unemployment insurance programs, OPM = Office of Personal Management
 
 # segment (od): main=jobs with both workplace and residence in the state, aux=jobs with the workplace in the state and the residence outside of the state
 # segment (residence, workplace): S000=total jobs, SA01=29 or younger jobs, SA02=30-54 jobs, SA03=55+ jobs, 
@@ -68,7 +76,7 @@ cvl_lodes_rac %>%
 
 # it looks like we can look at this (and workplace) by granular industry, race of worker, plus
 # age groups, wage groups
-
+# LL: The RAC datafile has age groups, earnings, and NAICS sectors. Plus race and ethnicity data. 
 
 # workplace ----
 va_lodes_wac <- read_lodes(state = "VA", type = "workplace", year = 2018,
