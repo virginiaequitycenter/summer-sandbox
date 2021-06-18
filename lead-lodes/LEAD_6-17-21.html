@@ -171,6 +171,7 @@ pre code {
 </div>
 
 
+<p>This week, I really dug into the Low-Income Energy Affordability Data (LEAD). I focused on energy burden, which is measured as the percentage of household income spent on energy. I looked at specific subgroups, and how energy burden changes among subgroups in different census tracts.</p>
 <div id="energy-burden-by-census-tract" class="section level2">
 <h2>Energy Burden by Census Tract</h2>
 <p>The first step was to recreate the energy burden metric at the census tract level. To do this, I downloaded the Area Median Income (AMI) data, broken down into census tracts. The FIPS codes for each census tract can be found at <a href="https://www.fcc.gov/general/census-blocks-state" class="uri">https://www.fcc.gov/general/census-blocks-state</a>. I then created subsamples for the Charlottesville area, and since this week’s analysis will focus solely on Charlottesville, I created a subsample for Charlottesville city as well.</p>
@@ -316,22 +317,34 @@ other &lt;- cville %&gt;% summarize(totalother = sum(FULP*UNITS, na.rm = TRUE))<
 <p>I then created a categorical variable called <code>burden</code>, which is either “low”, “high”, “very high”, or “extremely high”, as explained above.</p>
 <pre class="r"><code>cville &lt;- cville %&gt;% 
 mutate(burden = ifelse(hh_energy_burden&lt;6, &quot;low&quot;, ifelse(hh_energy_burden&gt;=6 &amp; hh_energy_burden&lt;10, &quot;high&quot;, ifelse(hh_energy_burden&gt;=10 &amp; hh_energy_burden&lt;20, &quot;very high&quot;, ifelse(hh_energy_burden&gt;=20, &quot;extremely high&quot;, no=&quot;other&quot;)))))</code></pre>
-<p>Then I created a table to show the percentage of households that falls in each category. From the table, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.</p>
+<p>To find the number of households that fall within each level of energy burden, I grouped by <code>burden</code> and counted the <code>UNITS</code> within each category.</p>
+<pre class="r"><code>cville %&gt;% 
+  group_by(burden) %&gt;% 
+  summarize(hh = sum(UNITS))</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##   burden             hh
+##   &lt;chr&gt;           &lt;dbl&gt;
+## 1 extremely high  1623.
+## 2 high            1546.
+## 3 low            12838.
+## 4 very high       1420.
+## 5 &lt;NA&gt;             596.</code></pre>
+<p>However, these numbers are much harder to conceptualize than percentages, so I created a table to show the percentage of households that falls in each category. From these two tables, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.</p>
 <pre class="r"><code>burdentab &lt;- xtabs(~burden, data=cville) 
 prop.table(burdentab) %&gt;% 
   round(digits = 2)</code></pre>
 <pre><code>## burden
 ## extremely high           high            low      very high 
 ##           0.06           0.12           0.73           0.09</code></pre>
-<p>I then tried to break it down even further and find the percentage of households in each burden category in each census tract. This is the code I was trying, but I can’t get it to run.</p>
-<pre><code>burdentab &lt;- cville %&gt;% group_by(tract) %&gt;% 
-  xtabs(~burden, data=cville)
-prop.table(burdentab2) %&gt;% 
-  round(digits = 2)</code></pre>
+<p>I then broke it down even further to find the number of households in each burden category in each census tract.</p>
+<pre class="r"><code>household_tract_burden &lt;- cville %&gt;% 
+  group_by(tract, burden) %&gt;% 
+  summarize(hh = sum(UNITS))</code></pre>
+<p>The goal with this calculation was to replicate the numbers in Table 15 of <a href="https://static1.squarespace.com/static/5a0c67f5f09ca475c85d7686/t/5f2071d39eb94c7ad741a90d/1595961851763/C3%27s+Uncovering+Energy+Inequity.pdf">C3’s “Uncovering Energy Inequity”</a>. The general trends are there (with certain census tracts having far more high to extremely high burden households than others), but the numbers are different between my calculations and theirs. I chalk that up to the fact that the AMI data we have is already semi-aggregated, which makes it hard to find individual statistics.</p>
 </div>
 <div id="energy-burden-by-area-median-income" class="section level2">
 <h2>Energy Burden by Area Median Income</h2>
-<p>We can also look at energy burden by income bracket. The AMI data contains a categorical variable called <code>AMI68</code>, which shows household income as a percentage of the area’s median income. There are five categories: 0-30%, 30-60%, 60-80%, 80-110%, and 100%+. To calculate average energy burden for each income range, I used the same process as with the census tracts above.</p>
+<p>We can also look at energy burden by income bracket. The AMI data contains a categorical variable called <code>AMI68</code>, which shows household income as a percentage of the area’s median income. There are five categories: 0-30%, 30-60%, 60-80%, 80-100%, and 100%+. To calculate average energy burden for each income range, I used the same process as with the census tracts above.</p>
 <pre class="r"><code>energy_burden_ami &lt;- cville %&gt;% 
   group_by(AMI68) %&gt;% 
   summarize(totalinc = sum(HINCP*UNITS),
@@ -394,6 +407,297 @@ prop.table(burdentab2) %&gt;%
 </tbody>
 </table>
 <p>These results show that average energy burden ranges from 1.4% all the way to 19%, and that it decreases as income increases.</p>
+<p>We can break this down even further and look at average energy burden by AMI in each census tract.</p>
+<pre class="r"><code>energy_burden_ami_tract &lt;- cville %&gt;% 
+  group_by(tract, AMI68) %&gt;% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %&gt;% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)</code></pre>
+</div>
+<div id="energy-burden-by-housing-characteristics" class="section level2">
+<h2>Energy Burden by Housing Characteristics</h2>
+<p>We can also look at energy burden by various housing characteristics. These characteristics include: * whether the family is the owner or renter * the type of housing unit * the year it was built * the primary fuel source</p>
+<p>To compare average energy burden between owners and renters, we can use the same basic procedure that we used for many of the other metrics.</p>
+<pre class="r"><code>energy_burden_own &lt;- cville %&gt;% 
+  group_by(TEN) %&gt;% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %&gt;% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">TEN</th>
+<th align="right">totalinc</th>
+<th align="right">totalelep</th>
+<th align="right">totalgas</th>
+<th align="right">totalother</th>
+<th align="right">avgburden</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">OWNER</td>
+<td align="right">1010968583</td>
+<td align="right">11957889</td>
+<td align="right">5891611</td>
+<td align="right">530963.6</td>
+<td align="right">0.0181810</td>
+</tr>
+<tr class="even">
+<td align="right">RENTER</td>
+<td align="right">554482507</td>
+<td align="right">13909457</td>
+<td align="right">2939246</td>
+<td align="right">130724.4</td>
+<td align="right">0.0306221</td>
+</tr>
+</tbody>
+</table>
+<p>From this metric, we can see that there’s not a huge difference in energy burden between renters and owners, though renters overall bear a slightly larger burden.</p>
+<p>As we have done with previous metrics, we can also break this one down by census tract.</p>
+<pre class="r"><code>energy_burden_own_tract &lt;- cville %&gt;% 
+  group_by(tract, TEN) %&gt;% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %&gt;% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">tract</th>
+<th align="right">TEN</th>
+<th align="right">totalinc</th>
+<th align="right">totalelep</th>
+<th align="right">totalgas</th>
+<th align="right">totalother</th>
+<th align="right">avgburden</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">10</td>
+<td align="right">OWNER</td>
+<td align="right">92984640</td>
+<td align="right">938127.1</td>
+<td align="right">792619.45</td>
+<td align="right">82662.1631</td>
+<td align="right">0.0195022</td>
+</tr>
+<tr class="even">
+<td align="right">10</td>
+<td align="right">RENTER</td>
+<td align="right">59724998</td>
+<td align="right">922904.8</td>
+<td align="right">277142.24</td>
+<td align="right">8147.7026</td>
+<td align="right">0.0202293</td>
+</tr>
+<tr class="odd">
+<td align="right">2.01</td>
+<td align="right">OWNER</td>
+<td align="right">62283125</td>
+<td align="right">630754.5</td>
+<td align="right">800528.88</td>
+<td align="right">13107.1089</td>
+<td align="right">0.0231907</td>
+</tr>
+<tr class="even">
+<td align="right">2.01</td>
+<td align="right">RENTER</td>
+<td align="right">39762853</td>
+<td align="right">965213.8</td>
+<td align="right">608325.15</td>
+<td align="right">20074.0314</td>
+<td align="right">0.0400779</td>
+</tr>
+<tr class="odd">
+<td align="right">2.02</td>
+<td align="right">OWNER</td>
+<td align="right">21390004</td>
+<td align="right">441593.5</td>
+<td align="right">187746.38</td>
+<td align="right">4976.1415</td>
+<td align="right">0.0296548</td>
+</tr>
+<tr class="even">
+<td align="right">2.02</td>
+<td align="right">RENTER</td>
+<td align="right">26452048</td>
+<td align="right">1628829.6</td>
+<td align="right">211432.25</td>
+<td align="right">4791.1833</td>
+<td align="right">0.0697509</td>
+</tr>
+<tr class="odd">
+<td align="right">3.02</td>
+<td align="right">OWNER</td>
+<td align="right">76832231</td>
+<td align="right">931197.6</td>
+<td align="right">369083.67</td>
+<td align="right">33286.0264</td>
+<td align="right">0.0173569</td>
+</tr>
+<tr class="even">
+<td align="right">3.02</td>
+<td align="right">RENTER</td>
+<td align="right">31504141</td>
+<td align="right">878382.2</td>
+<td align="right">87869.86</td>
+<td align="right">3888.0909</td>
+<td align="right">0.0307941</td>
+</tr>
+<tr class="odd">
+<td align="right">4.01</td>
+<td align="right">OWNER</td>
+<td align="right">71024465</td>
+<td align="right">1073274.3</td>
+<td align="right">310533.61</td>
+<td align="right">99214.3194</td>
+<td align="right">0.0208804</td>
+</tr>
+<tr class="even">
+<td align="right">4.01</td>
+<td align="right">RENTER</td>
+<td align="right">33069777</td>
+<td align="right">1062363.1</td>
+<td align="right">175422.92</td>
+<td align="right">11255.0705</td>
+<td align="right">0.0377699</td>
+</tr>
+<tr class="odd">
+<td align="right">4.02</td>
+<td align="right">OWNER</td>
+<td align="right">145454575</td>
+<td align="right">1847885.0</td>
+<td align="right">603342.06</td>
+<td align="right">83063.3850</td>
+<td align="right">0.0174232</td>
+</tr>
+<tr class="even">
+<td align="right">4.02</td>
+<td align="right">RENTER</td>
+<td align="right">51869006</td>
+<td align="right">1240565.2</td>
+<td align="right">246527.40</td>
+<td align="right">13724.9247</td>
+<td align="right">0.0289348</td>
+</tr>
+<tr class="odd">
+<td align="right">5.01</td>
+<td align="right">OWNER</td>
+<td align="right">41454162</td>
+<td align="right">729470.0</td>
+<td align="right">446762.25</td>
+<td align="right">15441.7739</td>
+<td align="right">0.0287468</td>
+</tr>
+<tr class="even">
+<td align="right">5.01</td>
+<td align="right">RENTER</td>
+<td align="right">41140682</td>
+<td align="right">1608492.5</td>
+<td align="right">328375.68</td>
+<td align="right">12509.9763</td>
+<td align="right">0.0473832</td>
+</tr>
+<tr class="odd">
+<td align="right">5.02</td>
+<td align="right">OWNER</td>
+<td align="right">141575036</td>
+<td align="right">1691593.6</td>
+<td align="right">673141.50</td>
+<td align="right">41915.8406</td>
+<td align="right">0.0169991</td>
+</tr>
+<tr class="even">
+<td align="right">5.02</td>
+<td align="right">RENTER</td>
+<td align="right">103758199</td>
+<td align="right">1630305.0</td>
+<td align="right">270214.08</td>
+<td align="right">9979.1178</td>
+<td align="right">0.0184130</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">OWNER</td>
+<td align="right">25346981</td>
+<td align="right">125572.6</td>
+<td align="right">20561.01</td>
+<td align="right">4067.8768</td>
+<td align="right">0.0059258</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">RENTER</td>
+<td align="right">41624906</td>
+<td align="right">1530994.9</td>
+<td align="right">183644.46</td>
+<td align="right">10196.2439</td>
+<td align="right">0.0414376</td>
+</tr>
+<tr class="odd">
+<td align="right">7</td>
+<td align="right">OWNER</td>
+<td align="right">136159330</td>
+<td align="right">1178362.8</td>
+<td align="right">675715.61</td>
+<td align="right">32256.8160</td>
+<td align="right">0.0138539</td>
+</tr>
+<tr class="even">
+<td align="right">7</td>
+<td align="right">RENTER</td>
+<td align="right">50831897</td>
+<td align="right">990847.2</td>
+<td align="right">245803.30</td>
+<td align="right">33126.0238</td>
+<td align="right">0.0249799</td>
+</tr>
+<tr class="odd">
+<td align="right">8</td>
+<td align="right">OWNER</td>
+<td align="right">126673886</td>
+<td align="right">1358489.7</td>
+<td align="right">583016.53</td>
+<td align="right">100804.9017</td>
+<td align="right">0.0161226</td>
+</tr>
+<tr class="even">
+<td align="right">8</td>
+<td align="right">RENTER</td>
+<td align="right">45731564</td>
+<td align="right">925530.5</td>
+<td align="right">134577.36</td>
+<td align="right">2107.0305</td>
+<td align="right">0.0232272</td>
+</tr>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">OWNER</td>
+<td align="right">69790147</td>
+<td align="right">1011568.4</td>
+<td align="right">428559.55</td>
+<td align="right">20167.2803</td>
+<td align="right">0.0209241</td>
+</tr>
+<tr class="even">
+<td align="right">9</td>
+<td align="right">RENTER</td>
+<td align="right">29012437</td>
+<td align="right">525028.0</td>
+<td align="right">169910.79</td>
+<td align="right">925.0044</td>
+<td align="right">0.0239850</td>
+</tr>
+</tbody>
+</table>
+<p>When we do this, we can see that the difference in energy burden between owners and renters is much more pronounced in some census tracts than in others. (Tracts 2.02 and 6 have particularly large differences.) It would be interesting to dig into why that is that case. What characteristics do these tracts have that cause such a disparity? One driving factor could be the fact that both those tracts contain large numbers of UVA students, who are likely renting rather than owning (and who also likely have less income, so are spending more of that income on energy than other Charlottesville residents).</p>
 </div>
 
 
