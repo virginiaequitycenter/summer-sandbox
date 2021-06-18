@@ -4,12 +4,12 @@ library(tidyverse)
 leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
 download.file(url = leadurl,
               destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
-unzip("va2018lead.zip", exdir = getwd())
+unzip("va2018lead.zip", exdir = paste(getwd(), "/data/", sep = ""))
 
-ami <- read_csv("VA AMI State, Counties, Cities 2018.csv")
+ami <- read_csv("data/VA AMI State, Counties, Cities 2018.csv")
 cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
 
-#' Create new datasets for the whole region and each county individually
+# Create new datasets for the whole region and each county individually
 cville_area = filter(ami, FIP %in% cvlfips & HINCP!="NA")
 cville = filter(cville_area, FIP==51540 & HINCP!="NA")
 
@@ -50,3 +50,21 @@ cvl_area_burden <- cville_area %>%
 # e.g., can we use this to do energy burden by AMI, by TEN/ownership, 
 #   by BLD/type of unit (probably collapsed into 1 attached, 1 detached, mobile, 2 & 3-4 unit, 5-9 & 10-19 unit, 20-49 & 50+; or something),
 #   by HFL/fuel type (I don't actually understand this one yet -- is it primary fuel?)
+
+tractdata <- read_csv("data/VA AMI Census Tracts 2018.csv")
+
+tractdata <- tractdata %>% 
+  mutate(countyfip = str_sub(FIP, 1,5),
+         tractfip = str_sub(FIP, 6,11))
+
+cville_area_tracts = filter(tractdata, countyfip %in% cvlfips & HINCP!="NA")
+cville_tracts = filter(cville_area_tracts, countyfip==51540 & HINCP!="NA")
+
+cvl_tract_burden <- cville_tracts %>% 
+  group_by(tractfip) %>% 
+  summarize(totalinc = sum(HINCP*UNITS, na.rm = TRUE),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(totalexp = totalelep + totalgas + totalother,
+         avgburden = totalexp/totalinc)
