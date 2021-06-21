@@ -151,7 +151,8 @@ race <- cvl_rac %>%
             amerindw = sum(CR03),
             asianw = sum(CR04),
             nhAPIw = sum(CR05),
-            tworacew = sum(CR07))
+            tworacew = sum(CR07),
+            tot_w = sum(C000))
 
 race$area <- ifelse(race$h_county == "51540000800", "Seminole Square",
                     ifelse(race$h_county == "51540000700", "Emmett St. N", 
@@ -178,9 +179,32 @@ ggplot(racelong, aes(x = area, y = jobcount, fill = race))+
 
 ```
 
+Looking at the proportion of workers in each racial group by each census tract:
+
+``` {r}
+race <- race %>% 
+  group_by(h_county) %>% 
+  mutate(whitew_p = whitew/tot_w,
+         blackw_p = blackw/tot_w,
+         amerindw_p = amerindw/tot_w,
+         asianw_p = asianw/tot_w,
+         nhAPIw_p = nhAPIw/tot_w,
+         tworacew_p = tworacew/tot_w)
+
+racelongp <- melt(race, 
+                 id.vars = c("h_county", "area"), 
+                 measure.vars = c("whitew_p", "blackw_p", "amerindw_p", "asianw_p", "nhAPIw_p", "tworacew_p"), 
+                 variable.name = c("race_p"),  
+                 value.name = "tot_w")
+
+ggplot(racelongp, aes(x = area, y = tot_w, fill = race_p))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Rough Area description", y = "Proportion of workers in each race")
+```
 
 ### Questions I still have about the LODES data:
-1. I don't quite understand the difference between the h_geocode and the w_geocode. Michele, you mentioned looking at differences between where workers live and work, I'm not sure how that information is represented in the data. 
+1. I don't quite understand the difference between the h_geocode and the w_geocode. Michele, you mentioned looking at differences between where workers live and work---I'm not sure how that information is represented in the data. 
 2. How interested are we in looking at changes over time? Data available for years 2002-2018.
 
 ### Next steps:
