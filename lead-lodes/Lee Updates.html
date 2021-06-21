@@ -1,0 +1,274 @@
+---
+title: "Lee Equity Center Weekly Updates"
+output: html_document
+---
+
+# June 21 
+
+This week I looked more closely at the LEAD and LODES data. 
+
+## LEAD
+Four different data files are available for the state of VA: (1) Census tracts energy data with State Median Income (SMI), (2) Census tracts energy data with % Federal Poverty Level (FPL), (3) State, counties, and cities energy data with SMI, and (3) State, counties, and cities energy dat with % FPL. Since we're focussing on census tracts, I just show information about datasets 1 ("leaddat1") and 2 ("leaddat2") below. 
+
+* The smallest spatial scale for which data are available are census tracts. 
+
+* Income groupings exists both by state median income (SMI) and Federal poverty level (FPL). For any given observation, the income groupings are:
+    + If using SMI: "0-30%", "30-60%", "60-80%", "80-100", "100%+"
+    + If using FPL: "0-30%", "30-60%", "60-80%", "80-100", "100%+"
+    + The SMI and FPL variables exist in different datafiles, but both are easily downloaded as .csv's
+    + In both datafiles, neither variable (SMI or FPL) have any missing observations, though many are missing energy use data. 
+
+* Time period: "Low-Income Energy Affordability Data comes primarily from the 2018 U.S. Census American Community Survey 5-Year Public Use Microdata Samples and is calibrated to 2018 U.S. Energy Information Administration electric utility (Survey Form-861) and natural gas utility (Survey Form-176) data." These are 5-year rolling averages and these data cannot be used to assess changes over time. 
+
+* Energy estimates
+    + Residential energy consumption is estimated using U.S. census data from 2016
+    + Avg. energy expenditures are then weighted by housing unit counts for the census tract estimates
+    + Household income + number of persons are collapsed based on U.S. government defintions of SMI and FPL
+
+* Other potential data sources listed in the methodology document:
+    + [Xcel Energy](https://www.xcelenergy.com/working_with_us/municipalities/community_energy_reports) --- "an investor-owned utility that operates in several western and midwestern states, reports community-level electricity and natural gas sales and revenue data" Can spend some more time digging into this if it would be helpful.
+
+* Potential problems of note:
+    + May be discrepancies between community boarders used by energy reporting entities and the U.S. census
+    + Can only estimate energy use for occupied houses 
+
+## LODES
+Starting from where Michele left of on the "lodes_packages" script, I tried looking at differences in the proportion of high, mid, and low wage jobs in the different census tracts in Charlottesville. 
+
+```{r libraries}
+knitr::opts_chunk$set(echo = FALSE)
+devtools::install_git("https://github.com/hrbrmstr/lodes.git")
+library(lodes)
+library(tidyverse)
+library(ggpubr)
+library(reshape2)
+library(psych)
+```
+
+```{r}
+va_lodes_od <- read_lodes(state = "VA", type = "od", year = 2018, 
+                          segment = "main", job_type = "JT00")
+```
+
+To practice working with these data, I restricted the observations to just those in the Charlottesville census blocks.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+cviltracts <- c("51540000201", "51540000202", "51540000302", "51540000401", "51540000402", "51540000501", "51540000502", "51540000600", 
+                "51540000700", "51540000800", "51540000900","51540001000")
+
+cvl_lodes <- va_lodes_od %>% 
+  mutate(w_county = str_sub(w_geocode, 1,11)) %>% 
+  filter(w_county %in% cviltracts)
+```
+
+Below I show the decsriptive statistics for the proportion of high, mid, and low wage jobs by each of the difference Charlottesville census blocks. 
+
+``` {r}
+wage <- cvl_lodes %>% 
+  group_by(w_county) %>% 
+  summarize(lowwage = sum(SE01),
+            midwage = sum(SE02),
+            hiwage = sum(SE03),
+            allwage = sum(S000))
+
+wage <- wage %>% 
+  group_by(w_county) %>% 
+  mutate(lowwage_p = lowwage/allwage,
+         midwage_p = midwage/allwage,
+         hiwage_p = hiwage/allwage)
+
+describe(wage$hiwage_p)
+describe(wage$lowwage_p)
+describe(wage$midwage_p)
+```
+
+To help simplify visualizing the data, I re-named each of the census tracts by my own rough naming of the neighborhoods/areas --- I'm sure better names exist (and I'm sure there's a more efficient way to do this than with a thousand ifelse statements)
+
+```{r}
+wage$area <- ifelse(wage$w_county == "51540000800", "Seminole Square",
+                    ifelse(wage$w_county == "51540000700", "Emmett St. N", 
+                           ifelse(wage$w_county == "51540000900", "Rugby Rd",
+                                  ifelse(wage$w_county == "51540000201", "10th & Page",
+                                         ifelse(wage$w_county == "51540000202", "Washington Park",
+                                                ifelse(wage$w_county == "51540001000", "The Mall",
+                                                       ifelse(wage$w_county == "51540000302", "Riverview",
+                                                              ifelse(wage$w_county == "51540000600", "JPA",
+                                                                     ifelse(wage$w_county == "51540000501", "Fifeville",
+                                                                            ifelse(wage$w_county == "51540000502", "Fry's Spring",
+                                                                                   ifelse(wage$w_county == "51540000401", "Belmont",
+                                                                                          ifelse(wage$w_county == "51540000402","RidgeSt",wage$w_county))))))))))))
+
+allwage <- ggplot(wage, aes(x = area, y = allwage)) +
+  geom_bar(stat = 'identity', width = 0.5)+ 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Rough Area description", y = "Raw count of all jobs")
+```
+
+As we might expect, most of the jobs in Charlottesville are concentrated on the mall.
+
+Here are the raw counts plotted together:
+``` {r}
+wagelong <- melt(wage, 
+                 id.vars = c("w_county", "allwage", "area"), 
+                 measure.vars = c("lowwage", "midwage", "hiwage"), 
+                 variable.name = c("wage"),  
+                 value.name = "jobcount")
+
+ggplot(wagelong, aes(x = area, y = jobcount, fill = wage))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Rough Area description", y = "Jobs counts by wage")
+```
+
+Here are the proportions plotted together:
+``` {r}
+wageplong <- melt(wage,
+                 id.vars = c("w_county", "allwage", "area"), 
+                 measure.vars = c("lowwage_p", "midwage_p", "hiwage_p"),
+                 variable.name = c("wage_p"),  
+                 value.name = "jobp")
+
+ggplot(wageplong, aes(x = area, y = jobp, fill = wage_p))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(x = "Rough Area description", y = "Proportion of high, mid, and low wage jobs")
+```
+
+I repeated the process above but with racial demographics of the jobs, rather than wage. 
+
+```{r}
+va_lodes_rac <- read_lodes(state = "VA", type = "residence", year = 2018,
+                           segment = "S000", job_type = "JT00")
+cvl_rac <- va_lodes_rac %>% 
+  mutate(h_county = str_sub(h_geocode, 1,11)) %>% 
+  filter(h_county %in% cviltracts)
+
+race <- cvl_rac %>% 
+  group_by(h_county) %>% 
+  summarize(whitew = sum(CR01),
+            blackw = sum(CR02),
+            amerindw = sum(CR03),
+            asianw = sum(CR04),
+            nhAPIw = sum(CR05),
+            tworacew = sum(CR07))
+
+race$area <- ifelse(race$h_county == "51540000800", "Seminole Square",
+                    ifelse(race$h_county == "51540000700", "Emmett St. N", 
+                           ifelse(race$h_county == "51540000900", "Rugby Rd",
+                                  ifelse(race$h_county == "51540000201", "10th & Page",
+                                         ifelse(race$h_county == "51540000202", "Washington Park",
+                                                ifelse(race$h_county == "51540001000", "The Mall",
+                                                       ifelse(race$h_county == "51540000302", "Riverview",
+                                                              ifelse(race$h_county == "51540000600", "JPA",
+                                                                     ifelse(race$h_county == "51540000501", "Fifeville",
+                                                                            ifelse(race$h_county == "51540000502", "Fry's Spring",
+                                                                                   ifelse(race$h_county == "51540000401", "Belmont",
+                                                                                          ifelse(race$h_county == "51540000402","RidgeSt",race$h_county))))))))))))
+racelong <- melt(race, 
+                 id.vars = c("h_county", "area"), 
+                 measure.vars = c("whitew", "blackw", "amerindw", "asianw", "nhAPIw", "tworacew"), 
+                 variable.name = c("race"),  
+                 value.name = "jobcount")
+
+ggplot(racelong, aes(x = area, y = jobcount, fill = race))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Rough Area description", y = "Number of workers by race")
+
+```
+
+
+### Questions I still have about the LODES data:
+1. I don't quite understand the difference between the h_geocode and the w_geocode. Michele, you mentioned looking at differences between where workers live and work, I'm not sure how that information is represented in the data. 
+2. How interested are we in looking at changes over time? Data available for years 2002-2018.
+
+### Next steps:
+1. Figure out answers to the questions above.
+2. Start trying to map the data. I plan to read more about how use Leaflet this week. 
+
+# June 14 
+
+I familiarized myself with the following datasources: Low-Income Energy Affordability Data (LEAD) Tool and Longitudinal Employer-Household Dynamics Origin-Destination Employment Statistics (LODES). The structure for each dataset is shown below. I also used [Jacob's handy-dandy function](https://github.com/jacob-gg/manager) to check for missing data! In instances where there were no missing data, I removed that line of code. Everything shown below is based on the csv's available for download from each of these sources---I've done no data cleaning or re-formatting.
+
+
+```{r LEAD}
+knitr::opts_chunk$set(echo = TRUE)
+source('https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_missingness_monster.R')
+setwd("/Users/Carlson/Desktop/Equity Center Data Exploration")
+leaddat1 <- read.csv("VA AMI Census Tracts 2018.csv")
+leaddat2 <- read.csv("VA FPL Census Tracts 2018.csv")
+lodesOD <- read.csv("va_od_aux_JT00_2002.csv")
+lodesRAC <- read.csv("va_rac_S000_JT00_2002.csv")
+lodesWAC <- read.csv("va_wac_S000_JT00_2002.csv")
+```
+
+## LEAD
+Four different data files are available for the state of VA: (1) Census tracts energy data with Area Median Income (AMI), (2) Census tracts energy data with % Federal Poverty Level (FPL), (3) State, counties, and cities energy data with AMI, and (3) State, counties, and cities energy dat with % FPL. Below, I show the structures and missing data information for datasets 1 ("leaddat1") and 3 ("leaddat2"). 
+
+#### Abridged data dictionary:
+* FIP: state, county, or city
+* TEN: Owner or renter
+* YBL6: Year of building construction
+* BLD: Number of units in the building
+* HFL INDEX: Primary heating fuel type
+* AMI68: % Area Median Income
+* FPL15: % Federal Poverty Level
+* SMI68: % State Median Income 
+* HINCP: Avg. Annual household income ($/year)
+* ELEP: Avg. household annnual electricity expenditure ($/year)
+* GASP: Avg. household annual gas expenditure ($/year)
+* FULP: Avg. household annual other fuel expenditure ($/year)
+
+``` {r eval=TRUE, echo = TRUE}
+str(leaddat1)
+loch_missingness_monster(leaddat1)
+str(leaddat2)
+loch_missingness_monster(leaddat2)
+```
+
+## LODES
+Per the website, "Data files are state-based and organized into three types: Origin-Destination (OD), Residence Area Characteristics (RAC), and Workplace Area Characteristics (WAC), all at census block geographic detail. Data is available for most states for the years 2002–2018." There are two versions of each of these---one using 2000 census blocks and one using 2010 census blocks. Below, I show the structures and missing data information for the 2010 versions for each dataset---OD ("lodesOD), RAC ("lodesRAC""), and WAC ("lodesRAC").
+
+### Origin-Destination (OD)
+#### Abridged data dictionary:
+* S000: Total # of jobs
+* SA01--SA03: # of jobs for different age groups
+* SE01--SE03: # of jobs with different earnings per month
+* S101--S103: # of jobs in different industries 
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesOD)
+```
+
+### Residence Area Characteristics (RAC)
+#### Abridged data dictionary:
+* C000: Total # of jobs
+* CA01--CA03: # of jobs for different age groups
+* CE01--CE03: # of jobs with different earnings per month
+* CNS01--CNS20: # of jobs in different NAICS sectors
+* CR01--CR07: # of jobs for workers with different races
+* CT01--CT02: # of jobs for Hispanic and non-Hispanic workers
+* CD01--CD04: # of jobs by educational attainment
+* CS01--CS02: # of jobs by sex
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesRAC[,1:10])
+```
+
+### Workplace Area Characteristics (WAC)
+#### Abridged data dictionary:
+* First 42 columns: All of the same data as the RAC datafile
+* CFA01--CFA05: # of jobs by firm age
+* CFS01--CFS05: # of jobs by firm size 
+
+``` {r eval=TRUE, echo = TRUE}
+str(lodesWAC[,1:10])
+```
+
+#### And, I learned that you can embed gifs in R Markdown! Huzzah! 
+![](https://media.giphy.com/media/PLHdpauwfN2MvHcHxL/giphy.gif)
+
+
+
+
