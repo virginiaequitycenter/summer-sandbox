@@ -5,6 +5,7 @@ output: html_document
 # Virginia Analysis using the National Land Cover Database
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(tigris_use_cache = TRUE)
 ```
 
 
@@ -132,7 +133,15 @@ sp::plot(land6)
 sp::plot(land7)
 ```
 
+### Shapefile
+```{r}
+library(rgdal)
+land_sf = st_read(dsn = "NLCD2016_spatial_metadata/NLCD2016_Spatial_metadata_20190205.shp")
 
+plot(land_sf)
+
+
+```
 
 
 ### Impervious Surfaces
@@ -212,5 +221,6 @@ sp::plot(imperv7)
 ```
 
 ### Tree Canopy
+
 
 
