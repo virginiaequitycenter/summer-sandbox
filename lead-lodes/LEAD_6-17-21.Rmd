@@ -14,9 +14,9 @@ library(mosaic)
 leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
 download.file(url = leadurl,
               destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
-unzip("va2018lead.zip", exdir = getwd())
+unzip("va2018lead.zip", exdir = paste(getwd(), "/data/", sep = ""))
 
-ami_census_tracts <- read_csv("VA AMI Census Tracts 2018.csv")
+ami_census_tracts <- read_csv("data/VA AMI Census Tracts 2018.csv")
 
 # filter by area
 cville_area = filter(ami_census_tracts, (FIP%in%51540000201:51540001000 | FIP%in%51003010100:51003011400 | FIP%in%51065020101:51065020300 | FIP%in%51079030101:51079030200 | FIP%in%51109950100:51109950500 | FIP%in%51125950100:51125950300) & HINCP!="NA")
