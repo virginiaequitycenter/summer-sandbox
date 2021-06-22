@@ -50,3 +50,16 @@ library(noaastormevents)
 # Vignettes: https://cran.r-project.org/web/packages/noaastormevents/vignettes/noaastormevents.html
 # Vignettes: https://cran.r-project.org/web/packages/noaastormevents/vignettes/details.html
 
+# details vignette
+find_file_name(year = "2020", file_type = "details")
+?find_file_name
+
+download_storm_data(year = "2020", file_type = "details") # function not found
+test2010s <- create_storm_data(date_range = c("2010-01-01", "2020-12-31"), file_type = "details") # worked
+
+# eastern shore only
+es2010s <- test2010s %>% 
+  filter(CZ_NAME %in% c("ACCOMACK", "NORTHAMPTON"))
+
+es2010s %>% count(EVENT_TYPE)
+
