@@ -20,9 +20,14 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * MC: I used to listen to music in my office, but since I've been working from home -- in a shared space -- I've not  done so (I know I could wear headphones/earbuds or something, but find it uncomfortable for long periods). But I think I'd love some background music diluted by background coffee-house style noises, where I'd mostly tune it out but once in a while hone in on a lovely and new sound. That said, my past working music was heavy on the mandolin genre, often instrumental or with winding lyrics (the kind of thing Chris Thile does on the [Goat Rodeo](https://goatrodeo.lnk.to/notourfirstMW) series).
 
+* AG: It depends on the work I'm doing - if it's anything where I have to really think deeply or problem solve, I prefer not to have music because it distracts me. I love studying in coffee shops for the background music and energy of having other people around me. When I'm doing less thought intensive work, I often listen to music. I like a wide variety of genres, but while working I mostly listen to chill R&B or indie type music. I really like finding new music through putting on suggested Spotify playlists. 
+
+* CD: I listen to a lot of music while I work. My main issue is that I listen to the same 3 songs for 2 weeks until I'm so sick of them I can't listen to them for a year. Currently, I'm really enjoying the album Dreamland by Glass Animals.
+
 2. If you could be a villain but couldn't kill people just inconvenience the world unless you were paid, what would you do? Example, make everyones phone chargers so short they have to hold it to charge or pay you to get an extra foot of chord.
 
 * KK: I would make people's alarm always go off at the wrong time unless I were paid. Maybe it would go off at 7PM instead of AM and make you late for work, or it would go off two hours early on your day off, something like that.
+
 
 * TO: I would make all charging ports work at 30 percent capacity. So, charging a phone will take like 6-8 hours instead of 1 and you would have to pay to upgrade to a higher charge rate/capacity. Or (this is from a friend and I loved it) I would randomize food tastes. So, you would bite into an apple and it would taste like pizza but tomorrow an apple from the same batch could taste like pineapples. So you would never know what any food would taste like because it changes daily. (My addition to the idea) you could pay me daily to get a list of what different foods will taste like that day but only for 7 food items.
 
@@ -35,6 +40,10 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 * JGG: "Sorry, folks, look like we're going to be stuck here on the tarmac for another hour or so unless you all break out the pocketbooks."
 
 * MC: I'm pretty sure as I villain I'd end up more in the Doofenschmirtz camp ("it's an -inator"), like a machine I could point at a corporation's building that would attract a pack of friendly but very loud barking dogs to the premises until they paid my ransom (see, no one is hurt, but I can attest one cannot do anything in the presence of a pack of friendly, insistently barking dogs).
+
+* AG: This is an interesting question! I think I would make random objects weigh moderately more or less than they normally do, because I think it would be super disorienting. I'd also be curious to see how/if people developed new patterns to quickly assess weight and efficiently deal with this uncertainty. 
+
+* CD: I think I would want the ability to make people get something caught in the doorway as they pass through. Think like your headphones (back when headphones had wires) get caught on the doorknob and yanked out of your ear or like your pocket gets caught. This stuff happens infrequently to me but when it does I get so irrationally upset!
 
 <p align="center">
 <img src="https://media.giphy.com/media/11fFFMrKhR0Nt6/giphy.gif" width="300">

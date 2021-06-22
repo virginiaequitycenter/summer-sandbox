@@ -1,5 +1,5 @@
 ---
-title: "LEAD 6-17-21"
+title: "LEAD Update 6-22-2021"
 author: "Marisa Lemma"
 date: "6/17/2021"
 output: html_document
@@ -22,6 +22,8 @@ ami_census_tracts <- read_csv("data/VA AMI Census Tracts 2018.csv")
 cville_area = filter(ami_census_tracts, (FIP%in%51540000201:51540001000 | FIP%in%51003010100:51003011400 | FIP%in%51065020101:51065020300 | FIP%in%51079030101:51079030200 | FIP%in%51109950100:51109950500 | FIP%in%51125950100:51125950300) & HINCP!="NA")
 cville = filter(cville_area, FIP%in%51540000201:51540001000)
 ```
+
+This week, I really dug into the Low-Income Energy Affordability Data (LEAD). I focused on energy burden, which is measured as the percentage of household income spent on energy. I looked at specific subgroups, and how energy burden changes among subgroups in different census tracts.
 
 ## Energy Burden by Census Tract
 The first step was to recreate the energy burden metric at the census tract level. To do this, I downloaded the Area Median Income (AMI) data, broken down into census tracts. The FIPS codes for each census tract can be found at https://www.fcc.gov/general/census-blocks-state. I then created subsamples for the Charlottesville area, and since this week's analysis will focus solely on Charlottesville, I created a subsample for Charlottesville city as well. 
@@ -85,23 +87,31 @@ cville <- cville %>%
 mutate(burden = ifelse(hh_energy_burden<6, "low", ifelse(hh_energy_burden>=6 & hh_energy_burden<10, "high", ifelse(hh_energy_burden>=10 & hh_energy_burden<20, "very high", ifelse(hh_energy_burden>=20, "extremely high", no="other")))))
 ```
 
-Then I created a table to show the percentage of households that falls in each category. From the table, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.
+To find the number of households that fall within each level of energy burden, I grouped by `burden` and counted the `UNITS` within each category.
+```{r}
+cville %>% 
+  group_by(burden) %>% 
+  summarize(hh = sum(UNITS))
+```
+
+However, these numbers are much harder to conceptualize than percentages, so I created a table to show the percentage of households that falls in each category. From these two tables, we can see that the vast majority of households in Charlottesville have a low energy burden; however, the number that have a very high or extremely high energy burden is not insignificant.
 ```{r}
 burdentab <- xtabs(~burden, data=cville) 
 prop.table(burdentab) %>% 
   round(digits = 2)
 ```
 
-I then tried to break it down even further and find the percentage of households in each burden category in each census tract. This is the code I was trying, but I can't get it to run.
-```
-burdentab <- cville %>% group_by(tract) %>% 
-  xtabs(~burden, data=cville)
-prop.table(burdentab2) %>% 
-  round(digits = 2)
+I then broke it down even further to find the number of households in each burden category in each census tract.
+```{r, message=FALSE}
+household_tract_burden <- cville %>% 
+  group_by(tract, burden) %>% 
+  summarize(hh = sum(UNITS))
 ```
 
+The goal with this calculation was to replicate the numbers in Table 15 of [C3's "Uncovering Energy Inequity"](https://static1.squarespace.com/static/5a0c67f5f09ca475c85d7686/t/5f2071d39eb94c7ad741a90d/1595961851763/C3%27s+Uncovering+Energy+Inequity.pdf). The general trends are there (with certain census tracts having far more high to extremely high burden households than others), but the numbers are different between my calculations and theirs. I chalk that up to the fact that the AMI data we have is already semi-aggregated, which makes it hard to find individual statistics.
+
 ## Energy Burden by Area Median Income
-We can also look at energy burden by income bracket. The AMI data contains a categorical variable called `AMI68`, which shows household income as a percentage of the area's median income. There are five categories: 0-30%, 30-60%, 60-80%, 80-110%, and 100%+. To calculate average energy burden for each income range, I used the same process as with the census tracts above.
+We can also look at energy burden by income bracket. The AMI data contains a categorical variable called `AMI68`, which shows household income as a percentage of the area's median income. There are five categories: 0-30%, 30-60%, 60-80%, 80-100%, and 100%+. To calculate average energy burden for each income range, I used the same process as with the census tracts above.
 ```{r}
 energy_burden_ami <- cville %>% 
   group_by(AMI68) %>% 
@@ -116,3 +126,210 @@ energy_burden_ami <- cville %>%
 knitr::kable(energy_burden_ami, align = "rrrrrr")
 ```
 These results show that average energy burden ranges from 1.4% all the way to 19%, and that it decreases as income increases.
+
+We can break this down even further and look at average energy burden by AMI in each census tract.
+```{r, message=FALSE}
+energy_burden_ami_tract <- cville %>% 
+  group_by(tract, AMI68) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, fig.width=8, fig.height=8}
+ggplot(energy_burden_ami_tract) +
+  geom_col(aes(x=AMI68, y=avgburden)) +
+  facet_wrap(~tract, nrow=4)
+```
+
+Looking at this graph, we can see that the trends are the same across all census tracts, although the magnitude of the average burden varies by tract.
+
+## Energy Burden by Housing Characteristics
+We can also look at energy burden by various housing characteristics. These characteristics include: 
+
+* whether the family is the owner or renter 
+* the type of housing unit 
+* the year it was built 
+* the primary fuel source
+
+### Energy Burden by Ownership Status
+To compare average energy burden between owners and renters, we can use the same basic procedure that we used for many of the other metrics.
+```{r}
+energy_burden_own <- cville %>% 
+  group_by(TEN) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, echo=FALSE}
+knitr::kable(energy_burden_own, align = "rrrrrr")
+```
+From this metric, we can see that there's not a huge difference in energy burden between renters and owners, though renters overall bear a slightly larger burden.
+
+As we have done with previous metrics, we can also break this one down by census tract.
+```{r, message=FALSE}
+energy_burden_own_tract <- cville %>% 
+  group_by(tract, TEN) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+ggplot(energy_burden_own_tract) +
+  geom_col(aes(x=TEN, y=avgburden)) +
+  facet_wrap(~tract)
+```
+
+When we do this, we can see that the difference in energy burden between owners and renters is much more pronounced in some census tracts than in others. (Tracts 2.02 and 6 have particularly large differences.) It would be interesting to dig into why that is that case. What characteristics do these tracts have that cause such a disparity? One driving factor could be the fact that both those tracts contain large numbers of UVA students, who are likely renting rather than owning (and who also likely have less income, so they are spending more of that income on energy than other Charlottesville residents).
+
+### Energy Burden by Type of Housing
+We can also look at energy burden by type of housing unit. This dataset is broken down into 10 different types of housing units:
+
+* 1 Unit Attached
+* 1 Unit Detached
+* 2 Unit
+* 3-4 Unit
+* 5-9 Unit
+* 10-19 Unit
+* 20-49 Unit
+* 50+ Unit
+* Boat, RV, or Van
+* Mobile or Trailer
+
+For purposes of simplicity, I will collapse these into 6 larger categories:
+
+* 1 Unit Attached
+* 1 Unit Detached
+* 2-4 Unit
+* 5-19 Unit
+* 20+ Unit
+* Mobile
+```{r, include=FALSE}
+cville <- cville %>% 
+  mutate(type = ifelse(BLD=="1 ATTACHED", "1 attached", ifelse(BLD=="1 DETACHED", "1 detached", ifelse(BLD=="2 UNIT" | BLD=="3-4 UNIT", "2-4 unit", ifelse(BLD=="5-9 UNIT" | BLD=="10-19 UNIT", "5-19 unit", ifelse(BLD=="20-49 UNIT" | BLD=="50+ UNIT", "20+ unit", no="mobile"))))))
+```
+
+We can then calculate the energy burden by type of housing unit.
+```{r}
+energy_burden_type <- cville %>% 
+  group_by(type) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, echo=FALSE}
+knitr::kable(energy_burden_type, align = "rrrrrr")
+```
+When we do this, we see, interestingly, that the 20+ unit housing has the lowest energy burden, at 1.5%, and mobile housing has the highest, at 6.6%.
+
+We can then break this down by individual tract:
+```{r, message=FALSE}
+energy_burden_type_tract <- cville %>% 
+  group_by(tract, type) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, fig.width=11, fig.height=8}
+ggplot(energy_burden_type_tract) +
+  geom_col(aes(x=type, y=avgburden)) +
+  facet_wrap(~tract, nrow=4) +
+  theme(axis.text = element_text(size=8))
+```
+
+When we do this, the trends are much less straightforward; the types of housing unit with the highest and lowest energy burden are not the same across different tracts, and the burdens vary in magnitude.
+
+### Energy Burden by Year Built
+We can also look at energy burden based on the year the housing was built. This dataset is broken up into broad time periods: before 1940, 1940-59, 1960-79, 1980-99, 2000-09, and 2010 or later.
+```{r}
+energy_burden_year <- cville %>% 
+  group_by(YBL6) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, include=FALSE}
+knitr::kable(energy_burden_year, align = "rrrrrr")
+```
+Unsurprisingly, housing built in 2010 or later has the lowest energy burden, but interestingly, the highest housing burden falls on housing built between 1980 and 1999.
+
+Breaking this down by census tracts, we see much more confusing trends. In fact, there aren't really any similarities across census tracts.
+```{r, message=FALSE}
+energy_burden_year_tract <- cville %>% 
+  group_by(tract, YBL6) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, fig.width=12, fig.height=8}
+ggplot(energy_burden_year_tract) +
+  geom_col(aes(x=YBL6, y=avgburden)) +
+  facet_wrap(~tract, nrow=4)
+```
+
+### Energy Burden by Primary Fuel Source
+The last metric that we can look at is energy burden by primary fuel source. The LEAD data has a variable called `HFL`, which indicates the primary heating fuel type for the household. There are nine types:
+
+* Utility gas (natural gas)
+* Bottled gas (propane or liquified petroleum gas)
+* Electricity
+* Fuel oil
+* Coal
+* Wood
+* Solar
+* Other
+* No heating
+
+```{r}
+energy_burden_hfl <- cville %>% 
+  group_by(HFL) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, fig.width=8}
+ggplot(energy_burden_hfl) +
+  geom_col(aes(x=HFL, y=avgburden))
+```
+
+As we can see from this metric, households that primarily use solar heating have the highest energy burden, while those that primarily use wood have the lowest.
+
+To break it down further into tracts:
+```{r, message=FALSE}
+energy_burden_hfl_tract <- cville %>% 
+  group_by(tract, HFL) %>% 
+  summarize(totalinc = sum(HINCP*UNITS),
+            totalelep = sum(ELEP*UNITS, na.rm = TRUE),
+            totalgas = sum(GASP*UNITS, na.rm = TRUE),
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+  mutate(avgburden = (totalelep + totalgas + totalother)/totalinc)
+```
+
+```{r, fig.width=12, fig.height=12}
+ggplot(energy_burden_hfl_tract) +
+  geom_col(aes(x=HFL, y=avgburden)) +
+  facet_wrap(~tract, nrow=6) + 
+  theme(axis.text = element_text(size=7))
+```
+
+Primary heating fuel type is an interesting metric because many of the tracts only have a few of these types present. This makes me wonder how the overall trends would change if there were all types of primary heating sources in every tract: would certain tracts have higher or lower overall energy burdens than they do now?
