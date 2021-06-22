@@ -6,8 +6,11 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 1. Is there anything that you hope others on this team can help you with?
 
+* LL: I think today's meeting was so helpful in clarifying next steps that, at the moment, nothing jumps out at me. I'm sure it won't be long before I'm blowing up the troubleshoot Slack channel with questions though!
+
 2. What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)?
 
+* LL: Just this afternoon I purchased tickets to see Shakey Graves at the Jefferson Theater in November and I am __very__ excited to see live music again. I'd like to at least attend a Fridays After Five (or any other show I can) between now and November, but buying tickets for a concert was pretty exciting. 
 
 # June 15
 
