@@ -1,0 +1,130 @@
+---
+title: "Generative file"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+# Virginia Analysis using the National Land Cover Database
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(tigris_use_cache = TRUE)
+```
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+library(FedData) 
+library(tigris)
+library(sf)
+library(raster)
+library(tidyverse)
+```
+
+
+```{r, echo=TRUE, include=FALSE}
+vacounties <- counties(state="VA")
+cvl_alb <- vacounties %>%
+  dplyr::filter(COUNTYFP %in% c("003", "540", "065", "079", "109", "125", "001", "131"))
+```
+
+
+
+## {.tabset}
+
+Visualize 
+
+* Percent impervious surfaces in spatial unit
+* Percent tree canopy in spatial unit
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, figures-side, fig.show="hold", out.width="20%"}
+sp::plot(cvl_alb[1,5], col="blue", border=NA) 
+sp::plot(cvl_alb[2,5], col="blue", border=NA)
+sp::plot(cvl_alb[3,5], col="blue", border=NA)
+sp::plot(cvl_alb[4,5], col="blue", border=NA)
+sp::plot(cvl_alb[5,5], col="blue", border=NA)
+sp::plot(cvl_alb[6,5], col="blue", border=NA)
+sp::plot(cvl_alb[7,5], col="blue", border=NA)
+sp::plot(cvl_alb[8,5], col="blue", border=NA)
+
+```
+
+
+
+### Impervious Surfaces
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.align='left', fig.show="hold", out.width="30%"}
+
+imperv <- get_nlcd(
+  template = cvl_alb[1,5],
+  label = "Charlottesville",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+
+# Charlottesville
+# convert to sp
+cville = rasterToPolygons(imperv) 
+# convert to sf
+cville2 <- st_as_sf(cville)
+
+cville_plot <- ggplot() + 
+  geom_sf(data = cville2, size = 0.1, color = "blue", fill = "blue") + 
+  ggtitle("Charlottesville Impervious Surfaces Plot") + 
+  coord_sf()
+
+print(cville_plot)
+
+
+imperv2 <- get_nlcd(
+  template = cvl_alb[2,5],
+  label = "Greene",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+
+# Greene
+# convert to sp
+Greene = rasterToPolygons(imperv2) 
+# convert to sf
+Greene2 <- st_as_sf(Greene)
+
+Greene_plot <- ggplot() + 
+  geom_sf(data = Greene2, size = 0.1, color = "blue", fill = "blue") + 
+  ggtitle("Greene Impervious Surfaces Plot") + 
+  coord_sf()
+
+print(Greene_plot)
+
+
+imperv3 <- get_nlcd(
+  template = cvl_alb[3,5],
+  label = "Accomack",
+  dataset = "Impervious",
+  year = 2016, 
+  landmass = "L48"
+)
+
+# Accomack
+# convert to sp
+Accomack = rasterToPolygons(imperv3) 
+# convert to sf
+Accomack2 <- st_as_sf(Accomack)
+
+Accomack_plot <- ggplot() + 
+  geom_sf(data = Accomack2, size = 0.1, color = "blue", fill = "blue") + 
+  ggtitle("Accomack Impervious Surfaces Plot") + 
+  coord_sf()
+
+print(Accomack_plot)
+
+```
+
+
+
+### Tree Canopy
+
+
+
