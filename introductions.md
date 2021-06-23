@@ -12,14 +12,17 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * ML: I'm brand new to R, so I'm hoping that others can help me get better at it. I learned a couple new Mac keyboard shortcuts for R Markdown yesterday and they're already making my life so much easier, so if anyone has other shortcuts, please share!
 
+* JGG: All's well at the moment. I'm glad we've got the troubleshooting Slack channel for when issues crop up.
+
 2. What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)?
 
-* LL: Just this afternoon I purchased tickets to see Shakey Graves at the Jefferson Theater in November and I am __very__ excited to see live music again. I'd like to at least attend a Fridays After Five (or any other show I can) between now and November, but buying tickets for a concert was pretty exciting. 
+* LL: Just this afternoon I purchased tickets to see Shakey Graves at the Jefferson Theater in November and I am __very__ excited to see live music again. I'd like to at least attend a Fridays After Five (or any other show I can) between now and November, but buying tickets for a concert was pretty exciting.
 
 * KK: Very excited to just be able to go out and see my friends and do things without fear! Can’t wait for stuff like amusement parks, music festivals, and other similar things that are definitely no-gos when there’s a global pandemic going on lol
 
 * ML: I'm definitely excited to do a lot of things, but I'm especially happy that I can hang out with friends again! (Especially my new friends from my grad program, most of whom I've only ever seen through Zoom!)
 
+* JGG: At the risk of sounding overly commercial, I very much missed cafes and cocktail bars. It's satisfying to get an espresso at a coffee shop Saturday or Sunday morning and be able to sit *there* and read for a bit. And the quiet chatter of a place like Alley Light on Friday evening caps off the week perfectly; it was a bummer to have to spend so long unable to dip into that world.
 
 # June 15
 
