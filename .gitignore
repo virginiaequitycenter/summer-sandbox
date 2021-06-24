@@ -2,11 +2,11 @@
 .Rhistory
 .Rproj.user
 =======
-.zip
-.gz
-.csv
-.RData
-.rds
+*.zip
+*.gz
+*.RData
+*.rds
+*.gbo
 
 /data/
 # .gdb? shapefiles? what else?
