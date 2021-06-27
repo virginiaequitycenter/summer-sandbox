@@ -10,8 +10,8 @@ options(tigris_use_cache = TRUE)
 # get tract polygons for Cville
 cvltracts <- tracts(state = "VA", county = "540")
 
-# 1. Example for impervious surfaces ----
-# get impervious surface measures for Cville
+# 1. Exploration and Understanding ----
+# a. get impervious surface measures for Cville
 imperv <- get_nlcd(
   template = cvltracts,
   label = "Charlottesville",
@@ -37,8 +37,8 @@ st_crs(cvltracts)
 ggplot() + 
   geom_sf(data = cvltracts)
 
-# 1b. convert raster to df ----
-# this section isn't necessary for extraction, but useful for preliminary viz
+# Convert raster to df
+# this section isn't necessary for extraction below, but useful for preliminary viz
 imperv_df <- as.data.frame(imperv, xy = TRUE)
 names(imperv_df) <- c("x", "y", "imp_surf")
 
@@ -54,8 +54,61 @@ ggplot() +
   scale_fill_viridis_c() +
   geom_sf(data = cvltracts, color = "red", fill = NA)
 
+# b. get tree canopy
+tree <- get_nlcd(
+  template = cvltracts,
+  label = "Charlottesville",
+  dataset = "Tree_Canopy",
+  year = 2016, 
+  landmass = "L48"
+)
 
-# 1c. Extract pixels: target raster to target polygons ----
+plot(tree)
+
+# Convert raster to df
+tree_df <- as.data.frame(tree, xy = TRUE)
+names(tree_df) <- c("x", "y", "tree_can")
+
+ggplot(tree_df, aes(x = tree_can)) + geom_histogram()
+
+# plot raster with cvl boundaries
+ggplot() +
+  geom_raster(data = tree_df, aes(x = x, y = y, fill = tree_can)) + 
+  scale_fill_viridis_c() +
+  geom_sf(data = cvltracts, color = "red", fill = NA)
+
+# c. get land cover designation
+land <- get_nlcd(
+  template = cvltracts,
+  label = "Charlottesville",
+  dataset = "Land_Cover",
+  year = 2016, 
+  landmass = "L48"
+)
+
+# Convert raster to df
+land_df <- as.data.frame(land, xy = TRUE)
+names(land_df) <- c("x", "y", "land")
+
+# plot raster with cvl boundaries
+ggplot() +
+  geom_raster(data = land_df, aes(x = x, y = y, fill = land)) + 
+  scale_fill_viridis_d() +
+  geom_sf(data = cvltracts, color = "red", fill = NA)
+
+# d. evaluate missing in imp_surf and tree_can
+df <- left_join(imperv_df, tree_df) %>% 
+  left_join(land_df)
+
+df %>% filter(is.na(imp_surf)) %>% count(land)
+df %>% filter(is.na(tree_can)) %>% count(land)
+# still want to understand what generates a missing cell, should these be 0s?
+# the absence of 0 values makes this a possibility, and the land cover designation
+# is plausible
+
+
+# 2. Extract and summarize impervious surfaces, tree canopy ----
+# a. impervious surface
 imp_surf_extract <- raster::extract(imperv, cvltracts, df = TRUE)
 names(imp_surf_extract) <- c("tract", "imp_surf")
 
@@ -66,8 +119,6 @@ imp_surf_extract %>% group_by(tract) %>%
             miss = sum(is.na(imp_surf)),
             mean = mean(imp_surf, na.rm = TRUE), 
             std = sd(imp_surf, na.rm = TRUE))
-# still want to understand what generates a missing cell, should these be 0s?
-# the absence of 0 values makes this a possibility... .
 
 # is the mean a reasonable summary measure?
 imp_surf_extract %>% 
@@ -79,6 +130,8 @@ imp_surf_extract %>%
 imp_surf_mean <- raster::extract(imperv, cvltracts, df = TRUE, 
                                  fun = mean, na.rm = TRUE,
                                  sp = TRUE)
+# THIS WILL NEED TO CHANGE IF WE DECIDE NA's ARE ZEROS
+
 # the above returned a spatal polygon object; change it back to sf
 imp_surf_tracts <- st_as_sf(imp_surf_mean)
 imp_surf_tracts <- imp_surf_tracts %>% 
@@ -89,19 +142,8 @@ ggplot() +
   scale_fill_viridis_c()
 # this produces the tract level data for Cville
 
-# 2. Example for tree canopy ----
-# get impervious surface measures for Cville
-tree <- get_nlcd(
-  template = cvl_poly,
-  label = "Charlottesville",
-  dataset = "Tree_Canopy",
-  year = 2016, 
-  landmass = "L48"
-)
 
-plot(tree)
-
-# 2b. Extract pixels: target raster to target polygons ----
+# b. tree canopy
 tree_extract <- raster::extract(tree, cvltracts, df = TRUE)
 names(tree_extract) <- c("tract", "tree_can")
 
@@ -123,6 +165,8 @@ tree_extract %>%
 tree_mean <- raster::extract(tree, cvltracts, df = TRUE, 
                                  fun = mean, na.rm = TRUE,
                                  sp = TRUE)
+# THIS WILL NEED TO CHANGE IF WE DECIDE NA's ARE ZEROS
+
 # the above returned a spatal polygon object; change it back to sf
 tree_tracts <- st_as_sf(tree_mean)
 tree_tracts <- tree_tracts %>% 
@@ -133,7 +177,7 @@ ggplot() +
   scale_fill_viridis_c()
 # this produces the tract level data for Cville
 
-# 3. Reduce and combine impervious surface and tree canopy estimates 
+# 3. Reduce and combine impervious surface and tree canopy estimates ----
 #   into single dataframe for export to csv (can drop geometry)
 imp_surf_tracts_drop <- st_drop_geometry(imp_surf_tracts)
 tree_tracts_drop <- st_drop_geometry(tree_tracts)
@@ -148,17 +192,4 @@ write_csv(nlcd_cville_tracts, "data/nlcd_cville_tracts.csv")
 #   and for all blkgps within the Cville region
 #   and for all blocks in the Cville region
 # Then repeat for the Eastern Shore localities
-
-plot(imperv)
-plot(tree)
-# the missing areas of appear to be high for the other
-
-cells <- bind_cols(imp_surf_extract, tree_extract)
-cells %>% ggplot(aes(x = imp_surf, y = tree_can)) + geom_point()
-
-cells %>% filter(is.na(imp_surf)) %>% 
-  ggplot(aes(x = tree_can)) + geom_histogram()
-
-cells %>% filter(is.na(tree_can)) %>% 
-  ggplot(aes(x = imp_surf)) + geom_histogram()
 
