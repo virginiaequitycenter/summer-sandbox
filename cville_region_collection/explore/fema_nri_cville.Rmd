@@ -30,7 +30,23 @@ cvillefips <- c("540", "003", "065", "079", "109", "125")
 Source: FEMA, National Risk Index, October 2020 release.
 
 * Download URL: [https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip](https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip)
-* About: [https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
+
+### The Data Used here
+
+The National Risk Index is intended to provide a view of the natural hazard risk within communities. While FEMA includes information on 18 natural hazards, we focus on six -- coastal flooding, drought, heat wave, hurricane, riverine flooding, and strong wind -- pulling measures on 
+
+* frequency (measuring the number of events or event days during a reporting period and the estimated annualized frequency or probability), 
+* exposure (measuring the building value, people, or agricultural value exposed to the natural hazard event), and 
+* historic loss ratio (measuring the proportion of building value, people, or agricultural value that has been historically impacted by the natural hazard).
+
+The NRI uses data on natural hazards from multiple sources and estimates natural hazard frequency, exposure, and historic loss at the census tract level.
+
+To learn more, see: 
+
+* [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
+* [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
+
+
 
 ## Variable descriptions
 ```{r}
@@ -39,7 +55,7 @@ glimpse(nri)
 
 Observations are census tract estimates of...
 
-* Population, building value, agricultural value within tract, area of tract
+* Population, building value, agricultural value, and area within tract
 * Natural hazards include: CFLD - coastal flooding, DRGT - drought, HWAV - heat wave, HRCN - hurricane, RFLD - riverine flooding, SWND - strong wind
 * Hazard measures include: EVNTS - number of events in recording period, AFREQ - annualized frequency (# events/# years in recording period)
 * Exposure measures include: EXPB - building value exposure, EXPP - population exposure, EXPE - population equivalence exposure, EXPA - agricultural value exposure
@@ -65,7 +81,7 @@ nri %>% select(-c(OID_:STATEFIPS, COUNTYTYPE:TRACTFIPS, NRI_VER)) %>%
 ```
 
 ##  Visual distribution
-Via a grouped series of histograms
+Frequency distribution across tracts:
 
 ### Tract assets
 ```{r}
@@ -129,6 +145,7 @@ nri %>% select(contains("SWND"), TRACTFIPS) %>% select(-contains("HLRR")) %>%
 
 
 ## Maps
+Variation across tracts
 
 ```{r, echo = FALSE}
 cville_tracts <- readRDS("data/cville_tracts.RDS")
@@ -267,6 +284,6 @@ leaflet() %>%
 
 ## Nota Bene
 
-* Coastal flooding not relevant for this region.
+* Coastal flooding not relevant for this region (included for consistency with Eastern Shore work).
 * Most hazard overall ratings are very low or no ratings, except for drought; relative to larger national variation, these do not represent high risks.
-* Several hazard rates are dominated by regional effects, with little variation within th region.
+* Several hazard rates are dominated by regional effects, with little variation within the region.
