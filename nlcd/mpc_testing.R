@@ -13,7 +13,7 @@ cvltracts <- tracts(state = "VA", county = "540")
 # 1. Example for impervious surfaces ----
 # get impervious surface measures for Cville
 imperv <- get_nlcd(
-  template = cvl_poly,
+  template = cvltracts,
   label = "Charlottesville",
   dataset = "Impervious",
   year = 2016, 
@@ -27,7 +27,7 @@ summary(imperv)
 
 # check CRS
 crs(imperv) # check coordinate system: WGS84
-st_crs(cvl_poly) # check locality polygons for reference: NAD83
+st_crs(cvltracts) # check locality polygons for reference: NAD83
 
 # reproject polygons to same CRS as impervious
 cvltracts <- st_transform(cvltracts, projection(imperv))
