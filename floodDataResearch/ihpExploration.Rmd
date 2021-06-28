@@ -1,0 +1,98 @@
+# Individual Household Program
+
+FAQ Sheet:
+<file:///Users/khalila/Downloads/Individual%20and%20Households%20Program%20Remote%20Inspections.pdf>
+
+```{r}
+library(tidyverse)
+```
+
+"IHP is intended to meet basic needs and supplement disaster recovery
+efforts. The IHP is not intended to return disaster-damaged property to
+its pre-disaster condition. Disaster damage to secondary or vacation
+homes does not qualify for IHP assistance"
+
+"FEMA's Individuals and Households Program (IHP) provides financial and
+direct services to eligible individuals and households affected by a
+disaster, who have uninsured or under-insured necessary expenses and
+serious needs. IHP assistance is not a substitute for insurance and
+cannot compensate for all losses caused by a disaster. The assistance is
+intended to meet your basic needs and supplement disaster recovery
+efforts."
+
+"Any financial information is derived from NEMIS and not FEMA's official
+financial systems. Due to differences in reporting periods, status of
+obligations and how business rules are applied, this financial
+information may differ slightly from official publication on public
+websites such as usaspending.gov; this dataset is not intended to be
+used for any official federal financial reporting."
+
+**Get Data**
+
+```{r}
+ihp <- read.csv("~/DemofData/IndividualsAndHouseholdsProgramValidRegistrations.csv", header=TRUE)
+```
+
+# Notes
+
+only spatial units available are **county, city, state** ie. no
+tract/FIPS
+
+**Potentially relevant variables:**
+
+-   incidentType: Type of incident such as fire or flood. The incident type will affect the types of assistance available.
+    - after looking at data, the only incident type in our regions is Hurricanes
+
+-   declarationDate: Date the disaster was declared
+    - declaration date for every single observation in both relevant
+        regions is 2003-09-19 : must be referring to Hurricane Isabel
+
+-   grossIncome:Self-reported gross income range in U.S. dollars
+
+-   residenceType: Damaged Dwelling Residence Type (e.g., single-family home, apartment) 
+
+-   floodInsurance: Does the qpplicant have flood insurance? 
+  -    44/469 (9.38%) had insurance in eastern shore 
+  -    11/508 (2.17%) in cville 
+
+-   fipAmount: The amount of the applicant's Flood Insurance Premium (FIP) that was paid for by FEMA, in U.S. dollars
+
+-   haAmount: Total amount awarded for Housing Assistance under IHP
+
+-   onaAmount: Total dollar amount awarded for Other Needs Assistance (ONA) from the Individual and Households Program (IHP) 
+
+-   floodDamage: Was flood damage recorded?
+
+-   floodDamageAmount: FEMA-determined amount of damage to real and personal property due to flood damage, in U.S. dollars
+
+-   rentalAssistanceAmount: Amount of Rental Assistance awarded in U.S. dollars 
+  -   eligibility variable: rentalAssistanceEligible 
+  
+-   repairAmount: Amount of Repair Assistance awarded in U.S. dollars
+
+-   personalPropertyAmount: Amount of ONAnawarded for Personal Property Assistance in U.S. dollars
+  -   eligibility variable: personalPropertyEligible
+
+According to FEMA, the incident types are: Biological, Chemical,
+**Coastal Storm**, Dam/Levee Break, **Drought**, Earthquake, Explosion, Fire, Fishing Losses, **Flood**, Freezing, Human Cause, **Hurricane**, Mud/Landslide, Other, Severe Ice Storm, **Severe Storm(s)**, Snow, Terrorist, Tornado, Toxic Substances, Tsunami, Typhoon, Volcano
+
+```{r}
+eastern_ihp <- ihp %>% 
+  filter(damagedStateAbbreviation == 'VA',
+         county %in% (c('Accomack (County)', 'Northampton (County)')))
+# 469 observations
+
+cville_ihp <- ihp %>%
+  filter(damagedStateAbbreviation == 'VA',
+         county %in% (c('Charlottesville', 'Albemarle (County)','Fluvanna (County)', 'Greene (County)', 'Louisa (County)', 'Nelson (County)')))
+# 508 observations
+```
+
+```{r}
+ihpVA <- ihp %>%
+  filter(damagedStateAbbreviation == 'VA')
+```
+
+The only incident type in both regions is **'Hurricanes'**. This does
+seem a bit odd to me though, there's never been any severe storms or
+coastal floodings on the Eastern Shore?
