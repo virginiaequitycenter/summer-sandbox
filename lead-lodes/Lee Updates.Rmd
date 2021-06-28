@@ -35,8 +35,7 @@ Four different data files are available for the state of VA: (1) Census tracts e
 ## LODES
 Starting from where Michele left of on the "lodes_packages" script, I tried looking at differences in the proportion of high, mid, and low wage jobs in the different census tracts in Charlottesville. 
 
-```{r libraries}
-knitr::opts_chunk$set(echo = FALSE)
+```{r libraries, include=FALSE}
 devtools::install_git("https://github.com/hrbrmstr/lodes.git")
 library(lodes)
 library(tidyverse)
@@ -45,7 +44,7 @@ library(reshape2)
 library(psych)
 ```
 
-```{r}
+```{r, results='hide'}
 va_lodes_od <- read_lodes(state = "VA", type = "od", year = 2018, 
                           segment = "main", job_type = "JT00")
 ```
@@ -53,7 +52,6 @@ va_lodes_od <- read_lodes(state = "VA", type = "od", year = 2018,
 To practice working with these data, I restricted the observations to just those in the Charlottesville census blocks.
 
 ```{r}
-knitr::opts_chunk$set(echo = TRUE)
 cviltracts <- c("51540000201", "51540000202", "51540000302", "51540000401", "51540000402", "51540000501", "51540000502", "51540000600", 
                 "51540000700", "51540000800", "51540000900","51540001000")
 
@@ -87,17 +85,17 @@ To help simplify visualizing the data, I re-named each of the census tracts by m
 
 ```{r}
 wage$area <- ifelse(wage$w_county == "51540000800", "Seminole Square",
-                    ifelse(wage$w_county == "51540000700", "Emmett St. N", 
-                           ifelse(wage$w_county == "51540000900", "Rugby Rd",
-                                  ifelse(wage$w_county == "51540000201", "10th & Page",
-                                         ifelse(wage$w_county == "51540000202", "Washington Park",
+                    ifelse(wage$w_county == "51540000700", "Barracks Shopping Center", 
+                           ifelse(wage$w_county == "51540000900", "Locust Grove",
+                                  ifelse(wage$w_county == "51540000201", "Rose Hill",
+                                         ifelse(wage$w_county == "51540000202", "10th and Page",
                                                 ifelse(wage$w_county == "51540001000", "The Mall",
                                                        ifelse(wage$w_county == "51540000302", "Riverview",
                                                               ifelse(wage$w_county == "51540000600", "JPA",
                                                                      ifelse(wage$w_county == "51540000501", "Fifeville",
                                                                             ifelse(wage$w_county == "51540000502", "Fry's Spring",
                                                                                    ifelse(wage$w_county == "51540000401", "Belmont",
-                                                                                          ifelse(wage$w_county == "51540000402","RidgeSt",wage$w_county))))))))))))
+                                                                                          ifelse(wage$w_county == "51540000402","West View Terrace",wage$w_county))))))))))))
 
 allwage <- ggplot(wage, aes(x = area, y = allwage)) +
   geom_bar(stat = 'identity', width = 0.5)+ 
@@ -155,17 +153,18 @@ race <- cvl_rac %>%
             tot_w = sum(C000))
 
 race$area <- ifelse(race$h_county == "51540000800", "Seminole Square",
-                    ifelse(race$h_county == "51540000700", "Emmett St. N", 
-                           ifelse(race$h_county == "51540000900", "Rugby Rd",
-                                  ifelse(race$h_county == "51540000201", "10th & Page",
-                                         ifelse(race$h_county == "51540000202", "Washington Park",
+                    ifelse(race$h_county == "51540000700", "Barracks Shopping Center", 
+                           ifelse(race$h_county == "51540000900", "Locust Grove",
+                                  ifelse(race$h_county == "51540000201", "Rose Hill",
+                                         ifelse(race$h_county == "51540000202", "10th and Page",
                                                 ifelse(race$h_county == "51540001000", "The Mall",
                                                        ifelse(race$h_county == "51540000302", "Riverview",
                                                               ifelse(race$h_county == "51540000600", "JPA",
                                                                      ifelse(race$h_county == "51540000501", "Fifeville",
                                                                             ifelse(race$h_county == "51540000502", "Fry's Spring",
-                                                                                   ifelse(race$h_county == "51540000401", "Belmont",
-                                                                                          ifelse(race$h_county == "51540000402","RidgeSt",race$h_county))))))))))))
+                                                                                   ifelse(race$h_county == "51540000402", "Belmont",
+                                                                                          ifelse(race$h_county == "51540000401","West View Terrace", race$h_county))))))))))))
+
 racelong <- melt(race, 
                  id.vars = c("h_county", "area"), 
                  measure.vars = c("whitew", "blackw", "amerindw", "asianw", "nhAPIw", "tworacew"), 
