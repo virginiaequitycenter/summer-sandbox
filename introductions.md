@@ -16,6 +16,8 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * HL: People have been really helpful both in zoom calls and on the troubleshoot channel and I'm so grateful! Might be helpful to break out into smaller groups on the weekly meetings to discuss project-based questions since I've noticed that there are different formats of original datasets that people could benefit from sharing with each other (csv, raster etc)
 
+* MC: Getting a handle on so many new data sources :sweat_smile: (also, I was today days old when I learned github markdown supports [emojis](https://github.com/markdown-templates/markdown-emojis)) ... :tada:
+
 2. What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)?
 
 * LL: Just this afternoon I purchased tickets to see Shakey Graves at the Jefferson Theater in November and I am __very__ excited to see live music again. I'd like to at least attend a Fridays After Five (or any other show I can) between now and November, but buying tickets for a concert was pretty exciting.
@@ -26,7 +28,9 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * JGG: At the risk of sounding overly commercial, I very much missed cafes and cocktail bars. It's satisfying to get an espresso at a coffee shop Saturday or Sunday morning and be able to sit *there* and read for a bit. And the quiet chatter of a place like Alley Light on Friday evening caps off the week perfectly; it was a bummer to have to spend so long unable to dip into that world.
 
-* HL: Being able to hang out with people! It's been really nice going to Carter Mountain and other places, excited for the summer to be mostly back to normal. 
+* HL: Being able to hang out with people! It's been really nice going to Carter Mountain and other places, excited for the summer to be mostly back to normal.
+
+* MC: We celebrated our family's full vaccination (once the teenager was vaxxed) by (a) going to the goodwill thrift store and buying new (to us) outfits and (b) going to the downtown mall for vu noodles and the first friday's after five. It was awesome (though the downtown mall was almost overwhelming with all of the people)! Mostly I'm excited that Phoenix gets to go to theater camp __in person__ and sing (:notes:), perform (:performing_arts:) with other people!!
 
 # June 15
 
