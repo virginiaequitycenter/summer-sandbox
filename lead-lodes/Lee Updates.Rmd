@@ -2,6 +2,196 @@
 title: "Lee Equity Center Weekly Updates"
 output: html_document
 ---
+```{r libraries, include=FALSE}
+devtools::install_git("https://github.com/hrbrmstr/lodes.git")
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+```
+
+# June 28
+
+## LODES data weirdness
+I realized something weird about the LODES wac and od data...
+
+For background, there are 10,734 census block codes in the greater Charlottesville area (Charlottesville City, Albemarle, Fluvanna, Greene, Louisa, and Nelson). When working with the LODES data, we have been pulling out data for this area using the county codes (fips: 51540, 51003, 51065, 51079, 51109, 51125). For the main variables of interest from the LODES data (# of jobs in a census block, # of jobs in a census block disaggregated by wage, and proportion of high-wage jobs in each census block), we could ostensibly pull that information from either the origin-destination data file (OD) or the workplace area characteristics data file (wac). However, when filtering through the workplace census blocks (w_geocode) in the OD data file by the fips of interest, we end up with 2,019 census blocks; when filtering through the WAC datafile with the same criteria, we end up with 2,028 census blocks. According to the WAC datafile, there are jobs in the 9 census blocks missing from the OD w_geocode variable, so it's not clear to me why they aren't listed in the OD file. These are the census blocks missing from the w_geocode varibale in the OD file:
+
+* "510030101001064" Albemarle county
+* "510030104011061" Albemarle county
+* "510650201023031" Fluvanna county
+* "510650203001022" Fluvanna county
+* "511099503001037" Louisa county
+* "511259501002078" Nelson county
+* "515400002011006" Charlottesville City
+* "515400004022031" Charlottesville City
+* "515400010003009" Charlottesville City
+
+What's weirder, is that each of these census blocks are listed in the h_geocode variable in the OD datafile, which I though referred to where workers live. But, given that they are listed in the WAC file, I think they must be places of employment as well. Especially because, for example, the three missing Charlottesville census blocks listed above are in Belmont, Washington Park area (Northeast of Downtown), and the mall. Clearly, people work in those areas in addition to living there. 
+
+I'm not sure if the discrepancies matter, but based on our interest in the # of jobs in each area, I'm wondering whether it's alright to have multiple data files for the LODES data, one that contains the # of jobs per census block (disaggregated by wage, race, and educational attainment) based on the WAC data file, and a seperate file that contains the ratio of residents to jobs in each census block (and eventually, commuting distances), based on the OD data file. 
+
+Below I show the code that actually made me aware of the discrepancy. 
+
+Pulling from the OD datafile: 
+
+```{r, results='hide'}
+va_lodes_od <- read_lodes(state = "VA", type = "od", year = 2018, 
+                          segment = "main", job_type = "JT00")
+cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+```
+
+
+```{r}
+cvl_lodes_od <- va_lodes_od %>% 
+  mutate(w_county = str_sub(w_geocode, 1, 5)) %>% 
+  filter(w_county %in% cvlfips)
+```
+
+``` {r}
+cvl_wagevar_od <- cvl_lodes_od %>% 
+  group_by(w_geocode) %>% 
+  summarize(lowwage = sum(SE01),
+            midwage = sum(SE02),
+            hiwage = sum(SE03),
+            allwage = sum(S000)) %>%
+  mutate(lowwage_p = lowwage/allwage,
+         midwage_p = midwage/allwage,
+         higwage_p = hiwage/allwage)
+
+str(cvl_wagevar_od)
+```
+
+Note: 2,019 observations
+
+Pulling from the WAC datafile: 
+
+```{r}
+va_lodes_wac <- read_lodes(state = "VA", type = "workplace", year = 2018,
+                           segment = "S000", job_type = "JT00")
+```
+
+``` {r}
+cvl_lodes_wac <- va_lodes_wac %>% 
+  mutate(w_county = str_sub(w_geocode, 1, 5)) %>% 
+  filter(w_county %in% cvlfips)
+```
+
+``` {r}
+cvl_wagevar_wac <- cvl_lodes_wac %>% 
+  group_by(w_geocode) %>% 
+  summarize(lowwage = sum(CE01),
+            midwage = sum(CE02),
+            hiwage = sum(CE03),
+            allwage = sum(C000)) %>%
+  mutate(lowwage_p = lowwage/allwage,
+         midwage_p = midwage/allwage,
+         higwage_p = hiwage/allwage)
+
+str(cvl_wagevar_wac)
+```
+
+Note: 2,028 observations
+
+To confirm which census blocks were missing from the OD w_geocode variable, I ran the following code:
+
+```{r}
+missing <- unique(cvl_lodes_wac$w_geocode[which(cvl_lodes_wac$w_geocode %in% cvl_lodes_od$w_geocode == F)])
+format(missing, scientific=F)
+```
+
+## LODES data maps! 
+
+I started mapping some of the LODES data! Below I show just the proportions of high, mid, and low wage jobs in the Charlottesville census tracts.
+
+```{r}
+shape <- readOGR('US_Census_Tract_Area_2010/US_Census_Tract_Area_2010.shp')
+cviltracts <- c("51540000201", "51540000202", "51540000302", "51540000401", "51540000402", "51540000501", "51540000502", "51540000600", 
+                "51540000700", "51540000800", "51540000900","51540001000")
+
+cvl_lodes <- va_lodes_wac %>% 
+  mutate(w_county = str_sub(w_geocode, 1,11)) %>% 
+  filter(w_county %in% cviltracts)
+
+cvl_jobs <- cvl_lodes %>% 
+  group_by(w_county) %>%
+  summarize(lowwage = sum(CE01),
+         midwage = sum(CE02),
+         hiwage = sum(CE03),
+         alljobs = sum(C000),
+         White_workers = sum(CR01),
+         Black_workers = sum(CR02),
+         AI.Na_workers = sum(CR03),
+         Asian_workers = sum(CR04),
+         NaH.PI_workers = sum(CR05),
+         Multi.racial_workers = sum(CR07),
+         lessThanHS = sum(CD01),
+         HSnoCollege = sum(CD02),
+         SomeColl.Associates = sum(CD03),
+         Bach.AdvDeg = sum(CD04)) %>%  
+  mutate(lowwage_p = lowwage/alljobs,
+         midwage_p = midwage/alljobs,
+         higwage_p = hiwage/alljobs) %>%
+  mutate(Whiteworkers_p = White_workers/alljobs,
+         Blackworkers_p = Black_workers/alljobs,
+         lessThanHS_p = lessThanHS/alljobs,
+         Bach.AdvDeg_p = Bach.AdvDeg/alljobs) %>%
+  select(w_county, lowwage, midwage, hiwage, alljobs, lowwage_p, midwage_p, higwage_p, White_workers, Black_workers, AI.Na_workers, Asian_workers, NaH.PI_workers,
+         Multi.racial_workers, lessThanHS, HSnoCollege, SomeColl.Associates, Bach.AdvDeg, w_county, Whiteworkers_p,
+         Blackworkers_p, lessThanHS_p, Bach.AdvDeg_p)
+
+
+is.element(cvl_jobs$w_county, shape$Tract) %>%
+  all()
+
+cvl_jobs$Tract <- cvl_jobs$w_county
+
+cvlshapes <- merge(shape, cvl_jobs, by = 'Tract', all.x = F)
+
+# Low wage jobs
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$lowwage_p)
+
+leaflet(cvlshapes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T)) %>% 
+  addLegend("bottomright", pal = pal, values = cvlshapes$lowwage_p, 
+            title = "Proportion of low wage jobs", opacity = 0.7)
+
+# High wage jobs
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$higwage_p)
+
+leaflet(cvlshapes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(higwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T)) %>% 
+  addLegend("bottomright", pal = pal, values = cvlshapes$higwage_p, 
+            title = "Proportion of high wage jobs", opacity = 0.7)
+
+# Mid-wage jobs
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$midwage_p)
+
+leaflet(cvlshapes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(midwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T)) %>% 
+  addLegend("bottomright", pal = pal, values = cvlshapes$midwage_p, 
+            title = "Proportion of mid wage jobs", opacity = 0.7)
+```
+
 
 # June 21 
 
@@ -34,20 +224,6 @@ Four different data files are available for the state of VA: (1) Census tracts e
 
 ## LODES
 Starting from where Michele left of on the "lodes_packages" script, I tried looking at differences in the proportion of high, mid, and low wage jobs in the different census tracts in Charlottesville. 
-
-```{r libraries, include=FALSE}
-devtools::install_git("https://github.com/hrbrmstr/lodes.git")
-library(lodes)
-library(tidyverse)
-library(ggpubr)
-library(reshape2)
-library(psych)
-```
-
-```{r, results='hide'}
-va_lodes_od <- read_lodes(state = "VA", type = "od", year = 2018, 
-                          segment = "main", job_type = "JT00")
-```
 
 To practice working with these data, I restricted the observations to just those in the Charlottesville census blocks.
 
@@ -218,7 +394,7 @@ I familiarized myself with the following datasources: Low-Income Energy Affordab
 ```{r LEAD}
 knitr::opts_chunk$set(echo = TRUE)
 source('https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_missingness_monster.R')
-setwd("/Users/Carlson/Desktop/Equity Center Data Exploration")
+setwd("/Users/Carlson/Desktop/Equity Center Data Exploration/LEAD")
 leaddat1 <- read.csv("VA AMI Census Tracts 2018.csv")
 leaddat2 <- read.csv("VA FPL Census Tracts 2018.csv")
 lodesOD <- read.csv("va_od_aux_JT00_2002.csv")
