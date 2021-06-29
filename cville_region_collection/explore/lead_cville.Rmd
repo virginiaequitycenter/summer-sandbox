@@ -3,7 +3,10 @@ title: "Low-Income Energy Affordability Data"
 subtitle: "Data for Charlottesville Region"
 author: "Marisa Lemma"
 date: "6/25/2021"
-output: html_document
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -28,6 +31,8 @@ Source: Low-Income Energy Affordability Data, 2018 Update
 
 * Download URL: https://data.openei.org/submissions/573 
 * About: https://lead.openei.org/assets/files/LEAD-Tool-Methodology.pdf
+
+### About the Data
 
 ## Variable Descriptions
 ```{r}
@@ -119,23 +124,125 @@ lead %>% select(FIP, percent_burdened_owners, percent_burdened_renters) %>%
 
 ## Spatial Distributions
 
-```{r, message = F}
+Maps to show the distribution of variables across spatial units
+
+```{r, include = F}
 # Open shapefile
 cville_tracts <- readOGR('/Users/marisalemma/Downloads/US_Census_Tract_Area_2010/US_Census_Tract_Area_2010.shp', GDAL1_integer64_policy = TRUE)
 
-# Playing around with the spatial data, since I am still new to it
-color <- colorNumeric(palette = "Greens",
-            domain = as.numeric(cville_tracts$Population))
+lead <- lead %>% dplyr::rename(Tract = FIP)
 
-leaflet(cville_tracts) %>% addProviderTiles(providers$CartoDB.Positron) %>% 
-  addPolygons(color = ~color(cville_tracts$Population),
-              weight = 1, 
-              smoothFactor = 0.5,
-              opacity = 1.0, 
-              fillOpacity = 0.2,
-              highlightOptions = 
-              highlightOptions(color = "white", 
-                               weight = 2,
-                               bringToFront = TRUE))
+cvlshapes <- merge(cville_tracts, lead, by = 'Tract', all.x = F)
+
+```
+
+
+### Average Energy Burden
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$averageburden)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(averageburden),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                             "Avg. Burden: ", round(cvlshapes$averageburden, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$averageburden,
+            title = "Average Energy Burden", opacity = 0.7)
   
 ```
+
+
+### Number of Energy Burdened Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$numberburdened)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(numberburdened),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                             "Number Burdened: ", round(cvlshapes$numberburdened, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$numberburdened,
+            title = "Number of Energy Burdened Households", opacity = 0.7)
+```
+
+
+### Percent of Energy Burdened Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$percentburdened)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percentburdened),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                             "Pct. Burdened: ", round(cvlshapes$percentburdened, 2), "<br>",
+                             "Pct. Burdened - 0-30% AMI: ", round(cvlshapes$percent_0_30, 2), "<br>",
+                             "Pct. Burdened - 30-60% AMI: ", round(cvlshapes$percent_30_60, 2), "<br>",
+                             "Pct. Burdened - 60-80% AMI: ", round(cvlshapes$percent_60_80, 2), "<br>",
+                             "Pct. Burdened - 80-100% AMI: ", round(cvlshapes$percent_80_100, 2), "<br>",
+                             "Pct. Burdened - 100%+ AMI: ", round(cvlshapes$percent_over_100, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percentburdened,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+### Percent of Energy Burdened Rented Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$percent_burdened_renters)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_burdened_renters),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                             "Percent of Renters Burdened: ", round(cvlshapes$percent_burdened_renters, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_burdened_renters,
+            title = "Percent of Energy Burdened Rented Households", opacity = 0.7)
+```
+
+
+### Percent of Energy Burdened Owned Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$percent_burdened_owners)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_burdened_owners),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                             "Percent of Renters Burdened: ", round(cvlshapes$percent_burdened_owners, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_burdened_owners,
+            title = "Percent of Energy Burdened Owned Households", opacity = 0.7)
+```
+
+## Important Notes
+
+Several census tracts in Charlottesville and Albemarle County are primarily composed of UVA students, which makes energy burden difficult to calculate for these areas. Students typically spend a large portion of their "income" on energy, because they typically do not make a lot of money and get most of their money from other sources. 
+
+Census tracts 109.01, 109.02, and 109.03 in Albemarle County encompass the university. Charlottesville census tracts 2.01, 2.02, and 6, while not officially university property, house primarily students.
