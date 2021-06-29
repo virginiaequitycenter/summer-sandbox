@@ -1,0 +1,175 @@
+title: "FEMA NFIP Claims"
+author: "Khalila Karefa-Kargbo"
+date: "06/26/2021"
+```{r}
+library(tidyverse)
+library(mosaic)
+library(reticulate)
+library(stargazer)
+library(ggrepel)
+```
+
+# Get Data
+
+Source: <https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims>) from FEMA website
+
+```{r}
+claims <- read_csv("https://www.fema.gov/api/open/v1/FimaNfipClaims.csv")
+```
+
+*Define localities of interest and filter to relevant areas/years*
+
+```{r}
+cvillefips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+eastfips <- c("51001", "51131")
+
+cville_claims <- claims %>% 
+  filter(countyCode %in% cvillefips,
+         yearOfLoss >= 2010) 
+
+eastern_claims <- claims %>% 
+  filter(countyCode %in% eastfips,
+         yearOfLoss >= 2010)
+```
+
+# Exploration
+
+**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit...
+
+**\# of flood claims in spatial unit**
+
+```{r}
+cville_claims %>% count(censusTract)
+#55 total observations
+
+eastern_claims %>% count(censusTract)
+#417 total observations
+```
+
+**Variable Definitions:**
+
+amountPaidOnBuildingClaim: Dollar amount paid on the building claim. In some instances, a negative amount may appear which occurs when a check issued to a policy holder isn't cashed and has to be re-issued
+
+amountPaidOnContentsClaim: Dollar amount paid on the contents claim. In some instances, a negative amount may appear, which occurs when a check issued to a policy holder isn't cashed and has to be re-issued
+
+totalBuildingInsuranceCoverage: Total Insurance Amount in dollars on the Building (how much they are covered for)
+
+totalContentsInsuranceCoverage: Total Insurance Amount in dollars on the Contents
+
+### Creating new variables  
+(turns out to be unnecessary)
+
+```{r}
+# creating variable for total insurance amount (adding building + contents)
+cville_claims$totalInsuranceCoverage <- cville_claims$totalBuildingInsuranceCoverage + cville_claims$totalContentsInsuranceCoverage
+
+eastern_claims$totalInsuranceCoverage <- eastern_claims$totalBuildingInsuranceCoverage + eastern_claims$totalContentsInsuranceCoverage
+```
+
+```{r}
+# creating variable for total amount paid (adding building + contents)
+cville_claims$totalAmountPaid <- cville_claims$amountPaidOnBuildingClaim + cville_claims$amountPaidOnContentsClaim
+
+eastern_claims$totalAmountPaid <- eastern_claims$amountPaidOnBuildingClaim + eastern_claims$amountPaidOnContentsClaim
+```
+
+looks like there's a lot missing :(
+
+```{r}
+# missing data?
+sum(is.na(cville_claims$totalAmountPaid)) # 92.72% missing data
+sum(is.na(cville_claims$amountPaidOnBuildingClaim)) # 25.45% missing
+sum(is.na(cville_claims$totalInsuranceCoverage)) # 0
+```
+
+```{r}
+sum(is.na(eastern_claims$totalAmountPaid)) # 78.42% missing   
+sum(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 21.1% missing
+sum(is.na(eastern_claims$totalInsuranceCoverage)) # 0
+```
+
+-   could not find out the reason for the missing data, whether it was from lack of records or no money being paid for the claim (but I assume this would show up as a 0 and not NA, so still unclear)
+-   I'll continue by using just the amountPaidOnBuildingClaim variable; I'll also making a note that there is ContentsClaim data as well wherever applicable (most likely not for this exploration, but maybe if we look at individual claim data)
+- I'll also just use the totalBuilding... instead of adding building + contents to adjust for this (basically just going to ignore contents completely)
+
+**Relevant Variables**
+```{r}
+amountPaidByTract_c <- cville_claims %>%
+  group_by(censusTract) %>%
+  summarize(n = count(censusTract),
+            avgAmountPaid = mean(amountPaidOnBuildingClaim), # average $ amount paid by tract
+            avgInsuranceCoverage = mean(totalBuildingInsuranceCoverage), # average insurance covergae by tract
+            difference = avgInsuranceCoverage - avgAmountPaid, # difference btwn $ amount paid and insurance coverage
+            sumAmountPaid = sum(amountPaidOnBuildingClaim), # sum of $ amount paid
+            sumInsurance = sum(totalBuildingInsuranceCoverage)) # sum of insurance coverage
+print(amountPaidByTract_c)
+```
+```{r}
+amountPaidByTract_e <- eastern_claims %>%
+  group_by(censusTract) %>%
+  summarize(avgAmountPaid = mean(amountPaidOnBuildingClaim), # average $ amount paid by tract
+            avgInsuranceCoverage = mean(totalBuildingInsuranceCoverage), # average insurance covergae by tract
+            difference = avgInsuranceCoverage - avgAmountPaid, # difference btwn $ amount paid and insurance coverage
+            sumAmountPaid = sum(amountPaidOnBuildingClaim), # sum of $ amount paid
+            sumInsurance = sum(totalBuildingInsuranceCoverage)) # sum of insurance coverage
+print(amountPaidByTract_e)
+
+### count census tract error ?
+```
+
+# Charlottesville summaries & visualizations
+```{r}
+# 5-number summary of the $ amount paid
+cvilleClaimSum <- cville_claims %>%
+  group_by(censusTract) %>%
+  summarize(avg_amt = mean(amountPaidOnBuildingClaim, na.rm = TRUE),
+            med_amt = median(amountPaidOnBuildingClaim, na.rm = TRUE),
+            sd_amt = sd(amountPaidOnBuildingClaim, na.rm = TRUE),
+            min_amt = min(amountPaidOnBuildingClaim, na.rm = TRUE),
+            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE))
+print(cvilleClaimSum)
+# tried using stargazer but had too many syntax errors
+```
+
+```{r}
+# barplot of the average amount by census tract
+ggplot(cvilleClaimSum) + 
+  geom_col(aes(x=censusTract, y=avg_amt))
+```
+found that the ggrepel package is helpful for making the labels not overlap like they are; will see if I can figure out the syntax before next week
+
+```{r}
+# 5-number summary of the total coverage amount
+cville_claims %>%
+  summarize(avg_amt = mean(totalBuildingInsuranceCoverage),
+            med_amt = median(totalBuildingInsuranceCoverage),
+            sd_amt = sd(totalBuildingInsuranceCoverage),
+            iqr_amt = IQR(totalBuildingInsuranceCoverage),
+            min_amt = min(totalBuildingInsuranceCoverage),
+            max_amt = max(totalBuildingInsuranceCoverage))
+```
+# Eastern Shore summaries & visualizations
+```{r}
+# 5-number summary of the $ amount paid
+easternClaimSum <- eastern_claims %>%
+  group_by(censusTract) %>%
+  summarize(avg_amt = mean(amountPaidOnBuildingClaim, na.rm = TRUE),
+            med_amt = median(amountPaidOnBuildingClaim, na.rm = TRUE),
+            sd_amt = sd(amountPaidOnBuildingClaim, na.rm = TRUE),
+            min_amt = min(amountPaidOnBuildingClaim, na.rm = TRUE),
+            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE))
+print(easternClaimSum)
+```
+```{r}
+# barplot of the average amount by census tract
+ggplot(easternClaimSum) + 
+  geom_col(aes(x=censusTract, y=avg_amt))
+```
+# Miscellaneuos
+
+[This](https://www.fema.gov/about/openfema/data-sets#misc) is a list of all of FEMA's open data sets and could be helpful
+
+[claim manual](https://www.fema.gov/sites/default/files/2020-07/fema_nfip_claims-manual_2020.pdf) that gives a little more details on how claims are filed (might not be that helpful though)
+
+**Other potential variables of interest:**
+- **baseFloodElevation:** Base Flood Elevation (BFE) is the elevation at which there is a 1% chance per year of flooding in feet from the elevation certificate

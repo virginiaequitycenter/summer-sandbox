@@ -1,0 +1,141 @@
+---
+title: "Low-Income Energy Affordability Data"
+subtitle: "Data for Charlottesville Region"
+author: "Marisa Lemma"
+date: "6/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries and data
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(viridis)
+library(leaflet)
+library(rgdal)
+library(sf)
+
+lead <- read_csv("~/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/lead_cville_tract.csv")
+
+```
+
+## Data Source
+
+Source: Low-Income Energy Affordability Data, 2018 Update
+
+* Download URL: https://data.openei.org/submissions/573 
+* About: https://lead.openei.org/assets/files/LEAD-Tool-Methodology.pdf
+
+## Variable Descriptions
+```{r}
+glimpse(lead)
+```
+
+Observations are census tract estimates of:
+
+* Total income (`totalinc`)
+* Total expenditures on electricity, gas, and other energy sources (`totalelep`, `totalgas`, `totalother`)
+* Average energy burden (`averageburden`)
+  + Energy burden is defined in this data as the percentage of household income spent on energy.
+* Number of households that fall in each energy burden category:
+  + Low: less than 6% energy burden (`lowburden`)
+  + High: 6-10% energy burden (`highburden`)
+  + Very high: 10-20% energy burden (`veryhighburden`)
+  + Extremely high: 20% energy burden or higher (`extremelyhighburden`)
+* Total number of housing units (`totalunits`)
+* Total number of energy-burdened households (`numberburdened`)
+  + An energy-burdened household is one which falls in the high, very high, or extremely high categories
+* Percent of households that are energy-burdened (`percentburdened`)
+* Total number of households in each Area Median Income (AMI) category:
+  + 0-30%: household income is between 0 and 30% of AMI (`total_0_30`)
+  + 30-60%: household income is between 30 and 60% of AMI (`total_30_60`)
+  + 60-80%: household income is between 60 and 80% of AMI (`total_60_80`)
+  + 80-100%: household income is between 80 and 100% of AMI (`total_80_100`)
+  + 100%+: household income is 100% of AMI or greater (`total_over_100`)
+* Number of households in each AMI group that are energy burdened (`burdened_0_30`, `burdened_30_60`, `burdened_60_80`, `burdened_80_100`, `burdened_over_100`)
+* Percent of households in each AMI group that are energy burdened (`percent_0_30`, `percent_30_60`, `percent_60_80`, `percent_80_100`, `percent_over_100`)
+* Total number of households that are owned (`total_owners`)
+* Total number of households that are rented (`total_renters`)
+* Number of owned households that are energy burdened (`burdened_owners`)
+* Number of rented households that are energy burdened (`burdened_renters`)
+* Percent of owned households that are energy burdened (`percent_burdened_owners`)
+* Percent of rented households that are energy burdened (`percent_burdened_renters`)
+
+## Summaries
+
+Summary of all non-missing variables:
+
+```{r, message = F}
+lead %>% select(-c(FIP:tract)) %>% 
+  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual Distributions
+Visual distributions of the data, shown with histograms
+
+### Trends in Energy Burden
+```{r, message = F}
+lead %>% select(FIP, averageburden) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, message = F}
+lead %>% select(FIP, percentburdened) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram(binwidth=2) + 
+  facet_wrap(~measure, scales = "free")
+```
+
+
+
+### Trends in Energy Burden Across AMI Ranges
+```{r, message = F, warning = F}
+lead %>% select(FIP, percent_0_30:percent_over_100) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+### Trends in Energy Burden by Owning/Renting
+
+```{r}
+lead %>% select(FIP, percent_burdened_owners, percent_burdened_renters) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram(binwidth = 5) + 
+  facet_wrap(~measure, scales = "free")
+```
+
+## Spatial Distributions
+
+```{r, message = F}
+# Open shapefile
+cville_tracts <- readOGR('/Users/marisalemma/Downloads/US_Census_Tract_Area_2010/US_Census_Tract_Area_2010.shp', GDAL1_integer64_policy = TRUE)
+
+# Playing around with the spatial data, since I am still new to it
+color <- colorNumeric(palette = "Greens",
+            domain = as.numeric(cville_tracts$Population))
+
+leaflet(cville_tracts) %>% addProviderTiles(providers$CartoDB.Positron) %>% 
+  addPolygons(color = ~color(cville_tracts$Population),
+              weight = 1, 
+              smoothFactor = 0.5,
+              opacity = 1.0, 
+              fillOpacity = 0.2,
+              highlightOptions = 
+              highlightOptions(color = "white", 
+                               weight = 2,
+                               bringToFront = TRUE))
+  
+```

@@ -1,0 +1,204 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+### General Instructions
+Khalila: added folder to github loading claims and national risk into R for further exploration. Summary measures worth creating/exploring
+Reporting these things as summaries/distributions for each of the key regions is a good starting point (they can be mapped later, if they look useful; or now, if you want to)
+
+```{r}
+library(tidyverse)
+library(mosaic)
+library(reticulate)
+```
+
+**Define localities of interest**
+```{r}
+cvillefips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+eastfips <- c("51001", "51131")
+```
+
+# Insurance Claims
+Claims: # of flood claims and $ amount of claims by census tract per year (really, 2010 and on)
+```{r}
+claims <- read_csv("https://www.fema.gov/api/open/v1/FimaNfipClaims.csv")
+```
+**filter to relevant areas/years**
+```{r}
+cville_claims <- claims %>% 
+  filter(countyCode %in% cvillefips,
+         yearOfLoss >= 2010)
+
+eastern_claims <- claims %>% 
+  filter(countyCode %in% eastfips,
+         yearOfLoss >= 2010)
+```
+## Exploration
+
+**Cville Area Summaries**
+
+*55 observations*
+```{r}
+cvilleClaimSum <- cville_claims %>%
+  group_by(yearOfLoss) %>%
+  summarize(avg_amt = mean(totalBuildingInsuranceCoverage),
+            med_amt = median(totalBuildingInsuranceCoverage),
+            sd_amt = sd(totalBuildingInsuranceCoverage),
+            iqr_amt = IQR(totalBuildingInsuranceCoverage),
+            min_amt = min(totalBuildingInsuranceCoverage),
+            max_amt = max(totalBuildingInsuranceCoverage)) %>%
+  round(3)
+  print(cvilleClaimSum)
+```
+**Barplot**
+```{r}
+ggplot(cvilleClaimSum) + 
+  geom_col(aes(x=yearOfLoss, y=avg_amt)) +
+  labs(x="Year of Loss",
+       y="Average Total Insurance Amount in $ on the Building")
+```
+
+**Eastern Shore Summaries**
+
+*417 observations*
+```{r}
+shoreClaimSum <- eastern_claims %>%
+  group_by(yearOfLoss) %>%
+  summarize(avg_amt = mean(totalBuildingInsuranceCoverage),
+            med_amt = median(totalBuildingInsuranceCoverage),
+            sd_amt = sd(totalBuildingInsuranceCoverage),
+            iqr_amt = IQR(totalBuildingInsuranceCoverage),
+            min_amt = min(totalBuildingInsuranceCoverage),
+            max_amt = max(totalBuildingInsuranceCoverage)) %>%
+  round(3)
+  print(shoreClaimSum)
+```
+**Barplot**
+```{r}
+ggplot(shoreClaimSum) + 
+  geom_col(aes(x=yearOfLoss, y=avg_amt)) +
+  labs(x="Year of Loss",
+       y="Average Total Insurance Amount in $ on the Building")
+```
+**Polygons**
+long/lat of claims spatially intersected with tract files for relative geographies (tigris files are an easy way to get census tract polygons; I use tigris in the R script in the nlcd/getdata.R file)
+```{r}
+cville_claims +
+  x == latitude
+  y == longitude
+polygon(x, y = NULL, density = NULL, angle = 45,
+        border = NULL, col = NA, lty = par("lty"),
+        fillOddEven = FALSE)
+```
+***having trouble with this***
+
+...
+
+# National Risk Incidence
+NRI: *I thought I saw this available by __tract__, so flood focused risk (coastal, riverine) are a good starting point -- still not sure what the precise measures are (predicted number, predicted $ loss, predicted people affected? Are these predictions?), or what social vulnerability or community resilience reflect (I’m assuming the former is an index of population characteristics? The latter varies over larger spaces only?)*
+
+**Intro Website:** https://www.fema.gov/flood-maps/products-tools/national-risk-index
+
+**Technical Document:** https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_technical-documentation.pdf
+
+**Primer:** https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf
+
+**Data Dictionary:** CSV available
+
+**Social Vulnerability:** "broadly defined as the susceptibility of social groups to the adverse impacts of natural hazards, including disproportionate death, injury, loss, or disruption of livelihood. Social vulnerability considers the social, economic, demographic, and housing characteristics of a community that influence its ability to prepare for, respond to, cope with, recover from, and adapt to environmental hazards..."
+***Source Data:*** *University of South Carolina's Hazards and Vulnerability Research Institute (HVRI) Social Vulnerability Index (SoVI) : a location-specific assessment of social vulnerability that utilizes 29 socioeconomic variables... (see primer for more)*
+
+**Community Resilience:** "defined by FEMA as the ability of a community to prepare for anticipated natural hazards, adapt to changing conditions, and withstand and recover rapidly from disruptions...represents the relative level of community resilience for a given location. A higher Community Resilience score --> a lower Risk score...unique to a geographic location—specifically, a county— [therefore] a geographic risk factor."
+***Source Data:*** *University of South Carolina’s Hazards and Vulnerability Research Institute (HVRI) Baseline Resilience Indicators for Communities (BRIC): HVRI BRIC dataset includes a set of 49 indicators that represent six types of resilience: social, economic, community capital, institutional capacity, housing/infrastructure, and environmental... (see primer)*
+
+**different measures** measuring different things: "Score" seems most useful, giving each location a score between 0 and 100; relative *not* absolute measure, compares relative to other communities; national %ile also seems useful; they seem to be calculated predictions, technical document and primer give more information on how these metrics are calculated
+
+**download**
+```{r}
+url <- "https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip"
+download.file(url = url,
+              destfile = paste(getwd(), "/nri/", "tract.zip", sep = ""),
+              mode = "wb")
+```
+
+**unzip and read**
+```{r}
+unzip("nri/tract.zip", exdir = "nri")
+nri_table <- read_csv("NRI_Table_CensusTracts.zip")
+```
+
+**filter to relevant areas**
+```{r}
+cville_nri <- nri_table %>% 
+  filter(STCOFIPS %in% cvillefips)
+eastern_nri <- nri_table %>% 
+  filter(STCOFIPS %in% eastfips)
+```
+
+### Charlottesville Area
+
+**filter to relevant risks**
+```{r}
+relCvilleNRI <- cville_nri %>% 
+  select(-starts_with(c("AVLN", "CWAV", "DRGT", "ERQK", "HAIL", "HWAV", "HRCN", "ISTM", "LNDS", "LTNG", "SWND", "TRND", "TSUN", "VLCN", "WFIR", "WNTW"))) 
+# subtracting all natural hazards except flood-focused risks: coastal flooding and riverine flooding
+
+# all coastal flooding columns are empty/not applicable (area not @ risk for this hazard)
+
+cvilleNriSum <- relCvilleNRI %>%
+  group_by(STCOFIPS) %>%
+  summarize(avgBuildValue = mean(BUILDVALUE),
+            sdBuildValue = sd(BUILDVALUE),
+            avgEAL_VALT = mean(EAL_VALT),
+            sdEAL_VALT = sd(EAL_VALT),
+            avgRISK_SCORE = mean(RISK_SCORE),
+            sdRISK_SCORE = sd(RISK_SCORE),
+            avgSOVI_SCORE = mean(SOVI_SCORE),
+            sdSOVI_SCORE = sd(SOVI_SCORE),
+            avgRESL_SCORE = mean(RESL_SCORE),
+            sdRESL_SCORE = sd(RESL_SCORE),
+            avgRFLD_EVNTS = mean(RFLD_EVNTS),
+            sdRFLD_EVNTS = sd(RFLD_EVNTS),
+            avgRFLD_RISKS = mean(RFLD_RISKS),
+            sdRFLD_RISKS = sd(RFLD_RISKS))
+print(cvilleNriSum)
+
+# BUILDVALUE (Building Value $ Amount)
+# EAL_VALT (expected annual cost total)
+# RISK_SCORE (national risk score)
+# SOVI_SCORE (social vulnerability risk score)
+# RESL_SCORE (community resilience)
+# RFLD_EVNTS (# of riverine flooding events) / _RISKS (indvd'l hazard risk score)
+```
+
+### Eastern Shore
+```{r}
+relShoreNRI <- eastern_nri %>% 
+  select(-starts_with(c("AVLN", "CWAV", "DRGT", "ERQK", "HAIL", "HWAV", "HRCN", "ISTM", "LNDS", "LTNG", "SWND", "TRND", "TSUN", "VLCN", "WFIR", "WNTW"))) 
+
+# populated with both riverine flooding and coastal flooding data
+
+easternNriSum <- relShoreNRI %>%
+  group_by(STCOFIPS) %>%
+  summarize(avgBuildValue = mean(BUILDVALUE),
+            sdBuildValue = sd(BUILDVALUE),
+            avgEAL_VALT = mean(EAL_VALT),
+            sdEAL_VALT = sd(EAL_VALT),
+            avgRISK_SCORE = mean(RISK_SCORE),
+            sdRISK_SCORE = sd(RISK_SCORE),
+            avgSOVI_SCORE = mean(SOVI_SCORE),
+            sdSOVI_SCORE = sd(SOVI_SCORE),
+            avgRESL_SCORE = mean(RESL_SCORE),
+            sdRESL_SCORE = sd(RESL_SCORE),
+            avgRFLD_EVNTS = mean(RFLD_EVNTS),
+            sdRFLD_EVNTS = sd(RFLD_EVNTS),
+            avgRFLD_RISKS = mean(RFLD_RISKS),
+            sdRFLD_RISKS = sd(RFLD_RISKS),
+            avgCFLD_EVNTS = mean(CFLD_EVNTS),
+            sdCFLD_EVNTS = sd(CFLD_EVNTS),
+            avgCFLD_RISKS = mean(CFLD_RISKS),
+            sdCFLD_RISKS = sd(CFLD_RISKS))
+print(easternNriSum)
+```
+
+***had trouble creating visual summaries/intersecting data for both data files*** 

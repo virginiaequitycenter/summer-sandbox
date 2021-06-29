@@ -1,0 +1,12 @@
+*.DS_Store
+*.Rhistory
+*.Rproj.user
+=======
+*.zip
+*.gz
+*.RData
+*.rds
+*.gbo
+
+/data/
+# .gdb? shapefiles? what else?

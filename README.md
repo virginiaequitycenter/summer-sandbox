@@ -18,6 +18,7 @@ A repo for equity center research fellows to practice with GitHub!
 * [GitHub Guides](https://guides.github.com/) (these go into more detail and will become more useful once you're comfortable with some basics)
 * [Happy Git with R](https://happygitwithr.com/) (R czar Jenny Bryan's concise e-book on using GitHub with R/RStudio - JGG)
 * [Learn Git Branching (Game!!)](https://learngitbranching.js.org/)
+* [Dangit, Git!?!](https://dangitgit.com/en) (Plain-English solutions to common git problems; e.g., "Dangit, I did something terribly wrong, please tell me git has a magic time machine!?!" - JGG)
 
 ## Git resources
 
