@@ -7,8 +7,10 @@
 *.RData
 *.rds
 *.gbo
+.DS_Store
 
 /data/
 *.gdb?
 
 # shapefiles? what else?
+.Rproj.user
