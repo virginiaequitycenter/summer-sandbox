@@ -9,4 +9,6 @@
 *.gbo
 
 /data/
-# .gdb? shapefiles? what else?
+*.gdb?
+
+# shapefiles? what else?

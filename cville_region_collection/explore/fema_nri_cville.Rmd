@@ -20,9 +20,11 @@ library(tigris) # for shapefiles
 library(sf) # for spatial joins
 library(leaflet) # for map
 library(viridis)
+library(googlesheets4)
 
-nri <- read_csv("data/fema_nri_cville_tract.csv")
+nri <- read_csv("../data/fema_nri_cville_tract.csv")
 cvillefips <- c("540", "003", "065", "079", "109", "125")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
 ```
 
 ## Data Source
@@ -45,7 +47,6 @@ To learn more, see:
 
 * [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
 * [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
-
 
 
 ## Variable descriptions
@@ -91,56 +92,102 @@ nri %>% select(TRACTFIPS:AREA) %>%
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free")
+
+meta %>% 
+  filter(varname %in% c("TRACTFIPS", "POPULATION", "BUILDVALUE", "AGRIVALUE")) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ### Tract hazards: Drought
 ```{r}
-nri %>% select(contains("DRGT"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 
+vars <- nri %>% select(contains("DRGT"), -contains("HLRR")) %>% names()
+
+nri %>% select(all_of(vars), TRACTFIPS) %>% 
   pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+
+meta %>%
+  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ### Tract hazards: Heat Wave
 ```{r}
-nri %>% select(contains("HWAV"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 
+vars <- nri %>% select(contains("HWAV"), -contains("HLRR")) %>% names()
+
+nri %>% select(all_of(vars), TRACTFIPS) %>% 
   pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+
+meta %>%
+  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ### Tract hazards: Hurricane
 ```{r}
-nri %>% select(contains("HRCN"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 
+vars <- nri %>% select(contains("HRCN"), -contains("HLRR")) %>% names()
+
+nri %>% select(all_of(vars), TRACTFIPS) %>% 
   pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+
+meta %>%
+  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ### Tract hazards: Riverine Flooding
 ```{r}
-nri %>% select(contains("RFLD"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 
+vars <- nri %>% select(contains("RFLD"), -contains("HLRR")) %>% names()
+
+nri %>% select(all_of(vars), TRACTFIPS) %>% 
   pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+
+meta %>%
+  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ### Tract hazards: Strong Wind
 ```{r}
-nri %>% select(contains("SWND"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 
+vars <- nri %>% select(contains("SWND"), -contains("HLRR")) %>% names()
+
+nri %>% select(all_of(vars), TRACTFIPS) %>% 
   pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+
+meta %>%
+  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
+  mutate(label = paste(varname, ":", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 
@@ -148,7 +195,7 @@ nri %>% select(contains("SWND"), TRACTFIPS) %>% select(-contains("HLRR")) %>%
 Variation across tracts
 
 ```{r, echo = FALSE}
-cville_tracts <- readRDS("data/cville_tracts.RDS")
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 
 cville_nri <- cville_tracts %>% 
   left_join(nri, by = c("TRACTCE" = "TRACT"))
@@ -179,6 +226,11 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$DRGT_AFREQ, 
             title = "Drought-#/year", opacity = 0.7)
+
+meta %>%
+  filter(varname == "DRGT_AFREQ") %>% 
+  select(about) %>% 
+  as.list()
 ```
 
 ### Heat Wave
@@ -204,6 +256,11 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$HWAV_AFREQ, 
             title = "Heat Wave-#/year", opacity = 0.7)
+
+meta %>%
+  filter(varname == "HWAV_AFREQ") %>% 
+  select(about) %>% 
+  as.list()
 ```
 
 ### Hurricane
@@ -229,6 +286,11 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$HRCN_AFREQ, 
             title = "Hurricane-#/year", opacity = 0.7)
+
+meta %>%
+  filter(varname == "HRCN_AFREQ") %>% 
+  select(about) %>% 
+  as.list()
 ```
 
 ### Riverine Flooding
@@ -254,6 +316,11 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$RFLD_AFREQ, 
             title = "Riverine Flooding-#/year", opacity = 0.7)
+
+meta %>%
+  filter(varname == "RFLD_AFREQ") %>% 
+  select(about) %>% 
+  as.list()
 ```
 
 
@@ -280,6 +347,11 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$SWND_AFREQ, 
             title = "Strong Wind-#/year", opacity = 0.7)
+
+meta %>%
+  filter(varname == "SWND_AFREQ") %>% 
+  select(about) %>% 
+  as.list()
 ```
 
 ## Nota Bene
