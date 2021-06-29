@@ -9,5 +9,6 @@
 *.gbo
 
 /data/
-# .gdb? shapefiles? what else?
-.Rproj.user
+*.gdb?
+
+# shapefiles? what else?
