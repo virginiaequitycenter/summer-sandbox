@@ -22,7 +22,7 @@ library(leaflet) # for map
 library(viridis)
 library(googlesheets4)
 
-nri <- read_csv("data/fema_nri_cville_tract.csv")
+nri <- read_csv("../data/fema_nri_cville_tract.csv")
 cvillefips <- c("540", "003", "065", "079", "109", "125")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
 ```
@@ -195,7 +195,7 @@ meta %>%
 Variation across tracts
 
 ```{r, echo = FALSE}
-cville_tracts <- readRDS("data/cville_tracts.RDS")
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 
 cville_nri <- cville_tracts %>% 
   left_join(nri, by = c("TRACTCE" = "TRACT"))
