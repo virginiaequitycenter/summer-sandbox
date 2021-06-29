@@ -10,3 +10,4 @@
 
 /data/
 # .gdb? shapefiles? what else?
+.Rproj.user
