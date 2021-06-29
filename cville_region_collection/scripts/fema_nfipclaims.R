@@ -2,6 +2,8 @@
 # 2021-06-29
 # FEMA NFIP Claims (Insurance) Data 
 
+# Source link: https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims
+
 library(tidyverse)
 
 # Define localities of interest
@@ -15,13 +17,13 @@ claims <- read_csv("https://www.fema.gov/api/open/v1/FimaNfipClaims.csv")
 cville_claims <- claims %>% 
   filter(countyCode %in% cvillefips,
          yearOfLoss >= 2010) %>%
-  select(c('censusTract', 'countyCode', 'yearOfLoss', 'dateOfLoss', 'amountPaidOnBuildingClaim', 'amountPaidOnContentsClaim', 'totalBuildingInsuranceCoverage', 'totalContentsInsuranceCoverage')) %>%
+  select(c('censusTract', 'countyCode', 'yearOfLoss', 'amountPaidOnBuildingClaim', 'amountPaidOnContentsClaim', 'totalBuildingInsuranceCoverage', 'totalContentsInsuranceCoverage')) %>%
   group_by(censusTract) 
 
 eastern_claims <- claims %>% 
   filter(countyCode %in% eastfips,
          yearOfLoss >= 2010) %>%
-  select(c('censusTract', 'countyCode', 'yearOfLoss', 'dateOfLoss', 'amountPaidOnBuildingClaim', 'amountPaidOnContentsClaim', 'totalBuildingInsuranceCoverage', 'totalContentsInsuranceCoverage')) %>%
+  select(c('censusTract', 'countyCode', 'yearOfLoss', 'amountPaidOnBuildingClaim', 'amountPaidOnContentsClaim', 'totalBuildingInsuranceCoverage', 'totalContentsInsuranceCoverage')) %>%
   group_by(censusTract) 
 
 # Save to csv
