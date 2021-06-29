@@ -92,10 +92,12 @@ nri %>% select(TRACTFIPS:AREA) %>%
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>% 
-  filter(varname %in% c("TRACTFIPS", "POPULATION", "BUILDVALUE", "AGRIVALUE")) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  filter(varname %in% c("POPULATION", "BUILDVALUE", "AGRIVALUE")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -110,10 +112,12 @@ nri %>% select(all_of(vars), TRACTFIPS) %>%
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -128,10 +132,12 @@ nri %>% select(all_of(vars), TRACTFIPS) %>%
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -146,10 +152,12 @@ nri %>% select(all_of(vars), TRACTFIPS) %>%
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -164,10 +172,12 @@ nri %>% select(all_of(vars), TRACTFIPS) %>%
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -182,10 +192,12 @@ nri %>% select(all_of(vars), TRACTFIPS) %>%
   geom_histogram() + 
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   facet_wrap(~measure, scales = "free")
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
-  mutate(label = paste(varname, ":", about)) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -226,7 +238,9 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$DRGT_AFREQ, 
             title = "Drought-#/year", opacity = 0.7)
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname == "DRGT_AFREQ") %>% 
   select(about) %>% 
@@ -256,7 +270,9 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$HWAV_AFREQ, 
             title = "Heat Wave-#/year", opacity = 0.7)
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname == "HWAV_AFREQ") %>% 
   select(about) %>% 
@@ -286,7 +302,9 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$HRCN_AFREQ, 
             title = "Hurricane-#/year", opacity = 0.7)
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname == "HRCN_AFREQ") %>% 
   select(about) %>% 
@@ -316,7 +334,9 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$RFLD_AFREQ, 
             title = "Riverine Flooding-#/year", opacity = 0.7)
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname == "RFLD_AFREQ") %>% 
   select(about) %>% 
@@ -347,7 +367,9 @@ leaflet() %>%
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_nri$SWND_AFREQ, 
             title = "Strong Wind-#/year", opacity = 0.7)
+```
 
+```{r, results = "asis"}
 meta %>%
   filter(varname == "SWND_AFREQ") %>% 
   select(about) %>% 
