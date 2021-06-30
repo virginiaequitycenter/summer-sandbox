@@ -2,8 +2,8 @@
 
 A repo for equity center's data fellows summer research!
 
-* See cville_region_collection for collection of climate justice data resources for the Charlottesville region
-* See eastern_shore_collection for collection of climate justice data resources for the Eastern Shore
+* See [cville_region_collection](https://github.com/virginiaequitycenter/summer-sandbox/tree/main/cville_region_collection) for collection of climate justice data resources for the Charlottesville region
+* See [eastern_shore_collection](https://github.com/virginiaequitycenter/summer-sandbox/tree/main/eastern_shore_collection) for collection of climate justice data resources for the Eastern Shore
 
 
 ## GitHub resources
