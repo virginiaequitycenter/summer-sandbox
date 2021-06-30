@@ -1,0 +1,269 @@
+---
+title: "Low-Income Energy Affordability Data"
+subtitle: "Data for Eastern Shore Region"
+author: "Marisa Lemma"
+date: "6/30/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries and data
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(viridis)
+library(leaflet)
+library(rgdal)
+library(sf)
+
+lead <- read_csv("~/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/lead_easternshore_tract.csv")
+
+```
+
+## Data Source
+
+Source: Low-Income Energy Affordability Data, 2018 Update
+
+* Download URL: https://data.openei.org/submissions/573 
+* About: https://lead.openei.org/assets/files/LEAD-Tool-Methodology.pdf
+
+### About the Data
+
+## Variable Descriptions
+```{r}
+glimpse(lead)
+```
+
+Observations are census tract estimates of:
+
+* Total income (`totalinc`)
+* Total expenditures on electricity, gas, and other energy sources (`totalelep`, `totalgas`, `totalother`)
+* Average energy burden (`averageburden`)
+  + Energy burden is defined in this data as the percentage of household income spent on energy.
+* Average yearly household energy expenditure (`avg_hh_exp`)
+* Number of households that fall in each energy burden category:
+  + Low: less than 6% energy burden (`lowburden`)
+  + High: 6-10% energy burden (`highburden`)
+  + Very high: 10-20% energy burden (`veryhighburden`)
+  + Extremely high: 20% energy burden or higher (`extremelyhighburden`)
+* Total number of housing units (`totalunits`)
+* Total number of energy-burdened households (`numberburdened`)
+  + An energy-burdened household is one which falls in the high, very high, or extremely high categories
+* Percent of households that are energy-burdened (`percentburdened`)
+* Total number of households in each Area Median Income (AMI) category:
+  + 0-30%: household income is between 0 and 30% of AMI (`total_0_30`)
+  + 30-60%: household income is between 30 and 60% of AMI (`total_30_60`)
+  + 60-80%: household income is between 60 and 80% of AMI (`total_60_80`)
+  + 80-100%: household income is between 80 and 100% of AMI (`total_80_100`)
+  + 100%+: household income is 100% of AMI or greater (`total_over_100`)
+* Number of households in each AMI group that are energy burdened (`burdened_0_30`, `burdened_30_60`, `burdened_60_80`, `burdened_80_100`, `burdened_over_100`)
+* Percent of households in each AMI group that are energy burdened (`percent_0_30`, `percent_30_60`, `percent_60_80`, `percent_80_100`, `percent_over_100`)
+* Total number of households that are owned (`total_owners`)
+* Total number of households that are rented (`total_renters`)
+* Number of owned households that are energy burdened (`burdened_owners`)
+* Number of rented households that are energy burdened (`burdened_renters`)
+* Percent of owned households that are energy burdened (`percent_burdened_owners`)
+* Percent of rented households that are energy burdened (`percent_burdened_renters`)
+
+## Summaries
+
+Summary of all non-missing variables:
+
+```{r, message = F}
+lead %>% select(-c(FIP:tract)) %>% 
+  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual Distributions
+Visual distributions of the data, shown with histograms and scatterplots
+
+### Trends in Energy Burden
+
+```{r, message = F}
+lead %>% select(FIP, averageburden) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, message = F}
+lead %>% select(FIP, percentburdened) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram(binwidth = 2) + 
+  facet_wrap(~measure, scales = "free")
+```
+
+
+### Trends in Energy Burden Across AMI Ranges
+
+```{r, message = F, warning = F}
+lead %>% select(FIP, percent_0_30:percent_over_100) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+### Trends in Energy Burden by Owning/Renting
+
+```{r}
+lead %>% select(FIP, percent_burdened_owners, percent_burdened_renters) %>% 
+  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram(binwidth = 4) + 
+  facet_wrap(~measure, scales = "free")
+```
+
+## Spatial Distributions
+
+Maps to show the distribution of variables across spatial units
+
+```{r, include = F}
+# Open shapefile
+eastshore_tracts <- readRDS("../data/eastshore_tracts.RDS")
+
+lead <- lead %>% dplyr::rename(GEOID = FIP)
+
+easternshapes <- merge(eastshore_tracts, lead, by = 'GEOID', all.x = T)
+
+easternshapes <- st_transform(easternshapes, crs = 4326) # to WGS84, given error
+
+```
+
+
+### Average Energy Burden
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$averageburden)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(averageburden),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Avg. Burden: ", round(easternshapes$averageburden, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$averageburden,
+            title = "Average Energy Burden", opacity = 0.7)
+  
+```
+
+
+### Average Yearly Household Energy Expenditures
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$avg_hh_exp)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(avg_hh_exp),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Avg. Household Energy Expenditures: ", round(easternshapes$avg_hh_exp, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$avg_hh_exp,
+            title = "Average Yearly Household Energy Expenditures", opacity = 0.7)
+```
+
+
+### Number of Energy Burdened Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$numberburdened)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(numberburdened),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Number Burdened: ", round(easternshapes$numberburdened, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$numberburdened,
+            title = "Number of Energy Burdened Households", opacity = 0.7)
+```
+
+
+### Percent of Energy Burdened Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$percentburdened)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(percentburdened),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Pct. Burdened: ", round(easternshapes$percentburdened, 2), "<br>",
+                             "Pct. Burdened - 0-30% AMI: ", round(easternshapes$percent_0_30, 2), "<br>",
+                             "Pct. Burdened - 30-60% AMI: ", round(easternshapes$percent_30_60, 2), "<br>",
+                             "Pct. Burdened - 60-80% AMI: ", round(easternshapes$percent_60_80, 2), "<br>",
+                             "Pct. Burdened - 80-100% AMI: ", round(easternshapes$percent_80_100, 2), "<br>",
+                             "Pct. Burdened - 100%+ AMI: ", round(easternshapes$percent_over_100, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$percentburdened,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+### Percent of Energy Burdened Rented Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$percent_burdened_renters)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(percent_burdened_renters),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Pct. of Renters Burdened: ", round(easternshapes$percent_burdened_renters, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$percent_burdened_renters,
+            title = "Percent of Energy Burdened Rented Households", opacity = 0.7)
+```
+
+
+### Percent of Energy Burdened Owned Households
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = easternshapes$percent_burdened_owners)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(percent_burdened_owners),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$tract, "<br>",
+                             "Pct. of Owners Burdened: ", round(easternshapes$percent_burdened_owners, 2))) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$percent_burdened_owners,
+            title = "Percent of Energy Burdened Owned Households", opacity = 0.7)
+```
+
+## Important Notes
+Census tracts 9801, 9802, 9901, and 9902 (all from Accomack County) do not appear in this data set. 9901 and 9902 contain only water. 9801 and 9802 contain land, but have a population of 0.
