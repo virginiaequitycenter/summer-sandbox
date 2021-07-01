@@ -1,92 +1,67 @@
 title: "FEMA NFIP Claims --Eastern Shore"
 author: "Khalila Karefa-Kargbo"
-date: "06/26/2021"
+date: "06/30/2021"
 ```{r}
 library(tidyverse)
 library(mosaic)
 library(reticulate)
 library(stargazer)
-library(ggrepel)
+library(googlesheets4)
+library(tigris)
+library(sf)
+library(viridis)
+library(leaflet)
+library(rgdal)
 ```
 
 # Get Data
-
-Source: <https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims>) from FEMA website
-
-```{r}
-claims <- read_csv("https://www.fema.gov/api/open/v1/FimaNfipClaims.csv")
-```
-
-*Define localities of interest and filter to relevant areas/years*
+Source: FEMA, NFIP Redacted Claims, last updated July 2020
+* Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims]
+* Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv]
 
 ```{r}
+eastern_claims <- read_csv("fema_nfip_eastern_tract.csv")
 eastfips <- c("51001", "51131")
-
-eastern_claims <- claims %>% 
-  filter(countyCode %in% eastfips,
-         yearOfLoss >= 2010)
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
 # Exploration
+```{r}
+glimpse(eastern_claims)
+```
+
 
 **Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit...
 
 **\# of flood claims in spatial unit**
-
 ```{r}
 eastern_claims %>% count(censusTract)
 #417 total observations
 ```
 
-**Variable Definitions:**
-
-amountPaidOnBuildingClaim: Dollar amount paid on the building claim. In some instances, a negative amount may appear which occurs when a check issued to a policy holder isn't cashed and has to be re-issued
-
-amountPaidOnContentsClaim: Dollar amount paid on the contents claim. In some instances, a negative amount may appear, which occurs when a check issued to a policy holder isn't cashed and has to be re-issued
-
-totalBuildingInsuranceCoverage: Total Insurance Amount in dollars on the Building (how much they are covered for)
-
-totalContentsInsuranceCoverage: Total Insurance Amount in dollars on the Contents
-
-### Creating new variables  
-(turns out to be unnecessary)
-
+**Variable Descriptions:**
 ```{r}
-# creating variable for total insurance amount (adding building + contents)
-eastern_claims$totalInsuranceCoverage <- eastern_claims$totalBuildingInsuranceCoverage + eastern_claims$totalContentsInsuranceCoverage
+meta %>%
+  select(c(varname, about)) %>% 
+  as.list() # keeps calling nri data instead of nfip ---> fix this!!
 ```
 
+**Missing data?**
 ```{r}
-# creating variable for total amount paid (adding building + contents)
-eastern_claims$totalAmountPaid <- eastern_claims$amountPaidOnBuildingClaim + eastern_claims$amountPaidOnContentsClaim
+sum(is.na(eastern_claims$amountPaidOnContentsClaim)) # 322 / 417  
+sum(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 88 / 417
+sum(is.na(eastern_claims$totalBuildingInsuranceCoverage)) # 0
+sum(is.na(eastern_claims$totalContentsInsuranceCoverage))# 0
 ```
-
-looks like there's a lot missing :(
-
 ```{r}
-# missing data?
-sum(is.na(eastern_claims$totalAmountPaid)) # 78.42% missing   
-sum(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 21.1% missing
-sum(is.na(eastern_claims$totalInsuranceCoverage)) # 0
+prop(is.na(eastern_claims$amountPaidOnContentsClaim)) #  77.22% 
+prop(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 21.1%
+prop(is.na(eastern_claims$totalBuildingInsuranceCoverage)) # 0
+prop(is.na(eastern_claims$totalContentsInsuranceCoverage)) # 0 
 ```
-
 -   could not find out the reason for the missing data, whether it was from lack of records or no money being paid for the claim (but I assume this would show up as a 0 and not NA, so still unclear)
 -   I'll continue by using just the amountPaidOnBuildingClaim variable; I'll also making a note that there is ContentsClaim data as well wherever applicable (most likely not for this exploration, but maybe if we look at individual claim data)
 - I'll also just use the totalBuilding... instead of adding building + contents to adjust for this (basically just going to ignore contents completely)
-
-**Relevant Variables**
-```{r}
-amountPaidByTract_e <- eastern_claims %>%
-  group_by(censusTract) %>%
-  summarize(avgAmountPaid = mean(amountPaidOnBuildingClaim), # average $ amount paid by tract
-            avgInsuranceCoverage = mean(totalBuildingInsuranceCoverage), # average insurance covergae by tract
-            difference = avgInsuranceCoverage - avgAmountPaid, # difference btwn $ amount paid and insurance coverage
-            sumAmountPaid = sum(amountPaidOnBuildingClaim), # sum of $ amount paid
-            sumInsurance = sum(totalBuildingInsuranceCoverage)) # sum of insurance coverage
-print(amountPaidByTract_e)
-
-### count census tract error ?
-```
 
 # Eastern Shore summaries & visualizations
 ```{r}
@@ -97,15 +72,55 @@ easternClaimSum <- eastern_claims %>%
             med_amt = median(amountPaidOnBuildingClaim, na.rm = TRUE),
             sd_amt = sd(amountPaidOnBuildingClaim, na.rm = TRUE),
             min_amt = min(amountPaidOnBuildingClaim, na.rm = TRUE),
-            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE))
+            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE)) ###find out count census tract error
 print(easternClaimSum)
 ```
 ```{r}
-# barplot of the average amount by census tract
-ggplot(easternClaimSum) + 
-  geom_col(aes(x=censusTract, y=avg_amt))
+# 5-number summary of the total insurance amount
+easternTotalSum <- eastern_claims %>%
+  group_by(censusTract) %>%
+  summarize(avg_amt = mean(totalBuildingInsuranceCoverage, na.rm = TRUE),
+            med_amt = median(totalBuildingInsuranceCoverage, na.rm = TRUE),
+            sd_amt = sd(totalBuildingInsuranceCoverage, na.rm = TRUE),
+            min_amt = min(totalBuildingInsuranceCoverage, na.rm = TRUE),
+            max_amt = max(totalBuildingInsuranceCoverage, na.rm = TRUE))
+print(easternTotalSum) ###count census tracts
 ```
-found that the ggrepel package is helpful for making the labels not overlap like they are; will see if I can figure out the syntax before next week
+```{r}
+###difference between means
+```
+
+
+# Visual distributions
+```{r}
+# barplot of the average building amount paid by census tract
+ggplot(easternClaimSum) + 
+  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+```
+```{r}
+# barplot of the average building insurance coverage by census tract
+ggplot(easternTotalSum) + 
+  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+```
+
+# Maps 
+**Get Data**
+```{r}
+vacounties <- counties(state="VA")
+
+eastern <- vacounties %>% 
+  filter(COUNTYFP %in% c("001", "131"))
+
+sp::plot(eastern[1], col="firebrick", border=TRUE)
+```
+
+........
+```{r}
+leaflet() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addPolygons(data = eastern)
+```
+...still in progress...
 
 # Miscellaneuos
 
