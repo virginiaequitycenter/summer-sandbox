@@ -5,12 +5,10 @@
 *.zip
 *.gz
 *.RData
-*.rds
+# *.rds
 *.gbo
 .DS_Store
-
-/data/
-*.gdb?
+*.gdb
 
 # shapefiles? what else?
 .Rproj.user
