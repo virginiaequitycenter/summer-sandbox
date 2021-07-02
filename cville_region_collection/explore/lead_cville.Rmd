@@ -22,7 +22,7 @@ library(rgdal)
 library(sf)
 library(googlesheets4)
 
-lead <- read_csv("~/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/lead_cville_tract.csv")
+lead <- read_csv("../data/lead_cville_tract.csv")
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet="lead", gs4_deauth())
 
