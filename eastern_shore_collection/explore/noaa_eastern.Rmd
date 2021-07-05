@@ -1,0 +1,169 @@
+---
+title: "NOAA Temperature Data"
+subtitle: "Data for Eastern Shore Region"
+author: "Tolu Odukoya"
+date: "7/4/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+# 0. Load libraries and data
+library(tidyverse)
+library(stargazer) # for summary table
+library(janitor) # for tabyl
+library(tigris) # for shapefiles
+library(sf) # for spatial joins
+library(leaflet) # for map
+library(viridis)
+library(googlesheets4)
+library(RColorBrewer)
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(transformr)
+library(gifski)
+library(ggrepel)
+library(hrbrthemes)
+noaa <- read_csv("noaa_eastern_county.csv")
+easternfips <- c("001", "131")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
+```
+
+
+```{r load and clean new data shp, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf <- read_sf("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Work/counties")
+eastern_sf <- eastern_sf %>% filter(FIPS %in% c(51001, 51131))
+eastern_sf <- eastern_sf %>%
+                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
+eastern_sf1 <- left_join(eastern_sf, noaa, by ="CNTY_FIPS")
+```
+
+
+```{r transpose the data, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- st_as_sf(eastern_sf1)
+eastern_sf1 <- cbind(eastern_sf1, st_coordinates(st_centroid(eastern_sf1)))
+```
+
+```{r remove na, , include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- eastern_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+eastern_sf1$Year = as.numeric(eastern_sf1$Year)
+eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Jul:Dec),all_vars(!is.na(.)))
+```
+
+## Data Source
+
+Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release
+* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
+* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604)
+
+### The Data Used Here
+
+The Climate Divisional Dataset from the National Center For Environmental Information began as the only long-term temporally and spatially complete dataset from which to generate historical climate analyses (1895-2013) for the contiguous United States (CONUS). It was originally developed for climate division, statewide, regional, national, and population-weighted monitoring of drought, temperature, precipitation, and heating/cooling degree day values. 
+
+There are 344 climate divisions in the CONUS. For each climate division, monthly station temperature and precipitation values are computed from the daily observations. The divisional values are weighted by area to compute statewide values and the statewide values are weighted by area to compute regional values. (Karl and Koss, 1984).
+
+The data here is the county data from all the states in the contigous United States. While NOAA includes information on a variety of climate measures, we are focusing on the maximum temperature of the counties of interest. 
+
+To Learn More, See: 
+
+* [ National Center For Environmental Information and Data ](https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-divisions.php#grdd)
+
+
+## Variable Descriptions
+
+```{r}
+glimpse(eastern_sf1)
+```
+
+Observations are county level estimates of...
+
+* Monthly maximum temperature of each county for years 1895-2021
+* Yearly average maximum temperature for each county for those years. 
+
+## Summaries 
+
+5-number summaries of (non-missing) numeric variables (remove non-numeric observations)
+
+```{r}
+noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>% 
+  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+
+## Maps
+
+### Maximum Temperature in July across Counties for all Years 
+
+```{r}
+eastern_sf1a <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Jul), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 7) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Maximum Temperature in July for Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf1a, fps = 1, detail = 1, nframes = 127)
+```
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Jul") %>% 
+  select(about) %>% 
+  as.list()
+```
+
+### Average Yearly Maximum Temperature across Counties
+
+```{r}
+eastern_sf1b <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Avg_Temp), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "BuPu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Average Yearly Maximum Temperature For Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf1b, fps = 1, detail = 1, nframes = 127)
+```
+
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Avg_Temp") %>% 
+  select(about) %>% 
+  as.list()
+```
