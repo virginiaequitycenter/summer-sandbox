@@ -9,6 +9,9 @@ options(tigris_use_cache = TRUE)
 
 # get tract polygons for Cville
 cvltracts <- tracts(state = "VA", county = "540")
+plot(cvltracts[1])
+
+cville_tracts <- readRDS("data/cville_tracts.RDS")
 
 # 1. Exploration and Understanding ----
 # a. get impervious surface measures for Cville
@@ -16,7 +19,7 @@ imperv <- get_nlcd(
   template = cvltracts,
   label = "Charlottesville",
   dataset = "Impervious",
-  year = 2016, 
+  year = 2019, 
   landmass = "L48"
 )
 
@@ -64,12 +67,19 @@ tree <- get_nlcd(
 )
 
 plot(tree)
-
 # Convert raster to df
 tree_df <- as.data.frame(tree, xy = TRUE)
 names(tree_df) <- c("x", "y", "tree_can")
 
 ggplot(tree_df, aes(x = tree_can)) + geom_histogram()
+
+# check CRS
+crs(tree) # check coordinate system: WGS84
+st_crs(cvltracts) # check locality polygons for reference: NAD83
+
+# reproject polygons to same CRS as impervious
+cvltracts <- st_transform(cvltracts, projection(tree))
+st_crs(cvltracts)
 
 # plot raster with cvl boundaries
 ggplot() +
@@ -77,13 +87,15 @@ ggplot() +
   scale_fill_viridis_c() +
   geom_sf(data = cvltracts, color = "red", fill = NA)
 
+
 # c. get land cover designation
 land <- get_nlcd(
   template = cvltracts,
   label = "Charlottesville",
   dataset = "Land_Cover",
   year = 2016, 
-  landmass = "L48"
+  landmass = "L48",
+  extraction.dir = paste0(getwd(), "/data/FedData/")
 )
 
 # Convert raster to df
@@ -177,6 +189,23 @@ ggplot() +
   scale_fill_viridis_c()
 # this produces the tract level data for Cville
 
+# add in some tract labels
+library(googlesheets4)
+cvlnames <- read_sheet("https://docs.google.com/spreadsheets/d/1wURquMto0aqGccU7417v1JBsVqi7gm2PGOR-E_eYmoc/edit#gid=790108595",
+                       sheet = "cville") %>% 
+  mutate(GEOID = as.character(geoid))
+
+# add centroid point to sf/dataframe and keypoints
+tree_tracts <- tree_tracts %>% 
+  mutate(center = st_centroid(tree_tracts)) %>% 
+  left_join(cvlnames, by = "GEOID")
+
+ggplot() + 
+  geom_sf(data = tree_tracts, aes(fill = tree_can)) +
+  geom_text()
+  scale_fill_viridis_c()
+
+
 # 3. Reduce and combine impervious surface and tree canopy estimates ----
 #   into single dataframe for export to csv (can drop geometry)
 imp_surf_tracts_drop <- st_drop_geometry(imp_surf_tracts)
@@ -193,3 +222,5 @@ write_csv(nlcd_cville_tracts, "data/nlcd_cville_tracts.csv")
 #   and for all blocks in the Cville region
 # Then repeat for the Eastern Shore localities
 
+# Save this work
+save.image("data/nlcd_testing.Rdata")
