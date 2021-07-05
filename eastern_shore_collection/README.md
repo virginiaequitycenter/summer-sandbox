@@ -7,3 +7,4 @@ By source
 
 * [Natural hazard risk from FEMA's National Risk Index](https://virginiaequitycenter.github.io/summer-sandbox/fema_nri_eastern.html)
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_eastern.html)
+* [NOAA County-level Temperature over Time](https://virginiaequitycenter.github.io/summer-sandbox/noaa_eastern.html)
