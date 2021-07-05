@@ -1,0 +1,211 @@
+---
+title: "Script"
+author: "Helena Lindsay"
+date: "7/1/2021"
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+
+### Data from get_nlcd() 
+Data source: https://www.mrlc.gov/
+
+Data was retrieved using the FedData library, get_nlcd function. The function returns a RasterLayer of NLCD data cropped to a given template study area. In this project, we pulled the impervious surfaces and tree canopy data to then analyze based on different tracts, blocks in various locations around Virginia.
+
+
+```{r, warning=FALSE, message=FALSE}
+library(FedData) 
+library(tigris)
+library(sf)
+library(sp)
+library(raster)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+
+## Tree Canopy{.tabset}
+
+### Charlottesville Region {.tabset}
+
+```{r, warning=FALSE, message=FALSE, out.width="40%"}
+cvltracts <- readRDS("cville_tracts.RDS")
+tree <- get_nlcd(
+  template = cvltracts,
+  label = "Charlottesville",
+  dataset = "Tree_Canopy",
+  year = 2016, 
+  landmass = "L48"
+)
+
+plot(tree)
+```
+
+#### Counties
+
+```{r, message=F, warning=F}
+cvl_county <- readRDS("cville_counties.RDS")
+
+tree_county <- get_nlcd(
+  template = cvl_county,
+  label = "Charlottesville",
+  dataset = "Tree_Canopy",
+  year = 2016, 
+  landmass = "L48"
+)
+
+tree_df_county <- as.data.frame(tree_county, xy = TRUE)
+names(tree_df_county) <- c("x", "y", "tree_can")
+
+# ggplot(tree_df_county, aes(x = tree_can)) + geom_histogram()
+
+# reproject polygons to same CRS as tree
+crs(tree_county)
+cvl_county <- st_transform(cvl_county, projection(tree_county))
+
+ggplot() +
+  geom_raster(data = tree_df_county, aes(x = x, y = y, fill = tree_can)) +
+  scale_fill_viridis_c() +
+  geom_sf(data = cvl_county, color = "red", fill = NA)
+
+tree_extract_county <- raster::extract(tree_county, cvl_county, df = TRUE)
+names(tree_extract_county) <- c("counties", "tree_can")
+
+tree_extract_county %>% group_by(counties) %>% 
+  summarize(cells = n(), 
+            miss = sum(is.na(tree_can)),
+            mean = mean(tree_can, na.rm = TRUE), 
+            std = sd(tree_can, na.rm = TRUE))
+
+tree_extract_county %>% 
+  ggplot(aes(x = tree_can)) + 
+  geom_histogram() + 
+  facet_wrap(~counties)+
+  theme(strip.background = element_blank())
+
+tree_mean_county <- raster::extract(tree_county, cvl_county, df = TRUE, 
+                                 fun = mean, na.rm = TRUE,
+                                 sp = TRUE)
+# THIS WILL NEED TO CHANGE IF WE DECIDE NA's ARE ZEROS
+
+tree_county <- st_as_sf(tree_mean_county)
+tree_county <- tree_county %>% 
+  rename(tree_can = Charlottesville_NLCD_2016_Tree_Canopy_L48_nlcd)
+
+ggplot() + 
+  geom_sf(data = tree_county, aes(fill = tree_can)) +
+  scale_fill_viridis_c()
+```
+
+
+#### Tracts
+
+```{r, message=F, warning=F}
+
+tree_df <- as.data.frame(tree, xy = TRUE)
+names(tree_df) <- c("x", "y", "tree_can")
+
+crs(tree)
+cvltracts <- st_transform(cvltracts, projection(tree))
+
+ggplot() +
+  geom_raster(data = tree_df, aes(x = x, y = y, fill = tree_can)) + 
+  scale_fill_viridis_c() +
+  geom_sf(data = cvltracts, color = "red", fill = NA)
+
+
+tree_extract <- raster::extract(tree, cvltracts, df = TRUE)
+names(tree_extract) <- c("tract", "tree_can")
+
+tree_extract %>% group_by(tract) %>% 
+  summarize(cells = n(), 
+            miss = sum(is.na(tree_can)),
+            mean = mean(tree_can, na.rm = TRUE), 
+            std = sd(tree_can, na.rm = TRUE))
+
+# is the mean a reasonable summary measure?
+tree_extract %>% 
+  ggplot(aes(x = tree_can)) + 
+  geom_histogram() + 
+  facet_wrap(~tract)+
+  theme(strip.background = element_blank())
+
+tree_mean <- raster::extract(tree, cvltracts, df = TRUE, 
+                                 fun = mean, na.rm = TRUE,
+                                 sp = TRUE)
+# THIS WILL NEED TO CHANGE IF WE DECIDE NA's ARE ZEROS
+
+tree_tracts <- st_as_sf(tree_mean)
+tree_tracts <- tree_tracts %>% 
+  rename(tree_can = Charlottesville_NLCD_2016_Tree_Canopy_L48_nlcd)
+
+ggplot() + 
+  geom_sf(data = tree_tracts, aes(fill = tree_can)) +
+  scale_fill_viridis_c()
+```
+
+
+#### Block Groups
+```{r, message=F, warning=F}
+cvl_blkgps <- readRDS("cville_blkgps.RDS")
+
+tree_blkgps <- get_nlcd(
+  template = cvl_blkgps,
+  label = "Charlottesville",
+  dataset = "Tree_Canopy",
+  year = 2016, 
+  landmass = "L48"
+)
+
+tree_df_blkgps <- as.data.frame(tree_blkgps, xy = TRUE)
+names(tree_df_blkgps) <- c("x", "y", "tree_can")
+
+ggplot(tree_df_blkgps, aes(x = tree_can)) + geom_histogram()
+
+# reproject polygons to same CRS as tree
+crs(tree_blkgps)
+cvl_blkgps <- st_transform(cvl_blkgps, projection(tree_blkgps))
+
+ggplot() +
+  geom_raster(data = tree_df_blkgps, aes(x = x, y = y, fill = tree_can)) +
+  scale_fill_viridis_c() +
+  geom_sf(data = cvl_blkgps, color = "red", fill = NA)
+
+tree_extract_blkgps <- raster::extract(tree_blkgps, cvl_blkgps, df = TRUE)
+names(tree_extract_blkgps) <- c("blockgroups", "tree_can")
+
+tree_extract_blkgps %>% group_by(blockgroups) %>% 
+  summarize(cells = n(), 
+            miss = sum(is.na(tree_can)),
+            mean = mean(tree_can, na.rm = TRUE), 
+            std = sd(tree_can, na.rm = TRUE))
+
+tree_extract_blkgps %>% 
+  ggplot(aes(x = tree_can)) + 
+  geom_histogram() + 
+  facet_wrap(~blockgroups)+
+  theme(strip.background = element_blank())
+
+tree_mean_blkgps <- raster::extract(tree_blkgps, cvl_blkgps, df = TRUE, 
+                                 fun = mean, na.rm = TRUE,
+                                 sp = TRUE)
+# THIS WILL NEED TO CHANGE IF WE DECIDE NA's ARE ZEROS
+
+tree_blkgps <- st_as_sf(tree_mean_blkgps)
+tree_blkgps <- tree_blkgps %>% 
+  rename(tree_can = Charlottesville_NLCD_2016_Tree_Canopy_L48_nlcd)
+
+ggplot() + 
+  geom_sf(data = tree_blkgps, aes(fill = tree_can)) +
+  scale_fill_viridis_c()
+```
+
+

@@ -1,10 +1,14 @@
-# Individual Household Program
+# Individuals and Households Program
+
+Source: FEMA, Individuals and Households Program, last updated June 2021
+* Source URL: [https://www.fema.gov/openfema-data-page/individuals-and-households-program-valid-registrations-v1]
 
 FAQ Sheet:
 <file:///Users/khalila/Downloads/Individual%20and%20Households%20Program%20Remote%20Inspections.pdf>
 
 ```{r}
 library(tidyverse)
+library(stargazer)
 ```
 
 "IHP is intended to meet basic needs and supplement disaster recovery
@@ -33,48 +37,10 @@ used for any official federal financial reporting."
 ihp <- read.csv("~/DemofData/IndividualsAndHouseholdsProgramValidRegistrations.csv", header=TRUE)
 ```
 
-# Notes
-
-only spatial units available are **county, city, state** ie. no
-tract/FIPS
-
-**Potentially relevant variables:**
-
--   incidentType: Type of incident such as fire or flood. The incident type will affect the types of assistance available.
-    - after looking at data, the only incident type in our regions is Hurricanes
-
--   declarationDate: Date the disaster was declared
-    - declaration date for every single observation in both relevant
-        regions is 2003-09-19 : must be referring to Hurricane Isabel
-
--   grossIncome:Self-reported gross income range in U.S. dollars
-
--   residenceType: Damaged Dwelling Residence Type (e.g., single-family home, apartment) 
-
--   floodInsurance: Does the qpplicant have flood insurance? 
-  -    44/469 (9.38%) had insurance in eastern shore 
-  -    11/508 (2.17%) in cville 
-
--   fipAmount: The amount of the applicant's Flood Insurance Premium (FIP) that was paid for by FEMA, in U.S. dollars
-
--   haAmount: Total amount awarded for Housing Assistance under IHP
-
--   onaAmount: Total dollar amount awarded for Other Needs Assistance (ONA) from the Individual and Households Program (IHP) 
-
--   floodDamage: Was flood damage recorded?
-
--   floodDamageAmount: FEMA-determined amount of damage to real and personal property due to flood damage, in U.S. dollars
-
--   rentalAssistanceAmount: Amount of Rental Assistance awarded in U.S. dollars 
-  -   eligibility variable: rentalAssistanceEligible 
-  
--   repairAmount: Amount of Repair Assistance awarded in U.S. dollars
-
--   personalPropertyAmount: Amount of ONAnawarded for Personal Property Assistance in U.S. dollars
-  -   eligibility variable: personalPropertyEligible
-
-According to FEMA, the incident types are: Biological, Chemical,
-**Coastal Storm**, Dam/Levee Break, **Drought**, Earthquake, Explosion, Fire, Fishing Losses, **Flood**, Freezing, Human Cause, **Hurricane**, Mud/Landslide, Other, Severe Ice Storm, **Severe Storm(s)**, Snow, Terrorist, Tornado, Toxic Substances, Tsunami, Typhoon, Volcano
+```{r}
+ihpVA <- ihp %>%
+  filter(damagedStateAbbreviation == 'VA')
+```
 
 ```{r}
 eastern_ihp <- ihp %>% 
@@ -89,10 +55,123 @@ cville_ihp <- ihp %>%
 ```
 
 ```{r}
-ihpVA <- ihp %>%
-  filter(damagedStateAbbreviation == 'VA')
+glimpse(ihp)
 ```
 
-The only incident type in both regions is **'Hurricanes'**. This does
-seem a bit odd to me though, there's never been any severe storms or
-coastal floodings on the Eastern Shore?
+# Notes
+
+only spatial units available are **county, city, state** ie. no tract/FIPS
+
+### Potentially relevant variables:
+(fairly long list; I think they key ones are rpfvl and ppfvl)
+
+-   incidentType: Type of incident such as fire or flood. The incident type will affect the types of assistance available.
+    - after looking at data, the only incident type in our regions is Hurricanes
+
+-   declarationDate: Date the disaster was declared
+    - declaration date for every single observation in both relevant regions is 2003-09-19 : must be referring to Hurricane Isabel
+
+-   floodInsurance: Does the qpplicant have flood insurance? 
+  -  44/469 (9.38%) had insurance in eastern shore 
+  -  11/508 (2.17%) in cville 
+
+-   fipAmount: The amount of the applicant's Flood Insurance Premium (FIP) that was paid for by FEMA, in U.S. dollars
+```{r}
+stargazer(data.frame('fipAmount' = cville_ihp[, c('fipAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('fipAmount' = eastern_ihp[, c('fipAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+
+-   haAmount: Total amount awarded for Housing Assistance under IHP
+```{r}
+stargazer(data.frame('haAmount' = cville_ihp[, c('haAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('haAmount' = eastern_ihp[, c('haAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+
+-   onaAmount: Total dollar amount awarded for Other Needs Assistance (ONA) from the Individual and Households Program (IHP) 
+  - eligibility variable: onaEligible
+```{r}
+stargazer(data.frame('onaAmount' = cville_ihp[, c('onaAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('onaAmount' = eastern_ihp[, c('onaAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+  
+-   floodDamage: Was flood damage recorded?
+  - present in the data dictionary online but not in the csv?
+  
+-   floodDamageAmount: FEMA-determined amount of damage to real and personal property due to flood damage, in U.S. dollars
+  - same as above, it's online in the data dictionary but doesn't seem to be in the csv :/
+  
+-   rpfvl: FEMA-determined value of disaster-caused damage to real property components, including floors, walls, access roads and bridges, electrical, plumbing, HVAC, etc. Note: IHP does not address land damage.	
+```{r}
+stargazer(data.frame('rpfvl' = cville_ihp[, c('rpfvl')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('rpfvl' = eastern_ihp[, c('rpfvl')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+-   ppfvl: FEMA-determined value of disaster-caused damage to personal property components, including appliances, furniture, etc. Note: IHP does not address land damage.	
+```{r results='asis'}
+stargazer(data.frame('ppfvl' = cville_ihp[, c('ppfvl')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('ppfvl' = eastern_ihp[, c('ppfvl')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+
+-   rentalAssistanceAmount: Amount of Rental Assistance awarded in U.S. dollars 
+  - eligibility variable: rentalAssistanceEligible 
+```{r results='asis'}
+stargazer(data.frame('rentalAssistanceAmount' = cville_ihp[, c('rentalAssistanceAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('rentalAssistanceAmount' = eastern_ihp[, c('rentalAssistanceAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+-   repairAmount: Amount of Repair Assistance awarded in U.S. dollars
+```{r}
+stargazer(data.frame('repairAmount' = cville_ihp[, c('repairAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('repairAmount' = eastern_ihp[, c('repairAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+
+-   personalPropertyAmount: Amount of ONA awarded for Personal Property Assistance in U.S. dollars
+  - eligibility variable: personalPropertyEligible
+```{r results='asis'}
+stargazer(data.frame('personalPropertyAmount' = cville_ihp[, c('personalPropertyAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+
+stargazer(data.frame('personalPropertyAmount' = eastern_ihp[, c('personalPropertyAmount')]),
+          summary = T, type = 'text', flip = T,
+          summary.stat = c('mean', 'sd', 'min', 'max'))
+```
+***
+
+According to FEMA, the incident types are: Biological, Chemical, **Coastal Storm**, Dam/Levee Break, **Drought**, Earthquake, Explosion, Fire, Fishing Losses, **Flood**, Freezing, Human Cause, **Hurricane**, Mud/Landslide, Other, Severe Ice Storm, **Severe Storm(s)**, Snow, Terrorist, Tornado, Toxic Substances, Tsunami, Typhoon, Volcano
+
+
+The only incident type in both regions is **'Hurricanes'**. This doe seem a bit odd to me though, there's never been any severe storms or coastal floodings in the Eastern Shore?

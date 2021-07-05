@@ -10,9 +10,11 @@ library(tigris) # for shapefiles
 library(sf) # for spatial joins
 library(leaflet) # for map
 library(viridis)
+library(googlesheets4)
 
 nri <- read_csv("data/fema_nri_eastern_tract.csv")
 easternfips <- c("001", "131")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
 
 
 # 1. Data citation
@@ -58,6 +60,12 @@ nri %>% select(TRACTFIPS:AREA) %>%
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free")
+
+meta %>% 
+  filter(varname %in% c("POPULATION", "BUILDVALUE", "AGRIVALUE")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  print(width = 1000)
 
 # Tract hazards: CFLD
 nri %>% select(contains("CFLD"), TRACTFIPS) %>% select(-contains("HLRR")) %>% 

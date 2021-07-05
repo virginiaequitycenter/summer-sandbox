@@ -50,6 +50,11 @@ householdburden <- hh_energy_burden %>%
             lowburden = sum(low, na.rm = TRUE),
             totalunits = sum(high+veryhigh+extremelyhigh+low, na.rm = TRUE))
 
+# Average yearly household energy expenditure
+avg_household_exp <- hh_energy_burden %>%
+  group_by(FIP) %>% 
+  summarize(avg_hh_exp = mean(hh_energy_exp, na.rm = TRUE))
+
 # Calculate number of households in each AMI group
 # and number of burdened households in each AMI group
 burden_by_ami <- hh_energy_burden %>% 
@@ -108,6 +113,7 @@ burden_by_ten <- burden_by_ten %>%
 burden <- inner_join(energy_burden, householdburden)
 burden <- inner_join(burden, burden_by_ami)
 burden <- inner_join(burden, burden_by_ten)
+burden <- inner_join(burden, avg_household_exp)
 
 # Number of households with high energy burden or above
 burden <- burden %>% 
@@ -146,7 +152,7 @@ burden <- burden %>%
 # Change the order of the columns so that they make more sense
 burden <- burden %>%
   select(FIP, county, tract, totalinc, totalelep, totalgas, totalother,
-         averageburden, lowburden, highburden, veryhighburden,
+         averageburden, avg_hh_exp, lowburden, highburden, veryhighburden,
          extremelyhighburden, totalunits, numberburdened,
          percentburdened, everything())
 
