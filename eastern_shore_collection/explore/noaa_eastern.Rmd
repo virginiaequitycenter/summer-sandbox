@@ -28,6 +28,8 @@ library(transformr)
 library(gifski)
 library(ggrepel)
 library(hrbrthemes)
+library(climatestripes)
+library(lubridate)
 noaa <- read_csv("noaa_eastern_county.csv")
 easternfips <- c("001", "131")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
@@ -65,6 +67,7 @@ eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Jul:Dec),all_vars(!is.na(.)))
 ## Data Source
 
 Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release
+
 * Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
 * Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604)
 
@@ -137,6 +140,83 @@ meta %>%
   as.list()
 ```
 
+#### Warming Stripes Showing Maximum Temperature in July across Counties for all Years 
+```{r warming1, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+eastern_sf1_jl <- select(eastern_sf1, NAME, Year, Jul)
+
+#rename the temperature column
+eastern_sf1_jl <- rename(eastern_sf1_jl, ta = Jul)
+
+```
+
+```{r warming2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1_jl <- mutate(eastern_sf1_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r  warming3, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1_jla <- filter(eastern_sf1_jl, NAME == "Accomack")
+eastern_sf1_jln <- filter(eastern_sf1_jl, NAME == "Northampton")
+```
+
+```{r  warming4, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       axis.text.x = element_text(vjust = 3),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 14, face = "bold")
+                       )
+
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+##### Accomack County
+```{r stripes1,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf1_jla,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County
+```{r stripes2,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf1_jln,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
 ### Average Yearly Maximum Temperature across Counties
 
 ```{r}
@@ -167,3 +247,62 @@ meta %>%
   select(about) %>% 
   as.list()
 ```
+
+#### Warming Stripes Showing Average Yearly Temperature across Counties
+```{r  warming6, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+eastern_sf1_yr <- select(eastern_sf1, NAME, Year, Avg_Temp)
+
+#rename the temperature column
+eastern_sf1_yr <- rename(eastern_sf1_yr, ta = Avg_Temp)
+
+```
+
+```{r  warming7, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1_yr <- mutate(eastern_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r warming8, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1_yra <- filter(eastern_sf1_yr, NAME == "Accomack")
+eastern_sf1_yrn <- filter(eastern_sf1_yr, NAME == "Northampton")
+```
+
+##### Accomack County
+```{r stripes1a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf1_yra,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County
+```{r stripes2a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf1_yrn,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
