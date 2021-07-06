@@ -1,0 +1,203 @@
+---
+title: "Air Quality Exploration File"
+subtitle: "Data for Charlottesville Region"
+author: "Marisa Lemma"
+date: "7/6/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries and data
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(viridis)
+library(leaflet)
+library(rgdal)
+library(sf)
+library(googlesheets4)
+
+airquality <- read_csv("../data/airquality_cville_tract.csv")
+
+```
+
+## Data Source
+
+Source: Replication Data for "Disparities in PM~2.5~ air pollution in the United States"
+
+* Download URL: https://dataverse.lib.virginia.edu/dataset.xhtml?persistentId=doi:10.18130/V3/QLBNQJ
+  + Article and Findings: https://science-sciencemag-org.proxy01.its.virginia.edu/content/369/6503/575
+* Additional Information: https://science-sciencemag-org.proxy01.its.virginia.edu/content/sci/suppl/2020/07/29/369.6503.575.DC1/aaz9353_Colmer_SM.pdf
+
+
+## About the Data
+
+This data shows air pollution at each census tract. It specifically focuses on concentrations of PM~2.5~, meaning fine particulate matter that is less than 2.5 micrometers in diameter. PM~2.5~ concentrations are measured by the number of micrograms per cubic meter.
+
+
+## Variable Descriptions
+```{r}
+glimpse(airquality)
+```
+
+Observations are census tract estimates of:
+
+* PM~2.5~ levels in 1981 and 2016 (`PM2_5_1981` and `PM2_5_2016`)
+* Percentile rankings in 1981 and 2016 (`percentile_1981` and `percentile_2016`)
+* Change in PM~2.5~ level between 1981 and 2016 (`PM_change`)
+* Change in percentile rank between 1981 and 2016 (`pctile_change`)
+
+## Summaries
+
+Five-number summaries of all variables:
+```{r}
+airquality %>% select(-c(CTIDFP00:NAME00)) %>% 
+  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual Distributions
+
+Visual representations of the data:
+
+```{r, message=F, warning=F}
+airquality %>% select(CTIDFP00, percentile_1981, percentile_2016) %>% 
+  pivot_longer(-CTIDFP00, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free") +
+  xlim(0,100)
+```
+
+```{r}
+airquality %>% 
+  ggplot() +
+  geom_point(aes(x=percentile_1981, y=percentile_2016)) +
+  xlim(0, 100) +
+  ylim(0, 100)
+```
+
+```{r}
+airquality %>% 
+  ggplot() +
+  geom_point(aes(x=percentile_1981, y=pctile_change)) +
+  xlim(0, 100) 
+```
+
+```{r}
+airquality %>% 
+  ggplot() +
+  geom_point(aes(x=percentile_2016, y=pctile_change)) +
+  xlim(0, 100) 
+```
+
+
+## Spatial Distributions
+
+```{r, include = F}
+cville_tracts <- readRDS("~/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_tracts.RDS")
+
+airquality <- airquality %>% rename(GEOID = CTIDFP00)
+
+cvilleshapes <- merge(cville_tracts, airquality, by = 'GEOID', all.x = T)
+cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
+```
+
+### Percentile in 1981
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$percentile_1981)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(percentile_1981),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$NAME00, "<br>",
+                             "Percentile: ", round(cvilleshapes$percentile_1981, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_1981,
+            title = "Percentile, 1981", opacity = 0.7)
+```
+
+### Percentile in 2016
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$percentile_2016)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(percentile_2016),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$NAME00, "<br>",
+                             "Percentile: ", round(cvilleshapes$percentile_2016, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_2016,
+            title = "Percentile, 2016", opacity = 0.7)
+```
+
+
+### Percentile Change, 1981-2016
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$pctile_change)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(pctile_change),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$NAME00, "<br>",
+                             "Percentile Change: ", round(cvilleshapes$pctile_change, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$pctile_change,
+            title = "Percentile Change, 1981-2016", opacity = 0.7)
+```
+
+
+### Change in PM~2.5~
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$PM_change)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(PM_change),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$NAME00, "<br>",
+                             "PM2.5 Change: ", round(cvilleshapes$PM_change, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$PM_change,
+            title = "Change in PM2.5, 1981-2016", opacity = 0.7)
+```
+
+
+## Important Notes
+
+The census tracts listed in this data are from the 2000 census. This makes the spatial data harder to visualize, since our shapefiles come from the 2010 census boundaries. The census tracts that are different are:
+
+* 102 (Albemarle): in the 2010 census, this should be 102.01 and 102.02.
+* 104 (Albemarle): in the 2010 census, this should be 104.01 and 104.02. 
+* 106 (Albemarle): in the 2010 census, this should be 106.01 and 106.02.
+* 112 (Albemarle): in the 2010 census, this should be 112.01 and 112.02.
+* 113 (Albemarle): in the 2010 census, this should be 113.01, 113.02, and 113.03.
+* 201 (Fluvanna): in the 2010 census, this should be 201.01 and 201.02.
+* 301 (Greene): in the 2010 census, this should be 301.01 and 301.02.
+* 9502 (Louisa): in the 2010 census, this should be 9502.01 and 9502.02.
+* 9504 and 9505 (Louisa): these exist in the 2010 census but are not present in this data.
+* 1 (Charlottesville): this tract does not exist in the 2010 census, but is present in this data.
+* 3.01 (Charlottesville): this tract does not exist in the 2010 census, but is present in this data.
+* 10 (Charlottesville): this tract exists in the 2010 census but is not present in this data.
