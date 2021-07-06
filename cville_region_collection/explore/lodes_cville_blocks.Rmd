@@ -1,0 +1,192 @@
+---
+title: "LEHD LODES"
+subtitle: "Charlottesville Region Block Data"
+author: "Lee LeBoeuf"
+date: "07/06/2021"
+output: 
+  html_document:
+  toc: true
+  toc_float: true
+---
+
+## Charlottesville region 2018 LODE data exploration
+
+```{r libraries, include=FALSE}
+source('https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_missingness_monster.R')
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 'sp'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+lodes <- read.csv("lodes_employment_cville_block.csv")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "lehd_lodes", gs4_deauth())
+```
+
+## Data source 
+* Data structure description: https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf
+* Data download: https://lehd.ces.census.gov/data/lodes/LODES7/va/
+* Helpful article about how these data are collected and how they can be used: https://www.researchgate.net/publication/328700665_The_US_Census_Longitudinal_Employer-Household_Dynamics_Datasets
+
+## Data specifics
+* This data file is a combined version of the WAC and RAC data files. These datafiles were combined for the Charlottesville area due to a number of census blocks being missing from the OD data file. 
+* Data are from 2018 and census blocks are based on the 2010 census. 
+* Some limitations: jobs counts do not include those working in defense-related industries, imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location), not suitable for longitudinal analysis. 
+
+## Variable descriptions
+```{r}
+meta %>% 
+  select(description) %>% as.list()
+glimpse(lodes)
+lodes %>% select(lowwage_jobs:resid_jobs_ratio) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+loch_missingness_monster(lodes)
+```
+* Most of the missing data comes from missing residential data. 
+
+## Histograms
+```{r}
+lodes %>% select(c(w_geocode:alljobs, residents)) %>% 
+  pivot_longer(-w_geocode, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+## Mapping the data 
+```{r, echo = FALSE}
+shape <- readRDS('cville_blocks.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(w_geocode = GEOID10)
+is.element(lodes$w_geocode, shape$w_geocode) %>%
+  all()
+cvl_lodes <- merge(shape, lodes, by = 'w_geocode', all.x = T)
+```
+
+### All jobs
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$alljobs)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(alljobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+                             "Number of jobs: ", cvl_lodes$alljobs, 2)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$alljobs, 
+            title = "Number of jobs", opacity = 0.7)
+```
+
+### Ratio of residents to jobs
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$resid_jobs_ratio)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(resid_jobs_ratio),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+                             "Resident to jobs ratio: ", round(cvl_lodes$resid_jobs_ratio, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$resid_jobs_ratio, 
+            title = "Ratio of residents to jobs", opacity = 0.7)
+```
+
+# Block type categories
+```{r}
+pal <- colorFactor("plasma", reverse = TRUE, domain = cvl_lodes$blocktype)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(blocktype),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+                             "Block Type: ", cvl_lodes$blocktype, "<br>",
+                             "Number of residents: ", cvl_lodes$residents, "<br>",
+                             "Number of jobs: ", cvl_lodes$alljobs)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$blocktype, 
+            title = "Block Type", opacity = 0.7)
+```
+
+### Wages
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$lowwage_p)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+                ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+               "Prop. low-wage jobs: ", round(cvl_lodes$lowwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$lowwage_p, 
+            title = "Proportion of low wage jobs", opacity = 0.7)
+```
+
+```{r}
+# High wage jobs
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$higwage_p)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(higwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+                             "Prop. high-wage jobs: ", round(cvl_lodes$higwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$higwage_p, 
+            title = "Proportion of high-wage jobs", opacity = 0.7)
+```
+
+# Education
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$Bach_AdvDeg_jobs)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(Bach_AdvDeg_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("Block Number: ", cvl_lodes$BLOCKCE10, "<br>",
+                             "Number of jobs: ", cvl_lodes$Bach_AdvDeg_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$Bach_AdvDeg_jobs, 
+            title = "Number of jobs for college-educated workers", opacity = 0.7)
+```
+
+
+
