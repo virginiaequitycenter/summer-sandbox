@@ -1,68 +1,3 @@
----
-title: "JGG update for the week of June 28, 2021"
-author: "Jacob Goldstein-Greenwood"
-date: "7/5/2021"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(xfun)
-```
-
-Below is an overview of what I've been working on this past week.
-
----
-
-[1.] I expanded the regex pattern that we'll use to identify non-residential defendants in eviction cases by a fairly significant amount. I think that we're now covering a great deal of ground in terms of flagging commercial/government/non-profit/etc. defendants. We received code from the Princeton Eviction Lab showing part of their search, and I integrated a number of their patterns into our regex. Michele also shared an article from the Urban Institute in which they tried to identify certain classes of entities in administrative data, and I pulled from their code to expand our search pattern. I've got a few more terms to add that I've landed on as I've looked through our data and continued to think on the matter, but I think that, overall, we're in decent shape regex-wise. Like last week, the current regex pattern is included the bottom of this file. (There's also a link to download an embedded folder containing the code for the regex as well as some tests for it.)
-
----
-
-[2.] I got VA ZCTA and VA locality shapefiles (.shps and .RDSs) from tigris and generated some test maps. Our data reflect different spatial units than the data for a number of this summer's projects: The data are delineated by ZIP code and by court jurisdiction. Getting polygons for ZIP codes (technically, Zip Code Tabulation Areas, ZCTAs) was straightforward enough. Finding a way to map jurisdictional boundaries will take a bit more thinking. Unfortunately, there isn't an accessible shapefile (that we know of) that captures district court boundaries.
-
----
-
-[3.] As a quality-of-life improvement for present and future users of our code for cleaning and aggregating eviction case data, I added code that generates a text file whenever the script is run that reports time-stamped info about the cleaning process, including the number of true duplicates and serial cases found for each year, as well as some info relevant to the issue outlined in [5.] below. An example of the .txt generated is at the bottom of this file.
-
----
-
-[4.] I got an initial script together that generates by-ZIP and by-locality summary CSVs of our eviction data. Each year's CSV contains the number of cases, number of evictions, and number of default judgments for each spatial unit. **Note:** These numbers are due to change once we resolve the issue outlined below in [5.] regarding non-VA addresses in the data. I've set this script up so that, like the cleaning and aggregation script, no code changes need to be made as additional years of data are added. All we'll need to do is drop additional data folders into the script directory, run the cleaning/aggregation script, and then run the summarizing script. The latter will conclude by spitting out by-ZIP and by-locality CSVs.
-
----
-
-[5.] I discovered a data issue that we may need to discuss with the VCU group. There are a number of cases in each year for which *no defendant has a VA address listed.*
-
-For example, the concatenated defendant addresses for a two-defendant case might be:
-
-`def_address = ‘MORRISTOWN, NJ 12345 | EWING, NJ 12345’`
-
-When this occurs, it usually seems like like the *plaintiff* has a VA address. Accordingly, the case is associated with a VA court (e.g., "Richmond District Civil"). However: It's unclear where exactly the filed-against property is. Could it be possible for a plaintiff who lives in XXX, VA, to file a case in a Virginia court on behalf of a property that they own in YYY, NJ? I don't currently know.
-
-So far, I'm finding that there are 748 cases in 2019 in which no defendant has a VA address, 90 cases in 2020 in which no defendant has a VA address, and 9 cases in 2021 in which no defendant has a VA address.
-
-I don't currently know exactly what to do with these cases. I've been opting to drop them---but this may be the wrong approach.
-
-Further: There are a number of cases where (a) at least one defendant has a VA address, but (b) defendant 1 does not have an associated ZIP code listed. E.g., the defendant addresses for a two-defendant case might look like this when concatenated together:
-
-`def_address = ‘HENRICO, VA | ALTAVISTA, VA’`
-
-or
-
-`def_address = ‘HENRICO, VA | SAN ANTONIO, TX’`
-
-or
-
-`def_address = ‘HENRICO, VA | NEW YORK, NY 12345’`
-
-Such cases are currently kept in the data (because there's >= 1 defendant with a VA address), but defendant 1 doesn't have an associated ZIP code that we can use when summarizing data by spatial units.
-
-It seems like an open question as to what exactly we do in these cases: As far as I can tell, the VCU group hasn't done anything to address or identify the extent of this issue in the cleaning and analysis they've done so far.
-
-##### Updated regex search pattern
-```{R, echo = F, eval = T}
-xfun::embed_dir(path = 'jgg-update-week-of-6-28-regex', text = 'Download a .zip with the code for the pattern as well as tests of it by clicking here.')
-```
-```{R, echo = F, eval = T}
 # Regex pattern for commercial/non-residential names
 pattern <- paste0('(?i)', paste0(c('(\\bacadem(y|ics?)\\b)',
                                    '(\\badvis(ers?|ors?|ing)\\b)',
@@ -162,8 +97,3 @@ pattern <- paste0('(?i)', paste0(c('(\\bacadem(y|ics?)\\b)',
                                    '(\\d+)'),
                                  collapse = '|')
                   )
-pattern
-```
-
-##### Example of the summary text file generated by the cleaning/aggregation script
-![](jgg-update-week-of-6-28-image.png){width=75%}
