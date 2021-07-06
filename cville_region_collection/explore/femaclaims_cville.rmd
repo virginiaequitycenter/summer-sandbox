@@ -1,17 +1,14 @@
 title: "FEMA NFIP Claims --- Charlottesville"
 author: "Khalila Karefa-Kargbo"
-date: "06/30/2021"
+date: "07/06/2021"
 ```{r}
 library(tidyverse)
 library(mosaic)
-library(reticulate)
 library(stargazer)
 library(googlesheets4)
-library(tigris)
 library(sf)
 library(viridis)
 library(leaflet)
-library(rgdal)
 ```
 
 # Get Data
@@ -20,22 +17,20 @@ Source: FEMA, NFIP Redacted Claims, last updated July 2020
 * Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv]
 
 ```{r}
-cville_claims <- read_csv("fema_nfip_cville_tract.csv")
-cvillefips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+cvilleAmountPaidByTract <- read_csv("fema_nfip_cville_tract.csv")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
 # Exploration
 ```{r}
-glimpse(cville_claims)
+glimpse(cvilleAmountPaidByTract)
 ```
 
-**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit...
+**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit; goal: understanding the degree of damage experienced in a place
 
-**\# of flood claims in spatial unit**
 ```{r}
 cville_claims %>% count(censusTract)
-#55 total observations
+# 55 total observations
 ```
 
 **Variable Descriptions:**
@@ -45,109 +40,119 @@ meta %>%
   as.list()
 ```
 
-**Missing data?**
-```{r}
-sum(is.na(cville_claims$amountPaidOnContentsClaim)) # 51 / 55  
-sum(is.na(cville_claims$amountPaidOnBuildingClaim)) # 14 / 55
-sum(is.na(cville_claims$totalBuildingInsuranceCoverage)) # 0
-sum(is.na(cville_claims$totalContentsInsuranceCoverage))# 0
-```
-```{r}
-prop(is.na(cville_claims$amountPaidOnContentsClaim)) #  92.72% 
-prop(is.na(cville_claims$amountPaidOnBuildingClaim)) # 25.45%
-prop(is.na(cville_claims$totalBuildingInsuranceCoverage)) # 0
-prop(is.na(cville_claims$totalContentsInsuranceCoverage)) # 0 
-```
-
--   could not find out the reason for the missing data, whether it was from lack of records or no money being paid for the claim (but I assume this would show up as a 0 and not NA, so still unclear)
--   I'll continue by using just the amountPaidOnBuildingClaim variable; I'll also making a note that there is ContentsClaim data as well wherever applicable (most likely not for this exploration, but maybe if we look at individual claim data)
-- I'll also just use the totalBuilding... instead of adding building + contents to adjust for this (basically just going to ignore contents completely)
-
-# Charlottesville summaries & visualizations
-```{r}
-# 5-number summary of the $ amount paid
-cvilleClaimSum <- cville_claims %>%
-  group_by(censusTract) %>%
-  summarize(n = count(censusTract),
-            avg_amt = mean(amountPaidOnBuildingClaim, na.rm = TRUE),
-            med_amt = median(amountPaidOnBuildingClaim, na.rm = TRUE),
-            sd_amt = sd(amountPaidOnBuildingClaim, na.rm = TRUE),
-            min_amt = min(amountPaidOnBuildingClaim, na.rm = TRUE),
-            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE))
-print(cvilleClaimSum)
-```
-```{r}
-# 5-number summary of the total insurance amount
-cvilleTotalSum <- cville_claims %>%
-  group_by(censusTract) %>%
-  summarize(n = count(censusTract),
-            avg_amt = mean(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            med_amt = median(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            sd_amt = sd(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            min_amt = min(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            max_amt = max(totalBuildingInsuranceCoverage, na.rm = TRUE))
-print(cvilleTotalSum)
-```
-
-```{r}
-# difference between amount covered and amount paid 
-cville_claims %>% 
-  diffmean <- mean("totalBuildingInsuranceCoverage", na.rm = TRUE) - mean("amountPaidOnBuildingClaim", na.rm = TRUE)
-####fix errors####
-```
-
-```{r}
-###difference between means
-```
-
 # Visual distributions
 ```{r}
-# barplot of the average building amount paid by census tract
-ggplot(cvilleClaimSum) + 
-  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+# barplot of the total $ amount paid by census tract
+ggplot(cvilleAmountPaidByTract) + 
+  geom_col(aes(x=as.factor(censusTract), y=totalAmountPaid)) +
+  coord_flip() +
+  labs(x="Census Tract",
+       y="$ Amount Paid",
+       title="Total Building & Contents Claim Amount Paid by Census Tract")
 ```
 ```{r}
-# barplot of the average building insurance coverage by census tract
-ggplot(cvilleTotalSum) + 
-  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+# barplot of the total insurance coverage amount by census tract
+ggplot(cvilleAmountPaidByTract) + 
+  geom_col(aes(x=as.factor(censusTract), y=totalInsuranceCoverage)) +
+  coord_flip() +
+  labs(x="Census Tract",
+       y="Insurance Coverage (in $)",
+       title="Insurance Coverage Amount by Census Tract")
 ```
 
 # Maps
 **Get Data**
 ```{r}
-vacounties <- counties(state="VA")
+cville_tracts <- readRDS("data/cville_tracts.RDS")
 
-cvl_alb <- vacounties %>% 
-  filter(COUNTYFP %in% c("003", "540", "065", "125", "079", "109"))
+cvilleAmountPaidByTract <- cvilleAmountPaidByTract %>% 
+  mutate(TRACT = str_sub(censusTract, 6,11),
+    TRACT = as.character(TRACT))
 
-sp::plot(cvl_alb[1], col="firebrick", border=TRUE)
+cville_amount <- cville_tracts %>% 
+  left_join(cvilleAmountPaidByTract, by = c("TRACTCE" = "TRACT"))
 
+cville_amount <- st_transform(cville_amount, crs = 4326) # to WGS84, given error
 ```
 
-**Building Amount Paid Map**
+**Number of Claims per Census Tract**
 ```{r}
-#spatial intersection of amount paid on building claim over polygon
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$n) # viridis
 
 leaflet() %>% 
-  addProviderTiles(providers$CartoDB.Positron) %>% 
-  addPolygons(data = cvl_alb)
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cville_amount,
+              fillColor = ~pal(n),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", cville_amount$NAME, "<br>",
+                             "Number: ", round(cville_amount$n, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = cville_amount$n, 
+            title = "# FEMA Claims", opacity = 0.7)
 ```
-LEFT TO-DO:
-- get on census tract level instead of county
-- make sure its using the same coordinate system (doesn't seem to be: inconsistent datum error) (st_transform...)
-- intersect claims data 
-- addLegend
 
-**Total Building Insurance Amount Map**
+**Total Insurance Amount Map**
 ```{r}
-#working on it
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalInsuranceCoverage) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cville_amount,
+              fillColor = ~pal(totalInsuranceCoverage),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", cville_amount$NAME, "<br>",
+                             "$ Amount: ", round(cville_amount$totalInsuranceCoverage, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = cville_amount$totalInsuranceCoverage, 
+            title = "Insurace Coverage Amount", opacity = 0.7)
 ```
 
-# Miscellaneuos
+**Total Claim Amount Map**
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalAmountPaid) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cville_amount,
+              fillColor = ~pal(totalAmountPaid),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", cville_amount$NAME, "<br>",
+                             "$ Amount: ", round(cville_amount$totalAmountPaid, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = cville_amount$totalAmountPaid, 
+            title = "Claim Amount Paid", opacity = 0.7)
+```
+
+# Miscellaneous
 
 [This](https://www.fema.gov/about/openfema/data-sets#misc) is a list of all of FEMA's open data sets and could be helpful
 
 [claim manual](https://www.fema.gov/sites/default/files/2020-07/fema_nfip_claims-manual_2020.pdf) that gives a little more details on how claims are filed (might not be that helpful though)
 
-**Other potential variables of interest:**
-- **baseFloodElevation:** Base Flood Elevation (BFE) is the elevation at which there is a 1% chance per year of flooding in feet from the elevation certificate
+**Other potential variables of interest (from original dataset):**
+- **elevatedBuildingIndicator:** Yes (Y) or No (N) indicator of whether or not a building meets the NFIP definition of an elevated building (if it does not meet this criteria --> higher chance for flood damage)
+- **floodZone:** derived from the Flood Insurance Rate Map (FIRM) used to rate the insured property (ie. how susceptible to flood damage they are)
