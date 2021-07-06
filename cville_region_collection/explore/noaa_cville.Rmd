@@ -2,7 +2,7 @@
 title: "NOAA Temperature Data"
 subtitle: "Data for Charlottesville Region"
 author: "Tolu Odukoya"
-date: "7/3/2021"
+date: "7/4/2021"
 output: 
   html_document: 
     toc: true
@@ -29,6 +29,9 @@ library(transformr)
 library(gifski)
 library(ggrepel)
 library(hrbrthemes)
+library(devtools)
+library(climatestripes)
+library(lubridate)
 noaa <- read_csv("noaa_cville_county.csv")
 cvillefips <- c("540", "003", "065", "079", "109", "125")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
@@ -95,7 +98,7 @@ Observations are county level estimates of...
 
 ## Summaries 
 
-5-number summaries of (non-missing) numeric variables (remove tract identifiers)
+5-number summaries of (non-missing) numeric variables (remove non-numeric observations)
 
 ```{r}
 noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>% 
@@ -138,6 +141,153 @@ meta %>%
   as.list()
 ```
 
+#### Warming Stripes Showing Maximum Temperature in July across Counties for all Years 
+```{r warming1, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+cville_sf1_jl <- select(cville_sf1, NAME, Year, Jul)
+
+#rename the temperature column
+cville_sf1_jl <- rename(cville_sf1_jl, ta = Jul)
+
+```
+
+```{r warming2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1_jl <- mutate(cville_sf1_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r  warming3, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1_jlg <- filter(cville_sf1_jl, NAME == "Greene")
+cville_sf1_jla <- filter(cville_sf1_jl, NAME == "Albemarle")
+cville_sf1_jlc <- filter(cville_sf1_jl, NAME == "Charlottesville")
+cville_sf1_jlf <- filter(cville_sf1_jl, NAME == "Fluvanna")
+cville_sf1_jll <- filter(cville_sf1_jl, NAME == "Louisa")
+cville_sf1_jln <- filter(cville_sf1_jl, NAME == "Nelson")
+```
+
+```{r  warming4, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       axis.text.x = element_text(vjust = 3),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 14, face = "bold")
+                       )
+
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+##### Greene County
+```{r stripes1,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jlg,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Greene County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Louisa County
+```{r stripes2,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jll,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Louisa County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Nelson County
+```{r stripes3,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jln,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Nelson County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Albemarle County
+```{r stripes4,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jla,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Albemarle County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Charlottesville County
+```{r stripes5,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jlc,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Charlottesville County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Fluvanna County
+```{r stripes6,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_jlf,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Fluvanna County July Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
+
+
 #### Average Yearly Temperature across Counties
 
 ```{r}
@@ -152,7 +302,8 @@ cville_sf1b <-
                            barwidth = 1)
   )  + 
   labs(fill = "Temperature ", title = 'Year: {frame_time}',
-       caption = "Average Yearly Temperature For Charlottesville Counties") + 
+       caption = "Average Yearly Maximum 
+       Temperature For Charlottesville Counties") + 
  transition_time(as.integer(Year)) +
 ease_aes('linear') 
 ```
@@ -167,4 +318,130 @@ meta %>%
   filter(varname == "Avg_Temp") %>% 
   select(about) %>% 
   as.list()
+```
+
+#### Warming Stripes Showing Average Yearly Temperature across Counties
+```{r  warming6, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+cville_sf1_yr <- select(cville_sf1, NAME, Year, Avg_Temp)
+
+#rename the temperature column
+cville_sf1_yr <- rename(cville_sf1_yr, ta = Avg_Temp)
+
+```
+
+```{r  warming7, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1_yr <- mutate(cville_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r warming8, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1_yrg <- filter(cville_sf1_yr, NAME == "Greene")
+cville_sf1_yra <- filter(cville_sf1_yr, NAME == "Albemarle")
+cville_sf1_yrc <- filter(cville_sf1_yr, NAME == "Charlottesville")
+cville_sf1_yrf <- filter(cville_sf1_yr, NAME == "Fluvanna")
+cville_sf1_yrl <- filter(cville_sf1_yr, NAME == "Louisa")
+cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
+```
+
+##### Greene County
+```{r stripes1a,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrg,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Greene County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Louisa County
+```{r stripes2a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrl,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Louisa County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Nelson County
+```{r stripes3a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrn,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Nelson County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Albemarle County
+```{r stripes4a,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yra,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Albemarle County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Charlottesville County
+```{r stripes5a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrc,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Charlottesville County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Fluvanna County
+```{r stripes6a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrf,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Fluvanna County Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
 ```
