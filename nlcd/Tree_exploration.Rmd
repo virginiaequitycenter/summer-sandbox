@@ -1,0 +1,128 @@
+---
+title: "Script"
+author: "Helena Lindsay"
+date: "7/1/2021"
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+
+### Data from get_nlcd() 
+Data source: https://www.mrlc.gov/
+
+Data was retrieved using the FedData library, get_nlcd function. The function returns a RasterLayer of NLCD data cropped to a given template study area. In this project, we pulled the impervious surfaces and tree canopy data to then analyze based on different tracts, blocks in various locations around Virginia.
+
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(leaflet)
+library(sp)
+```
+
+
+## Tree Canopy{.tabset}
+
+### Charlottesville Region {.tabset}
+
+```{r, message=F, warning=F}
+cville_tracts <- readRDS("cville_tracts.RDS")
+cville_blkgps <- readRDS("cville_blkgps.RDS")
+cville_blocks <- readRDS("cville_blocks.RDS")
+```
+
+#### Tracts
+```{r, message=F, warning=FALSE}
+cvl_tracts <- read.csv("nlcd_tree_cville_tracts.csv")%>%
+  as.data.frame()
+# cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
+
+
+cville_tracts$tree_can <- cvl_tracts$tree_can
+
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_tracts$tree_can)
+cvl_tracts$tree_can <- as.numeric(cvl_tracts$tree_can)
+cville_tracts$COUNTYFP <- as.numeric(cville_tracts$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = cville_tracts,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvl_tracts$GEOID, "<br>",
+                             "Tree Canopy: ", cvl_tracts$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = cvl_tracts$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+```
+
+
+
+#### Blockgroups
+```{r, message=F, warning=F}
+cvl_blkgps <- read.csv("nlcd_tree_cville_blkgps.csv")%>%
+  as.data.frame()
+
+
+cville_blkgps$tree_can <- cvl_blkgps$tree_can
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_blkgps$tree_can)
+cvl_blkgps$tree_can <- as.numeric(cvl_blkgps$tree_can)
+cville_blkgps$COUNTYFP <- as.numeric(cville_blkgps$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = cville_blkgps,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvl_blkgps$GEOID, "<br>",
+                             "Tree Canopy: ", cvl_blkgps$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = cvl_blkgps$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+
+```
+
+
+#### Blocks
+```{r, message=F, warning=FALSE}
+cvl_blocks <- read.csv("nlcd_tree_cville_blocks.csv")%>%
+  as.data.frame()
+
+cville_blocks$tree_can <- cvl_blocks$tree_can
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_blocks$tree_can)
+cvl_blocks$tree_can <- as.numeric(cvl_blocks$tree_can)
+cville_blocks$COUNTYFP <- as.numeric(cville_blocks$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = cville_blocks,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvl_blocks$GEOID, "<br>",
+                             "Tree Canopy: ", cvl_blocks$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = cvl_blocks$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+```
+
+
+
+
+
