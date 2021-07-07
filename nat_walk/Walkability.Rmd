@@ -48,24 +48,78 @@ cville_walk <- read_csv(url)%>%
   filter(COUNTYFP %in% cvillefips)
 
 cville_walk <- cville_walk %>%
-    select(vars)
+    dplyr::select(vars)
 
 cville_walk <- na_if(cville_walk, -99999.00)%>%
-  group_by(BLKGRPCE)
+  group_by(TRACTCE)
+```
 
-head(cville_walk)
+# Analysis {.tabset}
+## National Walkability Index score {.tabset}
+### County
+```{r, message=F, warning=F}
+cville_walk%>%
+  ggplot(aes(x = NatWalkInd)) + 
+    geom_histogram() + 
+    facet_wrap(~COUNTYFP)+
+    theme(strip.background = element_blank())
+```
+
+### Tract
+```{r, message=F, warning=F}
+cville_walk%>%
+  ggplot(aes(x = NatWalkInd)) + 
+    geom_histogram() + 
+    facet_wrap(~TRACTCE)+
+    theme(strip.background = element_blank())
+
+
+```
+
+## D3B{.tabset}
+Street intersection density (pedestrian-oriented intersections). Higher intersection density is correlated with more walk trips.
+
+### County
+```{r, message=F, warning=F}
+cville_walk%>%
+  ggplot(aes(x = D3B)) + 
+    geom_histogram() + 
+    facet_wrap(~COUNTYFP)+
+    theme(strip.background = element_blank())
+```
+
+### Tract
+```{r, message=F, warning=F}
+cville_walk%>%
+  ggplot(aes(x = D3B)) + 
+    geom_histogram() + 
+    facet_wrap(~TRACTCE)+
+    theme(strip.background = element_blank())
 
 
 ```
 
 
+## D2B_E8MIXA {.tabset}
+The mix of employment types in a block group (such as retail, office, or industrial). Higher values correlate with more walk trips.
 
+### County
+```{r, message=F, warning=F}
 
-
-
-
-
-
-
-
+cville_walk%>%
+  ggplot(aes(x = D2B_E8MIXA)) + 
+    geom_histogram() + 
+    facet_wrap(~COUNTYFP)+
+    theme(strip.background = element_blank())
 ```
+
+### Tract
+```{r, message=F, warning=F}
+cville_walk%>%
+  ggplot(aes(x = D2B_E8MIXA)) + 
+    geom_histogram() + 
+    facet_wrap(~TRACTCE)+
+    theme(strip.background = element_blank())
+```
+
+
