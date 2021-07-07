@@ -1,0 +1,71 @@
+---
+title: "Walkability"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Data Source: https://edg.epa.gov/metadata/catalog/search/resource/details.page?uuid=%7B33514B4C-54F2-464A-BCC7-35F441B7E21A%7D
+
+
+* D3B [Street intersection density (pedestrian-oriented intersections). Higher intersection density is correlated with more walk trips.]
+
+* D4A [Predicted commute mode split - proportion of workers in the block group who carpool. (replaced -99999.00 with NA)]
+
+* D2B_E8MIXA [The mix of employment types in a block group (such as retail, office, or industrial). Higher values correlate with more walk trips.]
+
+* D2A_EPHHM [The mix of employment types and occupied housing. A block group with a diverse set of employment types (such as office, retail, and service) plus a large quantity of occupied housing units will have a relatively high value. Higher values correlate with more walk trips.]
+
+* D2A_Ranked [Resulting rank of block group for D2A_EPHHM within all block groups. Range from 1-20, higher ranks indicate more walk trip likelihood.]
+
+* D2B_Ranked [Resulting rank of block group for D2B_E8MIXA within all block groups. Range from 1-20, higher ranks indicate more walk trip likelihood.] 
+
+* D3B_Ranked [Resulting rank of block group for D3B within all block groups. Range from 1-20, higher ranks indicate more walk trip likelihood.]
+
+* D4A_Ranked [Resulting rank of block group for D4A within all block groups. Range from 1-20, higher ranks indicate more walk trip likelihood.]
+
+* NatWalkInd  [National Walkability Index score. Calculated by weighted formula using results of indicator rank scores.]
+
+
+
+
+
+
+```{r, message=F, warning=F}
+library(tidyverse)
+
+# smart location database: https://www.epa.gov/smartgrowth/smart-location-mapping#SLD
+
+url <- ("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv")
+
+
+cvillefips <- c("540", "003", "065", "079", "109", "125")
+vars = c("D3B", "D4A", "D2B_E8MIXA", "D2A_EPHHM", "D2A_Ranked", "D2B_Ranked", "D3B_Ranked", "D4A_Ranked", "NatWalkInd", "GEOID10", "GEOID20", "STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE")
+
+cville_walk <- read_csv(url)%>%
+  filter(STATEFP == 51) %>%
+  filter(COUNTYFP %in% cvillefips)
+
+cville_walk <- cville_walk %>%
+    select(vars)
+
+cville_walk <- na_if(cville_walk, -99999.00)%>%
+  group_by(BLKGRPCE)
+
+head(cville_walk)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+```
