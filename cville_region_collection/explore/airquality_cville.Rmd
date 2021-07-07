@@ -165,8 +165,26 @@ leaflet(cvilleshapes) %>%
             title = "Percentile Change, 1981-2016", opacity = 0.7)
 ```
 
+### PM~2.5~ Concentration in 2016
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$PM2_5_2016)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(PM2_5_2016),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$NAME00, "<br>",
+                             "Concentration: ", round(cvilleshapes$PM2_5_2016, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$PM2_5_2016,
+            title = "PM2.5 Concentration, 2016", opacity = 0.7)
+```
 
-### Change in PM~2.5~
+
+### Change in PM~2.5~, 1981-2016
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$PM_change)
 leaflet(cvilleshapes) %>%
