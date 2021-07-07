@@ -2,12 +2,13 @@
 title: "NOAA Temperature Data"
 subtitle: "Data for Eastern Shore Region"
 author: "Tolu Odukoya"
-date: "7/4/2021"
+date: "7/6/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
@@ -28,13 +29,13 @@ library(transformr)
 library(gifski)
 library(ggrepel)
 library(hrbrthemes)
+library(devtools)
 library(climatestripes)
 library(lubridate)
 noaa <- read_csv("noaa_eastern_county.csv")
 easternfips <- c("001", "131")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
 ```
-
 
 ```{r load and clean new data shp, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
@@ -61,7 +62,7 @@ eastern_sf1 <- eastern_sf1 %>%
                       dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
                                 geometry, everything())
 eastern_sf1$Year = as.numeric(eastern_sf1$Year)
-eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Jul:Dec),all_vars(!is.na(.)))
+eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
 ```
 
 ## Data Source
@@ -77,7 +78,7 @@ The Climate Divisional Dataset from the National Center For Environmental Inform
 
 There are 344 climate divisions in the CONUS. For each climate division, monthly station temperature and precipitation values are computed from the daily observations. The divisional values are weighted by area to compute statewide values and the statewide values are weighted by area to compute regional values. (Karl and Koss, 1984).
 
-The data here is the county data from all the states in the contigous United States. While NOAA includes information on a variety of climate measures, we are focusing on the maximum temperature of the counties of interest. 
+The data here is the county data from all the states in the contigous United States. While NOAA includes information on a variety of climate measures, we are focusing on the maximum, minimum temperature, and precipitation of the counties of interest. 
 
 To Learn More, See: 
 
@@ -92,8 +93,17 @@ glimpse(eastern_sf1)
 
 Observations are county level estimates of...
 
-* Monthly maximum temperature of each county for years 1895-2021
-* Yearly average maximum temperature for each county for those years. 
+* Monthly maximum temperature for each county for years 1895-2021
+    * Yearly average maximum temperature for each county for those years. 
+    
+
+* Monthly minimum temperature for each county for years 1895-2021
+    * Yearly average minimum temperature for each county for those years. 
+
+
+* Monthly precipitation for each county for years 1895-2021
+    * Yearly average precipitation for each county for those years.
+
 
 ## Summaries 
 
@@ -110,12 +120,14 @@ noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>%
 
 ## Maps
 
-### Maximum Temperature in July across Counties for all Years 
+### Maximum Temperature 
+
+#### Maximum Temperature in July across Counties for all Years
 
 ```{r}
 eastern_sf1a <- 
   ggplot(eastern_sf1) +
-  geom_sf(aes(fill = Jul), color = "black", alpha = .9, na.rm = TRUE) +
+  geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
    geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
   scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 7) +
      theme_void() +
@@ -135,39 +147,40 @@ animate(eastern_sf1a, fps = 1, detail = 1, nframes = 127)
 
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Jul") %>% 
+  filter(varname == "Julmax") %>% 
   select(about) %>% 
   as.list()
 ```
 
-#### Warming Stripes Showing Maximum Temperature in July across Counties for all Years 
-```{r warming1, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+#### Warming Stripes Showing Maximum Temperature in July for Each County for all Years 
+```{r warming1, echo = TRUE, warning = FALSE, message = FALSE}
 
-#select only the annual temperature and year column
-eastern_sf1_jl <- select(eastern_sf1, NAME, Year, Jul)
+#select only the july temperature and year column
+eastern_sf1_jl <- select(eastern_sf1, NAME, Year, Julmax)
 
 #rename the temperature column
-eastern_sf1_jl <- rename(eastern_sf1_jl, ta = Jul)
+eastern_sf1_jl <- rename(eastern_sf1_jl, ta = Julmax)
 
 ```
 
-```{r warming2, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```{r warming2, echo = TRUE, warning = FALSE, message = FALSE}
+
+#create a date column because stripes only works with format = date
 
 eastern_sf1_jl <- mutate(eastern_sf1_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
 
 ```
 
-```{r  warming3, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```{r  warming3, echo = TRUE, warning = FALSE, message = FALSE}
 
+#Filter out each County
 eastern_sf1_jla <- filter(eastern_sf1_jl, NAME == "Accomack")
 eastern_sf1_jln <- filter(eastern_sf1_jl, NAME == "Northampton")
 ```
 
-```{r  warming4, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```{r  warming4,  echo = TRUE, warning = FALSE, message = FALSE}
+
+# Create a theme for the stripes image
 
 theme_strip <- theme_minimal()+
                  theme(axis.text.y = element_blank(),
@@ -184,7 +197,7 @@ theme_strip <- theme_minimal()+
 col_strip <- brewer.pal(11, "RdBu")
 ```
 
-##### Accomack County
+##### Accomack County Warming Stripes: July Maximum Temperature
 ```{r stripes1,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(eastern_sf1_jla,
              aes(x = date, y = 1, fill = ta))+
@@ -200,7 +213,7 @@ col_strip <- brewer.pal(11, "RdBu")
               theme_strip
 ```
 
-##### Northampton County
+##### Northampton County Warming Stripes: July Maximum Temperature
 ```{r stripes2,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(eastern_sf1_jln,
              aes(x = date, y = 1, fill = ta))+
@@ -222,7 +235,7 @@ col_strip <- brewer.pal(11, "RdBu")
 ```{r}
 eastern_sf1b <- 
   ggplot(eastern_sf1) +
-  geom_sf(aes(fill = Avg_Temp), color = "black", alpha = .9, na.rm = TRUE) +
+  geom_sf(aes(fill = Avg_Tempmax), color = "black", alpha = .9, na.rm = TRUE) +
    geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
   scale_fill_fermenter(palette = "BuPu", direction = 1,   type = "seq", n.breaks = 6) +
      theme_void() +
@@ -243,38 +256,38 @@ animate(eastern_sf1b, fps = 1, detail = 1, nframes = 127)
 
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Avg_Temp") %>% 
+  filter(varname == "Avg_Tempmax") %>% 
   select(about) %>% 
   as.list()
 ```
 
-#### Warming Stripes Showing Average Yearly Temperature across Counties
-```{r  warming6, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+#### Warming Stripes Showing Average Yearly Maximum Temperature for Each County
+```{r  warming6, echo = TRUE, warning = FALSE, message = FALSE}
 
 #select only the annual temperature and year column
-eastern_sf1_yr <- select(eastern_sf1, NAME, Year, Avg_Temp)
+eastern_sf1_yr <- select(eastern_sf1, NAME, Year, Avg_Tempmax)
 
 #rename the temperature column
-eastern_sf1_yr <- rename(eastern_sf1_yr, ta = Avg_Temp)
+eastern_sf1_yr <- rename(eastern_sf1_yr, ta = Avg_Tempmax)
 
 ```
 
-```{r  warming7, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```{r  warming7, echo = TRUE, warning = FALSE, message = FALSE}
+
+#create a date column because stripes only works with format = date
 
 eastern_sf1_yr <- mutate(eastern_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
 
 ```
 
-```{r warming8, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```{r warming8, echo = TRUE, warning = FALSE, message = FALSE}
+#Filter out each County. No need to do theme again it's already set 
 
 eastern_sf1_yra <- filter(eastern_sf1_yr, NAME == "Accomack")
 eastern_sf1_yrn <- filter(eastern_sf1_yr, NAME == "Northampton")
 ```
 
-##### Accomack County
+##### Accomack County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes1a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(eastern_sf1_yra,
              aes(x = date, y = 1, fill = ta))+
@@ -285,12 +298,12 @@ eastern_sf1_yrn <- filter(eastern_sf1_yr, NAME == "Northampton")
            scale_y_continuous(expand = c(0, 0))+
            scale_fill_gradientn(colors = rev(col_strip))+
              guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Accomack County Yearly Maximum Temperature 1895-2020",
+            labs(title = "Accomack County Average Yearly Maximum Temperature 1895-2020",
                 caption = "Data: NOAA Surface Temperature Analysis")+
               theme_strip
 ```
 
-##### Northampton County
+##### Northampton County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes2a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(eastern_sf1_yrn,
              aes(x = date, y = 1, fill = ta))+
@@ -301,7 +314,373 @@ eastern_sf1_yrn <- filter(eastern_sf1_yr, NAME == "Northampton")
            scale_y_continuous(expand = c(0, 0))+
            scale_fill_gradientn(colors = rev(col_strip))+
              guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Northampton County Yearly Maximum Temperature 1895-2020",
+            labs(title = "Northampton County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
+
+### Minimum Temperature
+
+#### Minimum Temperature in July across Counties for all Years 
+
+```{r}
+eastern_sf2a <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Julmin), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 7) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Minimum Temperature in July for Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf2a, fps = 1, detail = 1, nframes = 127)
+```
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Julmin") %>% 
+  select(about) %>% 
+  as.list()
+```
+
+#### Warming Stripes Showing Minimum Temperature in July for Each County for all Years 
+```{r warming1b, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the july temperature and year column
+eastern_sf2_jl <- select(eastern_sf1, NAME, Year, Julmin)
+
+#rename the temperature column
+eastern_sf2_jl <- rename(eastern_sf2_jl, ta = Julmin)
+
+```
+
+```{r warming2b, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf2_jl <- mutate(eastern_sf2_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r  warming3b, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf2_jla <- filter(eastern_sf2_jl, NAME == "Accomack")
+eastern_sf2_jln <- filter(eastern_sf2_jl, NAME == "Northampton")
+```
+
+
+##### Accomack County Warming Stripes: July Minimum Temperature
+```{r stripes1b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf2_jla,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County July Minimum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County Warming Stripes: July Minimum Temperature
+```{r stripes2b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf2_jln,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County July Minimum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
+### Average Yearly Minimum Temperature across Counties
+
+```{r}
+eastern_sf2b <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Avg_Tempmin), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Average Yearly Minimum Temperature For Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf2b, fps = 1, detail = 1, nframes = 127)
+```
+
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Avg_Tempmin") %>% 
+  select(about) %>% 
+  as.list()
+```
+
+#### Warming Stripes Showing Average Yearly Minimum Temperature for Each County
+```{r  warming6a, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+eastern_sf2_yr <- select(eastern_sf1, NAME, Year, Avg_Tempmin)
+
+#rename the temperature column
+eastern_sf2_yr <- rename(eastern_sf2_yr, ta = Avg_Tempmin)
+
+```
+
+```{r  warming7a, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf2_yr <- mutate(eastern_sf2_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r warming8a, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf2_yra <- filter(eastern_sf2_yr, NAME == "Accomack")
+eastern_sf2_yrn <- filter(eastern_sf2_yr, NAME == "Northampton")
+```
+
+##### Accomack County Warming Stripes: Average Yearly Minimum Temperature
+```{r stripes1c,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf2_yra,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County Average Yearly Minimum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County Warming Stripes: Average Yearly Minimum Temperature
+```{r stripes2c,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf2_yrn,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County Average Yearly Minimum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
+
+### Precipitation
+
+#### Precipitation in July across Counties for all Years 
+
+```{r}
+eastern_sf3a <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Julpcp), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuBuGn", direction = 1,   type = "seq", n.breaks = 7) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Precipitation", title = 'Year: {frame_time}',
+       caption = "Precipitation in July for Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf3a, fps = 1, detail = 1, nframes = 127)
+```
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Julpcp") %>% 
+  select(about) %>% 
+  as.list()
+```
+
+#### Warming Stripes Showing Precipitation in July for Each County for all Years 
+```{r warming1d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the july temperature and year column
+eastern_sf3_jl <- select(eastern_sf1, NAME, Year, Julpcp)
+
+#rename the temperature column
+eastern_sf3_jl <- rename(eastern_sf3_jl, ta = Julpcp)
+
+```
+
+```{r warming2d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf3_jl <- mutate(eastern_sf3_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r  warming3d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf3_jla <- filter(eastern_sf3_jl, NAME == "Accomack")
+eastern_sf3_jln <- filter(eastern_sf3_jl, NAME == "Northampton")
+```
+
+
+##### Accomack County Warming Stripes: July Precipitation
+```{r stripes1d,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf3_jla,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County July Precipitation 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County Warming Stripes: July Precipitation
+```{r stripes2f,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf3_jln,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County July Precipitation 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+
+### Average Yearly Precipitation across Counties
+
+```{r}
+eastern_sf3b <- 
+  ggplot(eastern_sf1) +
+  geom_sf(aes(fill = Avg_Temppcp), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "RdPu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Precipitation", title = 'Year: {frame_time}',
+       caption = "Average Yearly Precipitation For Eastern Shore Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(eastern_sf3b, fps = 1, detail = 1, nframes = 127)
+```
+
+
+```{r, results = "asis"}
+meta %>%
+  filter(varname == "Avg_Temppcp") %>% 
+  select(about) %>% 
+  as.list()
+```
+
+#### Warming Stripes Showing Average Yearly Precipitation for Each County
+```{r  warming6d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+#select only the annual temperature and year column
+eastern_sf3_yr <- select(eastern_sf1, NAME, Year, Avg_Temppcp)
+
+#rename the temperature column
+eastern_sf3_yr <- rename(eastern_sf3_yr, ta = Avg_Temppcp)
+
+```
+
+```{r  warming7d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf3_yr <- mutate(eastern_sf3_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r warming8d, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf3_yra <- filter(eastern_sf3_yr, NAME == "Accomack")
+eastern_sf3_yrn <- filter(eastern_sf3_yr, NAME == "Northampton")
+```
+
+##### Accomack County Warming Stripes: Average Yearly Precipitation
+```{r stripes1f,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf3_yra,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Accomack County Average Yearly Precipitation 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+##### Northampton County Warming Stripes: Average Yearly Precipitation
+```{r stripes2g,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(eastern_sf3_yrn,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Northampton County Average Yearly Precipitation 1895-2020",
                 caption = "Data: NOAA Surface Temperature Analysis")+
               theme_strip
 ```

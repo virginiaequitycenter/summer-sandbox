@@ -18,7 +18,9 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * MC: Getting a handle on so many new data sources :sweat_smile: (also, I was today days old when I learned github markdown supports [emojis](https://github.com/markdown-templates/markdown-emojis)) ... :tada:
 
-* CD: Everything is going smoothly on my end at the moment, but I will be sure to reach out to people through Slack if (or more likely when haha) I run into issues! 
+* CD: Everything is going smoothly on my end at the moment, but I will be sure to reach out to people through Slack if (or more likely when haha) I run into issues!
+
+TO: Currently good but the troubleshooting slack channel has been incredibly helpful. Happy to help if anyone needs help.
 
 2. What are you most excited about being able to do now that COVID is much less of a health concern (if you're vaccinated ofc)?
 
@@ -34,7 +36,9 @@ This is just a markdown file -- you can learn more about markdown [here](https:/
 
 * MC: We celebrated our family's full vaccination (once the teenager was vaxxed) by (a) going to the goodwill thrift store and buying new (to us) outfits and (b) going to the downtown mall for vu noodles and the first friday's after five. It was awesome (though the downtown mall was almost overwhelming with all of the people)! Mostly I'm excited that Phoenix gets to go to theater camp __in person__ and sing (:notes:), perform (:performing_arts:) with other people!!
 
-* CD: I went to a concert at Red Rock Amphitheater last week! (I saw Shakey Graves @ Lee!!) I forgot how much I missed live music and being around other people. It was still outdoors but it was the first time the venue had been at full capacity since March of 2020 and the first time the band playing the opening act had performed live since before the pandemic began! I'm probably most excited to see my best friend Liz, who is a UVA student but she hasn't returned to UVA since last March. She's visiting me next week in CO, and I can't wait! :) 
+* CD: I went to a concert at Red Rock Amphitheater last week! (I saw Shakey Graves @ Lee!!) I forgot how much I missed live music and being around other people. It was still outdoors but it was the first time the venue had been at full capacity since March of 2020 and the first time the band playing the opening act had performed live since before the pandemic began! I'm probably most excited to see my best friend Liz, who is a UVA student but she hasn't returned to UVA since last March. She's visiting me next week in CO, and I can't wait! :)
+
+TO: I am excited for trips and traveling. Saw in the heights in theater without a mask and that was initially scary but i have since been going everywhere without a mask :see_no_evil:. Looking forward to also hanging out with friends more this summer. 
 
 # June 15
 
