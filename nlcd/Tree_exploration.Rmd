@@ -1,7 +1,7 @@
 ---
 title: "Script"
 author: "Helena Lindsay"
-date: "7/1/2021"
+date: "7/7/2021"
 output:
   html_document: 
     toc: TRUE
@@ -39,7 +39,10 @@ cville_blocks <- readRDS("cville_blocks.RDS")
 #### Tracts
 ```{r, message=F, warning=FALSE}
 cvl_tracts <- read.csv("nlcd_tree_cville_tracts.csv")%>%
+  select(-INTPTLAT, -INTPTLON)%>%
   as.data.frame()
+
+head(cvl_tracts)
 # cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
 
 
@@ -71,7 +74,7 @@ m
 ```{r, message=F, warning=F}
 cvl_blkgps <- read.csv("nlcd_tree_cville_blkgps.csv")%>%
   as.data.frame()
-
+head(cvl_blkgps)
 
 cville_blkgps$tree_can <- cvl_blkgps$tree_can
 
@@ -100,6 +103,7 @@ m
 ```{r, message=F, warning=FALSE}
 cvl_blocks <- read.csv("nlcd_tree_cville_blocks.csv")%>%
   as.data.frame()
+head(cvl_blocks)
 
 cville_blocks$tree_can <- cvl_blocks$tree_can
 
