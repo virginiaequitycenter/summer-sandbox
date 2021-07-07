@@ -1,17 +1,14 @@
 title: "FEMA NFIP Claims --Eastern Shore"
 author: "Khalila Karefa-Kargbo"
-date: "06/30/2021"
+date: "07/07/2021"
 ```{r}
 library(tidyverse)
 library(mosaic)
-library(reticulate)
 library(stargazer)
 library(googlesheets4)
-library(tigris)
 library(sf)
 library(viridis)
 library(leaflet)
-library(rgdal)
 ```
 
 # Get Data
@@ -20,113 +17,140 @@ Source: FEMA, NFIP Redacted Claims, last updated July 2020
 * Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv]
 
 ```{r}
-eastern_claims <- read_csv("fema_nfip_eastern_tract.csv")
-eastfips <- c("51001", "51131")
+easternAmountPaidByTract <- read_csv("fema_nfip_eastern_tract.csv")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
 # Exploration
 ```{r}
-glimpse(eastern_claims)
+glimpse(easternAmountPaidByTract)
+# 417 total observations in the eastern shore
 ```
 
-
-**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit...
-
-**\# of flood claims in spatial unit**
-```{r}
-eastern_claims %>% count(censusTract)
-#417 total observations
-```
+**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit: goal: understanding the degree of damage experienced in a place
 
 **Variable Descriptions:**
 ```{r}
 meta %>%
   select(c(varname, about)) %>% 
-  as.list() # keeps calling nri data instead of nfip ---> fix this!!
+  as.list()
 ```
-
-**Missing data?**
-```{r}
-sum(is.na(eastern_claims$amountPaidOnContentsClaim)) # 322 / 417  
-sum(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 88 / 417
-sum(is.na(eastern_claims$totalBuildingInsuranceCoverage)) # 0
-sum(is.na(eastern_claims$totalContentsInsuranceCoverage))# 0
-```
-```{r}
-prop(is.na(eastern_claims$amountPaidOnContentsClaim)) #  77.22% 
-prop(is.na(eastern_claims$amountPaidOnBuildingClaim)) # 21.1%
-prop(is.na(eastern_claims$totalBuildingInsuranceCoverage)) # 0
-prop(is.na(eastern_claims$totalContentsInsuranceCoverage)) # 0 
-```
--   could not find out the reason for the missing data, whether it was from lack of records or no money being paid for the claim (but I assume this would show up as a 0 and not NA, so still unclear)
--   I'll continue by using just the amountPaidOnBuildingClaim variable; I'll also making a note that there is ContentsClaim data as well wherever applicable (most likely not for this exploration, but maybe if we look at individual claim data)
-- I'll also just use the totalBuilding... instead of adding building + contents to adjust for this (basically just going to ignore contents completely)
-
-# Eastern Shore summaries & visualizations
-```{r}
-# 5-number summary of the $ amount paid
-easternClaimSum <- eastern_claims %>%
-  group_by(censusTract) %>%
-  summarize(avg_amt = mean(amountPaidOnBuildingClaim, na.rm = TRUE),
-            med_amt = median(amountPaidOnBuildingClaim, na.rm = TRUE),
-            sd_amt = sd(amountPaidOnBuildingClaim, na.rm = TRUE),
-            min_amt = min(amountPaidOnBuildingClaim, na.rm = TRUE),
-            max_amt = max(amountPaidOnBuildingClaim, na.rm = TRUE)) ###find out count census tract error
-print(easternClaimSum)
-```
-```{r}
-# 5-number summary of the total insurance amount
-easternTotalSum <- eastern_claims %>%
-  group_by(censusTract) %>%
-  summarize(avg_amt = mean(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            med_amt = median(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            sd_amt = sd(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            min_amt = min(totalBuildingInsuranceCoverage, na.rm = TRUE),
-            max_amt = max(totalBuildingInsuranceCoverage, na.rm = TRUE))
-print(easternTotalSum) ###count census tracts
-```
-```{r}
-###difference between means
-```
-
 
 # Visual distributions
 ```{r}
-# barplot of the average building amount paid by census tract
-ggplot(easternClaimSum) + 
-  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+# barplot of the total $ amount paid by census tract
+ggplot(easternAmountPaidByTract) + 
+  geom_col(aes(x=as.factor(censusTract), y=totalAmountPaid)) +
+  coord_flip() +
+  labs(x="Census Tract",
+       y="$ Amount Paid",
+       title="Total Building & Contents Claim Amount Paid by Census Tract")
 ```
+
 ```{r}
-# barplot of the average building insurance coverage by census tract
-ggplot(easternTotalSum) + 
-  geom_col(aes(x=censusTract, y=avg_amt, color=censusTract))
+# barplot of the total insurance coverage amount by census tract
+ggplot(easternAmountPaidByTract) + 
+  geom_col(aes(x=as.factor(censusTract), y=totalInsuranceCoverage)) +
+  coord_flip() +
+  labs(x="Census Tract",
+       y="Insurance Coverage (in $)",
+       title="Insurance Coverage Amount by Census Tract")
 ```
 
 # Maps 
 **Get Data**
 ```{r}
-vacounties <- counties(state="VA")
+eastshore_tracts <- readRDS("data/eastshore_tracts.RDS")
 
-eastern <- vacounties %>% 
-  filter(COUNTYFP %in% c("001", "131"))
+easternAmountPaidByTract <- easternAmountPaidByTract %>% 
+  mutate(TRACT = str_sub(censusTract, 6,11),
+    TRACT = as.character(TRACT))
 
-sp::plot(eastern[1], col="firebrick", border=TRUE)
+eastern_amount <- eastshore_tracts %>% 
+  left_join(easternAmountPaidByTract, by = c("TRACTCE" = "TRACT"))
+
+eastern_amount <- st_transform(eastern_amount, crs = 4326) # to WGS84, given error
 ```
 
-........
+**Number of Claims per Census Tract**
 ```{r}
-leaflet() %>% 
-  addProviderTiles(providers$CartoDB.Positron) %>% 
-  addPolygons(data = eastern)
-```
-...still in progress...
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_amount$n) # viridis
 
-# Miscellaneuos
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_amount,
+              fillColor = ~pal(n),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", eastern_amount$NAME, "<br>",
+                             "Number: ", round(eastern_amount$n, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_amount$n, 
+            title = "# FEMA Claims", opacity = 0.7)
+```
+
+**Total Insurance Amount Map**
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_amount$totalInsuranceCoverage) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_amount,
+              fillColor = ~pal(totalInsuranceCoverage),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", eastern_amount$NAME, "<br>",
+                             "$ Amount: ", round(eastern_amount$totalInsuranceCoverage, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_amount$totalInsuranceCoverage, 
+            title = "Insurace Coverage Amount", opacity = 0.7)
+```
+
+**Total Claim Amount Map**
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_amount$totalAmountPaid) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_amount,
+              fillColor = ~pal(totalAmountPaid),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", eastern_amount$NAME, "<br>",
+                             "$ Amount: ", round(eastern_amount$totalAmountPaid, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_amount$totalAmountPaid, 
+            title = "Claim Amount Paid", opacity = 0.7)
+```
+
+# Miscellaneous
+
+**Other potential variables of interest (from original dataset):**
+- **elevatedBuildingIndicator:** Yes (Y) or No (N) indicator of whether or not a building meets the NFIP definition of an elevated building (does not meet this criteria --> higher chance for flood damage)
+- **floodZone:** derived from the Flood Insurance Rate Map (FIRM) used to rate the insured property (ie. how susceptible to flood damage they are)
+
 
 [This](https://www.fema.gov/about/openfema/data-sets#misc) is a list of all of FEMA's open data sets and could be helpful
 
 [claim manual](https://www.fema.gov/sites/default/files/2020-07/fema_nfip_claims-manual_2020.pdf) that gives a little more details on how claims are filed (might not be that helpful though)
-
-**Other potential variables of interest:**
-- **baseFloodElevation:** Base Flood Elevation (BFE) is the elevation at which there is a 1% chance per year of flooding in feet from the elevation certificate
