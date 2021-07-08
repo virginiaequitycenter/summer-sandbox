@@ -1,7 +1,17 @@
-title: "FEMA NFIP Claims --- Charlottesville"
+---
+title: "FEMA NFIP Claims"
+subtitle: "Data for Charlottesville Region"
 author: "Khalila Karefa-Kargbo"
 date: "07/06/2021"
-```{r}
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 library(tidyverse)
 library(mosaic)
 library(stargazer)
@@ -11,17 +21,19 @@ library(viridis)
 library(leaflet)
 ```
 
-# Get Data
+## Data Source
+
 Source: FEMA, NFIP Redacted Claims, last updated July 2020
-* Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims]
-* Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv]
+
+* Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims)
+* Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv](https://www.fema.gov/api/open/v1/FimaNfipClaims.csv)
 
 ```{r}
-cvilleAmountPaidByTract <- read_csv("fema_nfip_cville_tract.csv")
+cvilleAmountPaidByTract <- read_csv("../data/fema_nfip_cville_tract.csv")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
-# Exploration
+## Exploration
 ```{r}
 glimpse(cvilleAmountPaidByTract)
 ```
@@ -29,7 +41,7 @@ glimpse(cvilleAmountPaidByTract)
 **Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit; goal: understanding the degree of damage experienced in a place
 
 ```{r}
-cville_claims %>% count(censusTract)
+cvilleAmountPaidByTract %>% count(censusTract)
 # 55 total observations
 ```
 
@@ -40,7 +52,7 @@ meta %>%
   as.list()
 ```
 
-# Visual distributions
+## Visual distributions
 ```{r}
 # barplot of the total $ amount paid by census tract
 ggplot(cvilleAmountPaidByTract) + 
@@ -60,10 +72,9 @@ ggplot(cvilleAmountPaidByTract) +
        title="Insurance Coverage Amount by Census Tract")
 ```
 
-# Maps
-**Get Data**
-```{r}
-cville_tracts <- readRDS("data/cville_tracts.RDS")
+## Maps
+```{r, echo = FALSE}
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 
 cvilleAmountPaidByTract <- cvilleAmountPaidByTract %>% 
   mutate(TRACT = str_sub(censusTract, 6,11),
@@ -75,7 +86,7 @@ cville_amount <- cville_tracts %>%
 cville_amount <- st_transform(cville_amount, crs = 4326) # to WGS84, given error
 ```
 
-**Number of Claims per Census Tract**
+### Number of Claims per Census Tract
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$n) # viridis
 
@@ -99,7 +110,7 @@ leaflet() %>%
             title = "# FEMA Claims", opacity = 0.7)
 ```
 
-**Total Insurance Amount Map**
+### Total Insurance Amount Map
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalInsuranceCoverage) # viridis
 
@@ -123,7 +134,7 @@ leaflet() %>%
             title = "Insurace Coverage Amount", opacity = 0.7)
 ```
 
-**Total Claim Amount Map**
+### Total Claim Amount Map
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalAmountPaid) # viridis
 
@@ -147,7 +158,7 @@ leaflet() %>%
             title = "Claim Amount Paid", opacity = 0.7)
 ```
 
-# Miscellaneous
+## Miscellaneous
 
 [This](https://www.fema.gov/about/openfema/data-sets#misc) is a list of all of FEMA's open data sets and could be helpful
 
