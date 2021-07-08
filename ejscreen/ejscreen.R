@@ -4,8 +4,19 @@ library(tidyverse)
 library(leaflet)
 library(sf)
 
+
+# # Pull EJSCREEN
+# url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
+# download.file(url = url,
+#               destfile = paste(getwd(), "/", "ejscreen.zip", sep = ""),
+#               mode = "wb")
+
+# # unzip and read
+# unzip("ejscreen.zip", exdir = getwd())
+
 # Load data
-ejscreen <- read_csv("/Users/marisalemma/Downloads/EJSCREEN_2020_USPR.csv")
+ejscreen <- read_csv("EJSCREEN_2020_USPR.csv")
+# ejscreen <- read_csv("/Users/marisalemma/Downloads/EJSCREEN_2020_USPR.csv")
 
 # Get rid of demographic variables (since we don't need those)
 ejscreen_clean <- ejscreen %>% 
@@ -28,7 +39,8 @@ cville_area <- virginia %>%
 
 # Some spatial explorations
 # Load shapefile
-cville_blkgps <- readRDS("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_blkgps.RDS")
+# cville_blkgps <- readRDS("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_blkgps.RDS")
+cville_blkgps <- readRDS("../cville_region_collection/data/cville_blkgps.RDS")
 cville_area <- cville_area %>% rename(GEOID = ID)
 
 cvilleshapes <- merge(cville_blkgps, cville_area, by = 'GEOID', all.x = T)
@@ -82,7 +94,10 @@ leaflet(cvilleshapes) %>%
 # Comparison to PM2.5 data
 # Create tract variable
 cville_area %>% 
-  str_sub(GEOID, 1, 11)
+ str_sub(GEOID, 1, 11)
+str_sub(cville_area$GEOID, 1, 11)
+cville_area %>% 
+  mutate(tract = str_sub(GEOID, 1, 11))
 
 # Load data
 airquality <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/airquality_cville_tract.csv")
