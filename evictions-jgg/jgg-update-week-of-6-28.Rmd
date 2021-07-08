@@ -14,7 +14,7 @@ Below is an overview of what I've been working on this past week.
 
 ---
 
-[1.] I expanded the regex pattern that we'll use to identify non-residential defendants in eviction cases by a fairly significant amount. I think that we're now covering a great deal of ground in terms of flagging commercial/government/non-profit/etc. defendants. We received code from the Princeton Eviction Lab showing part of their search, and I integrated a number of their patterns into our regex. Michele also shared an article from the Urban Institute in which they tried to identify certain classes of entities in administrative data, and I pulled from their code to expand our search pattern. I've got a few more terms to add that I've landed on as I've looked through our data and continued to think on the matter, but I think that, overall, we're in decent shape regex-wise. Like last week, the current regex pattern is included the bottom of this file. (There's also a link to download an embedded folder containing the code for the regex as well as some tests for it.)
+[1.] I expanded the regex pattern that we'll use to identify non-residential defendants in eviction cases by a fairly significant amount. I think that we're now covering a great deal of ground in terms of flagging commercial/government/non-profit/etc. defendants. We received code from the Princeton Eviction Lab showing part of their search, and I integrated a number of their patterns into our regex. Michele also shared an article from the Urban Institute in which they tried to identify certain classes of entities in administrative data, and I pulled from their code to expand our search pattern. I've got a few more terms to add that I've landed on as I've looked through our data and continued to think on the matter, but I think that, overall, we're in decent shape regex-wise. Like last week, the current regex pattern is included the bottom of this file.
 
 ---
 
@@ -59,9 +59,6 @@ Such cases are currently kept in the data (because there's >= 1 defendant with a
 It seems like an open question as to what exactly we do in these cases: As far as I can tell, the VCU group hasn't done anything to address or identify the extent of this issue in the cleaning and analysis they've done so far.
 
 ##### Updated regex search pattern
-```{R, echo = F, eval = T}
-xfun::embed_dir(path = 'jgg-update-week-of-6-28-regex', text = 'Download a .zip with the code for the pattern as well as tests of it by clicking here.')
-```
 ```{R, echo = F, eval = T}
 # Regex pattern for commercial/non-residential names
 pattern <- paste0('(?i)', paste0(c('(\\bacadem(y|ics?)\\b)',
