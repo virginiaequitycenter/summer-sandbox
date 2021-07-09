@@ -23,6 +23,8 @@ Data was retrieved using the FedData library, get_nlcd function. The function re
 library(tidyverse)
 library(leaflet)
 library(sp)
+library(viridis)
+library(raster)
 ```
 
 
@@ -31,16 +33,14 @@ library(sp)
 ### Charlottesville Region {.tabset}
 
 ```{r, message=F, warning=F}
-cville_tracts <- readRDS("cville_tracts.RDS")
-cville_blkgps <- readRDS("cville_blkgps.RDS")
-cville_blocks <- readRDS("cville_blocks.RDS")
+cville_tracts <- readRDS("Cville_Tree/cville_tracts.RDS")
+cville_blkgps <- readRDS("Cville_Tree/cville_blkgps.RDS")
+cville_blocks <- readRDS("Cville_Tree/cville_blocks.RDS")
 ```
 
 #### Tracts
 ```{r, message=F, warning=FALSE}
-cvl_tracts <- read.csv("nlcd_tree_cville_tracts.csv")%>%
-  select(-INTPTLAT, -INTPTLON)%>%
-  as.data.frame()
+cvl_tracts <- read.csv("Cville_Tree/nlcd_tree_cville_tracts.csv")
 
 head(cvl_tracts)
 # cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
@@ -72,7 +72,7 @@ m
 
 #### Blockgroups
 ```{r, message=F, warning=F}
-cvl_blkgps <- read.csv("nlcd_tree_cville_blkgps.csv")%>%
+cvl_blkgps <- read.csv("Cville_Tree/nlcd_tree_cville_blkgps.csv")%>%
   as.data.frame()
 head(cvl_blkgps)
 
@@ -101,7 +101,7 @@ m
 
 #### Blocks
 ```{r, message=F, warning=FALSE}
-cvl_blocks <- read.csv("nlcd_tree_cville_blocks.csv")%>%
+cvl_blocks <- read.csv("Cville_Tree/nlcd_tree_cville_blocks.csv")%>%
   as.data.frame()
 head(cvl_blocks)
 
@@ -125,6 +125,105 @@ m <- leaflet()%>%
             title = "Tree Canopy", opacity = 0.7)
 m
 ```
+
+
+### Eastern Shore Region {.tabset}
+
+```{r, message=F, warning=F}
+east_tracts <- readRDS("Easternshore_Tree/eastshore_tracts.RDS")
+east_blkgps <- readRDS("Easternshore_Tree/eastshore_blkgps.RDS")
+east_blocks <- readRDS("Easternshore_Tree/eastshore_blocks.RDS")
+```
+
+#### Tracts
+```{r, message=F, warning=FALSE}
+eastern_tracts <- read.csv("Easternshore_Tree/nlcd_tree_eastshore_tracts.csv")%>%
+  as.data.frame()
+
+head(eastern_tracts)
+# cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
+
+east_tracts$tree_can <- eastern_tracts$tree_can
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_tracts$tree_can)
+eastern_tracts$tree_can <- as.numeric(eastern_tracts$tree_can)
+east_tracts$COUNTYFP <- as.numeric(east_tracts$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = east_tracts,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", eastern_tracts$GEOID, "<br>",
+                             "Tree Canopy: ", eastern_tracts$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = eastern_tracts$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+```
+
+
+#### Blockgroups
+```{r, message=F, warning=FALSE}
+eastern_blkgps <- read.csv("Easternshore_Tree/nlcd_tree_eastshore_blkgps.csv")%>%
+  as.data.frame()
+
+head(eastern_blkgps)
+# cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
+
+east_blkgps$tree_can <- eastern_blkgps$tree_can
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_blkgps$tree_can)
+eastern_blkgps$tree_can <- as.numeric(eastern_blkgps$tree_can)
+east_blkgps$COUNTYFP <- as.numeric(east_blkgps$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = east_blkgps,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", eastern_blkgps$GEOID, "<br>",
+                             "Tree Canopy: ", eastern_blkgps$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = eastern_blkgps$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+```
+
+#### Blocks
+```{r, message=F, warning=FALSE}
+eastern_blocks <- read.csv("Easternshore_Tree/nlcd_tree_eastshore_blocks.csv")%>%
+  as.data.frame()
+
+head(eastern_blocks)
+# cvl_tracts <- cvl_tracts[complete.cases(cvl_tracts),]
+
+east_blocks$tree_can <- eastern_blocks$tree_can
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_blocks$tree_can)
+eastern_blocks$tree_can <- as.numeric(eastern_blocks$tree_can)
+east_blocks$COUNTYFP <- as.numeric(east_blocks$COUNTYFP)
+m <- leaflet()%>%
+  addTiles()%>%
+  addPolygons(data = east_blocks,
+              fillColor = ~pal(tree_can),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", eastern_blocks$GEOID, "<br>",
+                             "Tree Canopy: ", eastern_blocks$tree_can)) %>%
+  addLegend("bottomright", pal = pal, values = eastern_blocks$tree_can,
+            title = "Tree Canopy", opacity = 0.7)
+m
+```
+
+
 
 
 
