@@ -7,18 +7,17 @@ library(sf)
 library(stargazer)
 
 
-# # Pull EJSCREEN
-# url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
-# download.file(url = url,
-#               destfile = paste(getwd(), "/", "ejscreen.zip", sep = ""),
-#               mode = "wb")
+# Pull EJSCREEN
+url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
+download.file(url = url,
+               destfile = paste(getwd(), "/", "ejscreen.zip", sep = ""),
+               mode = "wb")
 
-# # unzip and read
-# unzip("ejscreen.zip", exdir = getwd())
+# unzip and read
+unzip("ejscreen.zip", exdir = getwd())
 
 # Load data
 ejscreen <- read_csv("EJSCREEN_2020_USPR.csv")
-# ejscreen <- read_csv("/Users/marisalemma/Downloads/EJSCREEN_2020_USPR.csv")
 
 # Get rid of demographic variables (since we don't need those)
 ejscreen_clean <- ejscreen %>%
@@ -43,7 +42,6 @@ eastern_shore <- virginia %>%
 
 # Some spatial explorations
 # Load shapefile
-# cville_blkgps <- readRDS("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_blkgps.RDS")
 cville_blkgps <- readRDS("../cville_region_collection/data/cville_blkgps.RDS")
 cville_area <- cville_area %>% rename(GEOID = ID)
 
@@ -157,6 +155,15 @@ cville_area %>%
   geom_point(aes(x=P_PTRAF, y=P_DSLPM))
 # As above, there is a correlation in the percentiles, but not on the actual levels
 
+# PM2.5 vs. diesel particulate matter level
+cville_area %>%
+  ggplot() +
+  geom_point(aes(x=PM25, y=DSLPM))
+
+cville_area %>%
+  ggplot() +
+  geom_point(aes(x=P_PM25, y=P_DSLPM))
+# These metrics are not super correlated, either on actual levels or on percentiles
 
 # PM2.5, ozone, and NATA indicators are measured at the census tract level
   # So each block group within that census tract is assigned the same value
@@ -173,7 +180,7 @@ airquality <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/
 airquality_eastern <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/airquality_eastern_tract.csv")
 
 # Merge datasets
-airquality <- airquality %>% rename(tract = CTIDFP00)
+airquality <- airquality %>% rename(tract = trtid10)
 
 pm25 <- cville_area %>%
   group_by(tract) %>%
@@ -185,21 +192,20 @@ pm25 <- merge(airquality, pm25, by = 'tract', all.x = T)
 # Scatterplots to see if trends between the two metrics are consistent
 pm25 %>%
   ggplot() +
-  geom_point(aes(x = PM2_5_2016, y = pm25_ejscreen))
-# There is some correlation between the two metrics, although not as much as I would have liked
+  geom_point(aes(x = pm2_5_2016, y = pm25_ejscreen))
+# There is very little correlation between these two metrics
 
 pm25 %>%
   ggplot() +
   geom_point(aes(x = percentile_2016, y = pctile_pm25_ejscreen))
-# There is considerably less correlation between these two metrics. I am not sure why this is the case
+# There is also very little correlation between these two metrics. I am not sure why this is the case
 
 # Looking at differences between the two sets of values
 pm25 <- pm25 %>%
-  mutate(pmdifference = pm25_ejscreen - PM2_5_2016,
+  mutate(pmdifference = pm25_ejscreen - pm2_5_2016,
          pctiledifference = pctile_pm25_ejscreen - percentile_2016)
-# pmdifference is all over the place (some are positive, some are negative)
-# pctiledifference is all negative, but the values vary widely
-  # Some of the values are very large -- I'm not sure why this difference exists
+# Both variables are all over the place (some are positive, some are negative)
+  # Some of the values for pctiledifference are very large - I'm not sure why this difference exists
 
 
 # Some questions that all this exploration raises:
@@ -207,7 +213,5 @@ pm25 <- pm25 %>%
     # NAs only exist for PTRAF and PWDIS
     # In the case of traffic proximity, would that mean that there are no roads in the block group?
     # I think NAs are probably 0s but I'm not completely sure
-  # Looking at the nationwide data, it seems like the percentiles don't make sense
-    # For a lot of the percentile variables, 0 is not the lowest - not sure I understand why
   # Why are there such large differences between the replication data estimates and the EJSCREEN estimates?
     # Specifically for PM2.5, there are very large differences and I don't understand why
