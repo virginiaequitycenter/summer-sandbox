@@ -2,7 +2,6 @@
 *.Rhistory
 *.Rproj.user
 =======
-*.zip
 *.gz
 *.RData
 # *.rds
@@ -10,5 +9,6 @@
 .DS_Store
 *.gdb
 
+# *.zip
 # shapefiles? what else?
 .Rproj.user
