@@ -24,6 +24,8 @@ library(googlesheets4)
 
 airquality <- read_csv("../data/airquality_eastern_tract.csv")
 
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="airquality", gs4_deauth())
+
 ```
 
 ## Data Source
@@ -37,8 +39,7 @@ Source: Replication Data for "Disparities in PM~2.5~ air pollution in the United
 
 ## About the Data
 
-This data shows air pollution at each census tract. It specifically focuses on concentrations of PM~2.5~, meaning fine particulate matter that is less than 2.5 micrometers in diameter. PM~2.5~ concentrations are measured by the number of micrograms per cubic meter.
-
+This data shows air pollution at each census tract. It specifically focuses on concentrations of PM~2.5~, meaning fine particulate matter that is less than 2.5 micrometers in diameter. PM~2.5~ concentrations are measured by the number of micrograms per cubic meter. It shows PM~2.5~ concentrations at every year from 1981-2016. However, we focus only on 1981 and 2016 and the changes between the two years.
 
 ## Variable Descriptions
 ```{r}
@@ -56,7 +57,7 @@ Observations are census tract estimates of:
 
 Five-number summaries of all variables:
 ```{r}
-airquality %>% select(-c(CTIDFP00:NAME00)) %>% 
+airquality %>% select(-c(trtid10, STATEFP00, COUNTYFP00)) %>% 
   select(where(~is.numeric(.x) && !is.na(.x))) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 0,
@@ -68,8 +69,8 @@ airquality %>% select(-c(CTIDFP00:NAME00)) %>%
 Visual representations of the data:
 
 ```{r, message=F, warning=F}
-airquality %>% select(CTIDFP00, percentile_1981, percentile_2016) %>% 
-  pivot_longer(-CTIDFP00, names_to = "measure", values_to = "value") %>% 
+airquality %>% select(trtid10, percentile_1981, percentile_2016) %>% 
+  pivot_longer(-trtid10, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   facet_wrap(~measure, scales = "free") +
@@ -104,7 +105,7 @@ airquality %>%
 ```{r, include = F}
 eastern_tracts <- readRDS("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/eastshore_tracts.RDS")
 
-airquality <- airquality %>% rename(GEOID = CTIDFP00)
+airquality <- airquality %>% rename(GEOID = trtid10)
 
 easternshapes <- merge(eastern_tracts, airquality, by = 'GEOID', all.x = T)
 easternshapes <- st_transform(easternshapes, crs = 4326) # to WGS84, given error
@@ -122,7 +123,7 @@ leaflet(easternshapes) %>%
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", easternshapes$NAME00, "<br>",
+              popup = paste0("Tract Number: ", easternshapes$GEOID, "<br>",
                              "Percentile: ", round(easternshapes$percentile_1981, 2))) %>%
   addLegend("bottomright", pal = pal, values = easternshapes$percentile_1981,
             title = "Percentile, 1981", opacity = 0.7)
@@ -140,7 +141,7 @@ leaflet(easternshapes) %>%
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", easternshapes$NAME00, "<br>",
+              popup = paste0("Tract Number: ", easternshapes$GEOID, "<br>",
                              "Percentile: ", round(easternshapes$percentile_2016, 2))) %>%
   addLegend("bottomright", pal = pal, values = easternshapes$percentile_2016,
             title = "Percentile, 2016", opacity = 0.7)
@@ -159,7 +160,7 @@ leaflet(easternshapes) %>%
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", easternshapes$NAME00, "<br>",
+              popup = paste0("Tract Number: ", easternshapes$GEOID, "<br>",
                              "Percentile Change: ", round(easternshapes$pctile_change, 2))) %>%
   addLegend("bottomright", pal = pal, values = easternshapes$pctile_change,
             title = "Percentile Change, 1981-2016", opacity = 0.7)
@@ -178,7 +179,7 @@ leaflet(easternshapes) %>%
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", easternshapes$NAME00, "<br>",
+              popup = paste0("Tract Number: ", easternshapes$GEOID, "<br>",
                              "PM2.5 Change: ", round(easternshapes$PM_change, 2))) %>%
   addLegend("bottomright", pal = pal, values = easternshapes$PM_change,
             title = "Change in PM2.5, 1981-2016", opacity = 0.7)
@@ -187,4 +188,6 @@ leaflet(easternshapes) %>%
 
 ## Important Notes
 
-The census tracts used here are the 2000 census tracts, which makes it really hard to do any spatial interpretation.
+The original data uses 2000 census tracts, since that is roughly the midpoint of their 1981-2016 time frame. Since we want to be able to look at this in relation to other tract-level data, we needed this in 2010 census tracts. To estimate the data for 2010 census tracts, I used the bridging data found [here](https://s4.ad.brown.edu/Projects/Diversity/Researcher/Bridging.htm).
+
+Since the conversion to 2010 census tracts involved some estimation, the PM~2.5~ levels in the data may not be as accurate as the original 2000 data.
