@@ -13,3 +13,4 @@ By source
 * [LEHD Origin-Destination Employment Statistics (LODES) - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_eastern_tract.html)
 * [Air Quality (Replication Data) - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/airquality_eastern.html)
 * [FEMA National Flood Insurance Program Claims](https://virginiaequitycenter.github.io/summer-sandbox/femaclaims_eastern.html)
+* [NLCD 2016 Tree Canopy](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_tree_cville_eastern.html)
