@@ -2,11 +2,11 @@
 title: "LEHD LODES"
 subtitle: "Eastern Shore Region Block Group Data"
 author: "Lee LeBoeuf"
-date: "07/06/2021"
+date: "07/20/2021"
 output: 
   html_document:
-  toc: true
-  toc_float: true
+    toc: yes
+    toc_float: true
 ---
 
 ## Eastern Shore region 2018 LODES data exploration
@@ -25,16 +25,17 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 * Helpful article about how these data are collected and how they can be used: https://www.researchgate.net/publication/328700665_The_US_Census_Longitudinal_Employer-Household_Dynamics_Datasets
 
 ## Data specifics
-* This data file is a combined version of the WAC and RAC data files from LEHD-LODES. WAC stands for Workplace Area Characteristics and RAC stands for Resident Area Characteristics. 
-* Data are from 2018 and spatial units are based on the 2010 census. 
-* Some limitations: jobs counts do not include those working in defense-related industries, imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location), and these data are not suitable for longitudinal analysis. 
-* At the block group and tract level there are is no missing data, but these are aggregates of the block-level data, and there are blocks with missing data. 
+* The Longitudinal Employer Household Dynamics (LEHD) program at the US Census Bureau releases the Origin Destination Employment Statistis (LODES) datasets annually based on employer-employee insurance records. 
+* This data file uses data from the Workplace Area Characteristics (WAC) datafile from LEHD.. 
+* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002. 
+* The data contains the number of jobs within a spatial unit (SU), disaggregated by wage earnings, education-attainment of the worker, and race of the worker (all of which were pulled from the WAC data file)
+* Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
 
 ## Variable descriptions
 ```{r}
 meta %>% 
   filter(su_blkgp == 1) %>%
-  select(description) %>% as.list()
+  select(varname, about) %>% as.list()
 glimpse(lodes)
 lodes %>% select(lowwage_jobs:Bach_AdvDeg_jobs) %>% 
   select(where(~is.numeric(.x))) %>% 
@@ -43,7 +44,7 @@ lodes %>% select(lowwage_jobs:Bach_AdvDeg_jobs) %>%
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
-## Histograms
+## Total jobs counts
 ```{r}
 lodes %>% select(c(w_blkgr:alljobs)) %>% 
   pivot_longer(-w_blkgr, names_to = "measure", values_to = "value") %>% 
@@ -51,6 +52,14 @@ lodes %>% select(c(w_blkgr:alljobs)) %>%
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free")
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("higwage_jobs", "lowwage_jobs", "midwage_jobs", "alljobs")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
 ```
 
 ## Mapping the data 
@@ -77,15 +86,18 @@ leaflet(eastern_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Block Group: ", eastern_lodes$BLKGRPCE, "<br>",
+              popup = paste0("GEOID: ", eastern_lodes$w_blkgr, "<br>",
                              "Number of jobs: ", eastern_lodes$alljobs, 2)) %>% 
   addLegend("bottomright", pal = pal, values = eastern_lodes$alljobs, 
             title = "Number of jobs", opacity = 0.7)
 ```
 
 ### Wages
+
+#### Proportion of low-wage jobs (earnings $1250/month or less) in each SU
+
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes$lowwage_p)
+pal <- colorNumeric("BuPu", domain = eastern_lodes$lowwage_p)
 leaflet(eastern_lodes) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = eastern_lodes,
@@ -97,15 +109,17 @@ leaflet(eastern_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
                 ),
-              popup = paste0("Block Group: ", eastern_lodes$BLKGRPCE, "<br>",
+              popup = paste0("GEOID: ", eastern_lodes$w_blkgr, "<br>",
                "Prop. low-wage jobs: ", round(eastern_lodes$lowwage_p, 2))) %>% 
   addLegend("bottomright", pal = pal, values = eastern_lodes$lowwage_p, 
-            title = "Proportion of low wage jobs", opacity = 0.7)
+            title = "Proportion of <br> low-wage jobs", opacity = 0.7)
 ```
+
+#### Proportion of high-wage jobs (earnings greater than $3333/month) in each SU
 
 ```{r}
 # High wage jobs
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes$higwage_p)
+pal <- colorNumeric("BuPu", domain = eastern_lodes$higwage_p)
 leaflet(eastern_lodes) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = eastern_lodes,
@@ -118,13 +132,16 @@ leaflet(eastern_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Block Group: ", eastern_lodes$BLKGRPCE, "<br>",
+              popup = paste0("GEOID: ", eastern_lodes$w_blkgr, "<br>",
                              "Prop. high-wage jobs: ", round(eastern_lodes$higwage_p, 2))) %>% 
   addLegend("bottomright", pal = pal, values = eastern_lodes$higwage_p, 
-            title = "Proportion of high-wage jobs", opacity = 0.7)
+            title = "Proportion of <br> high-wage jobs", opacity = 0.7)
 ```
 
-# Education
+### Education
+
+#### Number of jobs for college-educated workers in each SU
+
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes$Bach_AdvDeg_jobs)
 leaflet(eastern_lodes) %>% 
@@ -139,10 +156,32 @@ leaflet(eastern_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Block Group: ", eastern_lodes$BLKGRPCE, "<br>",
+              popup = paste0("GEOID: ", eastern_lodes$w_blkgr, "<br>",
                              "Number of jobs: ", eastern_lodes$Bach_AdvDeg_jobs)) %>% 
   addLegend("bottomright", pal = pal, values = eastern_lodes$Bach_AdvDeg_jobs, 
-            title = "Number of jobs for college-educated workers", opacity = 0.7)
+            title = "Number of jobs for <br> college-educated workers", opacity = 0.7)
+```
+
+#### Number of jobs for high school-educated workers in each SU
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes$HSnoCollege_jobs)
+leaflet(eastern_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes,
+              fillColor = ~pal(HSnoCollege_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes$w_blkgr, "<br>",
+                             "Number of jobs: ", eastern_lodes$HSnoCollege_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes$HSnoCollege_jobs, 
+            title = "Number of jobs for <br> high school-educated workers", opacity = 0.7)
 ```
 
 

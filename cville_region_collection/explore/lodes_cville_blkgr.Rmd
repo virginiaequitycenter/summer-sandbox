@@ -25,7 +25,7 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 ## Data specifics
 * The Longitudinal Employer Household Dynamics (LEHD) program at the US Census Bureau releases the Origin Destination Employment Statistis (LODES) datasets annually based on employer-employee insurance records. 
 * This data file uses data from the Workplace Area Characteristics (WAC) datafile from LEHD.. 
-* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data is available. The earliest year for which data is available is 2002. 
+* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002. 
 * The data contains the number of jobs within a spatial unit (SU), disaggregated by wage earnings, education-attainment of the worker, and race of the worker (all of which were pulled from the WAC data file)
 * Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
 
@@ -84,7 +84,7 @@ leaflet(cvl_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Locality: ", cvl_lodes$countyName, "<br>",
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
                              "Number of jobs: ", cvl_lodes$alljobs, 2)) %>% 
   addLegend("bottomright", pal = pal, values = cvl_lodes$alljobs, 
             title = "Number of jobs", opacity = 0.7)
@@ -107,7 +107,7 @@ leaflet(cvl_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
                 ),
-              popup = paste0("Locality: ", cvl_lodes$countName, "<br>",
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
                "Prop. low-wage jobs: ", round(cvl_lodes$lowwage_p, 2))) %>% 
   addLegend("bottomright", pal = pal, values = cvl_lodes$lowwage_p, 
             title = "Proportion of <br> low-wage jobs", opacity = 0.7)
@@ -129,7 +129,7 @@ leaflet(cvl_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Locality: ", cvl_lodes$countName, "<br>",
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
                              "Prop. high-wage jobs: ", round(cvl_lodes$higwage_p, 2))) %>% 
   addLegend("bottomright", pal = pal, values = cvl_lodes$higwage_p, 
             title = "Proportion of <br> high-wage jobs", opacity = 0.7)
@@ -153,7 +153,7 @@ leaflet(cvl_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Locality: ", cvl_lodes$countyName, "<br>",
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup,  "<br>",
                              "Number of jobs: ", cvl_lodes$Bach_AdvDeg_jobs)) %>% 
   addLegend("bottomright", pal = pal, values = cvl_lodes$Bach_AdvDeg_jobs, 
             title = "Number of jobs for <br> college-educated workers", opacity = 0.7)
@@ -175,7 +175,7 @@ leaflet(cvl_lodes) %>%
               highlight = highlightOptions(
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
-              popup = paste0("Locality: ", cvl_lodes$countyName, "<br>",
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup,  "<br>",
                              "Number of jobs: ", cvl_lodes$HSnoCollege_jobs)) %>% 
   addLegend("bottomright", pal = pal, values = cvl_lodes$HSnoCollege_jobs, 
             title = "Number of jobs for <br> high school-educated <br> workers", opacity = 0.7)
