@@ -2,7 +2,7 @@
 title: "NOAA Temperature Data"
 subtitle: "Data for Charlottesville Region"
 author: "Tolu Odukoya"
-date: "7/6/2021"
+date: "7/13/2021"
 output: 
   html_document: 
     toc: true
@@ -32,6 +32,12 @@ library(hrbrthemes)
 library(devtools)
 library(climatestripes)
 library(lubridate)
+library(ggExtra)
+library(tidyr)
+library(dygraphs)
+library(xts)
+library(lubridate)
+library(zoo)
 noaa <- read_csv("noaa_cville_county.csv")
 cvillefips <- c("540", "003", "065", "079", "109", "125")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
@@ -65,14 +71,18 @@ cville_sf1$Year = as.numeric(cville_sf1$Year)
 cville_sf1 <-  cville_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
 ```
 
-## Data Source
+# Data Source
 
 Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release
 
 * Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
-* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604)
+* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
 
-### The Data Used Here
+    * Maximum Temperature: climdiv-tmaxcy-v1.0.0-20210707
+    * Minimum Temperature: climdiv-tmincy-v1.0.0-20210707
+    * Precipitation: climdiv-pcpncy-v1.0.0-20210707
+
+## The Data Used Here
 
 The Climate Divisional Dataset from the National Center For Environmental Information began as the only long-term temporally and spatially complete dataset from which to generate historical climate analyses (1895-2013) for the contiguous United States (CONUS). It was originally developed for climate division, statewide, regional, national, and population-weighted monitoring of drought, temperature, precipitation, and heating/cooling degree day values. 
 
@@ -102,7 +112,7 @@ Observations are county level estimates of...
 
 
 * Monthly precipitation for each county for years 1895-2021
-    * Yearly average precipitation for each county for those years.
+    * Total yearly precipitation for each county for those years.
 
 
 ## Summaries 
@@ -118,14 +128,14 @@ noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>%
 ```
 
 
-## Maps
+# Maps, Warming Stripes, and Timeplots
 
-### Maximum Temperature 
+## July Temperatures 
 
-#### Maximum Temperature in July across Counties for all Years 
+###  Maximum Temperature in July across Counties for all Years 
 
 ```{r}
-cville_sf1a <- 
+cville_sf11a <- 
   ggplot(cville_sf1) +
   geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
    geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
@@ -142,7 +152,7 @@ ease_aes('linear')
 ```
 
 ```{r}
-animate(cville_sf1a, fps = 1, detail = 1, nframes = 127)
+animate(cville_sf11a, fps = 1, detail = 1, nframes = 127)
 ```
 
 ```{r, results = "asis"}
@@ -152,185 +162,65 @@ meta %>%
   as.list()
 ```
 
-#### Warming Stripes Showing Maximum Temperature in July for Each County for all Years 
-```{r warming1,  echo = TRUE, warning = FALSE, message = FALSE}
 
-#select only the july temperature and year column
-cville_sf1_jl <- select(cville_sf1, NAME, Year, Julmax)
-
-#rename the temperature column
-cville_sf1_jl <- rename(cville_sf1_jl, ta = Julmax)
-
-```
-
-```{r warming2, echo = TRUE, warning = FALSE, message = FALSE}
-
-#create a date column because stripes only works with format = date
-cville_sf1_jl <- mutate(cville_sf1_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
-
-```
-
-```{r  warming3, echo = TRUE, warning = FALSE, message = FALSE}
-
-# Filter out each County 
-
-cville_sf1_jlg <- filter(cville_sf1_jl, NAME == "Greene")
-cville_sf1_jla <- filter(cville_sf1_jl, NAME == "Albemarle")
-cville_sf1_jlc <- filter(cville_sf1_jl, NAME == "Charlottesville")
-cville_sf1_jlf <- filter(cville_sf1_jl, NAME == "Fluvanna")
-cville_sf1_jll <- filter(cville_sf1_jl, NAME == "Louisa")
-cville_sf1_jln <- filter(cville_sf1_jl, NAME == "Nelson")
-```
-
-```{r  warming4, echo = TRUE, warning = FALSE, message = FALSE}
-
-#Create the theme for the stripes image
-
-theme_strip <- theme_minimal()+
-                 theme(axis.text.y = element_blank(),
-                       axis.line.y = element_blank(),
-                       axis.title = element_blank(),
-                       panel.grid.major = element_blank(),
-                       legend.title = element_blank(),
-                       axis.text.x = element_text(vjust = 3),
-                       panel.grid.minor = element_blank(),
-                        plot.title = element_text(size = 14, face = "bold")
-                       )
-
-
-col_strip <- brewer.pal(11, "RdBu")
-```
-
-##### Greene County  Warming Stripes: July Maximum Temperature
-```{r stripes1,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jlg,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Greene County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Louisa County Warming Stripes: July Maximum Temperature
-```{r stripes2,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jll,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Louisa County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Nelson County Warming Stripes: July Maximum Temperature
-```{r stripes3,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jln,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Nelson County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Albemarle County Warming Stripes: July Maximum Temperature
-```{r stripes4,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jla,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Albemarle County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Charlottesville County Warming Stripes: July Maximum Temperature
-```{r stripes5,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jlc,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Charlottesville County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Fluvanna County Warming Stripes: July Maximum Temperature
-```{r stripes6,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf1_jlf,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Fluvanna County July Maximum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-
-#### Average Yearly Maximum Temperature across Counties
+### Minimum Temperature in July across Counties for all Years
+      
+  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year. 
 
 ```{r}
-cville_sf1b <- 
-  ggplot(cville_sf1) +
-  geom_sf(aes(fill = Avg_Tempmax), color = "black", alpha = .9, na.rm = TRUE) +
-   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
-  scale_fill_fermenter(palette = "BuPu", direction = 1,   type = "seq", n.breaks = 6) +
-     theme_void() +
-  guides(fill =
-           guide_colourbar(title.position="top", title.hjust = 0.5,
-                           barwidth = 1)
-  )  + 
-  labs(fill = "Temperature ", title = 'Year: {frame_time}',
-       caption = "Average Yearly Maximum 
-       Temperature For Charlottesville Counties") + 
- transition_time(as.integer(Year)) +
-ease_aes('linear') 
+cville_sf1a <- mutate(cville_sf1, date = str_c(Year, "07-16", sep = "-") %>% ymd())
 ```
 
 ```{r}
-animate(cville_sf1b, fps = 1, detail = 1, nframes = 127)
+cville_sf1p <- select(cville_sf1a, NAME, date, Julmin)
+cville_sf1p <- as.data.frame(cville_sf1p)
+cville_sf1p <- select(cville_sf1p, -starts_with("geometry"))
+cville_sf1g <- filter(cville_sf1p, NAME == "Greene")
+cville_sf1al <- filter(cville_sf1p, NAME == "Albemarle")
+cville_sf1al <- rename(cville_sf1al, NAME1 = NAME, Julmin1 = Julmin, date1 = date)
+cville_sf1c<- filter(cville_sf1p, NAME == "Charlottesville")
+cville_sf1c <- rename(cville_sf1c, NAME2 = NAME, Julmin2 = Julmin, date2 = date)
+cville_sf1f<- filter(cville_sf1p, NAME == "Fluvanna")
+cville_sf1f <- rename(cville_sf1f, NAME3 = NAME, Julmin3 = Julmin, date3 = date)
+cville_sf1l <- filter(cville_sf1p, NAME == "Louisa")
+cville_sf1l <- rename(cville_sf1l, NAME4 = NAME, Julmin4 = Julmin, date4 = date)
+cville_sf1n <- filter(cville_sf1p, NAME == "Nelson")
+cville_sf1n <- rename(cville_sf1n, NAME5 = NAME, Julmin5 = Julmin, date5 = date)
+cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, cville_sf1l, cville_sf1n)
+cville_sf1x <- rename(cville_sf1x, Greene = Julmin, Albemarle = Julmin1, Charlottesville = Julmin2, Fluvanna = Julmin3, Louisa = Julmin4, Nelson = Julmin5)
+cville_sf1x <- cville_sf1x[ , -which(names(cville_sf1x) %in% c("date1","date2", "date3", "date4", "date5", "NAME", "NAME1", "NAME2", "NAME3", "NAME4","NAME5"))]
 ```
 
+```{r}
+cville_sf1x <- xts(x = cville_sf1x, order.by = cville_sf1x$date)
+```
+
+```{r}
+dygraph(cville_sf1x, main = "Minimum Temperature in July across Counties for all Years", ylab = "Temperature (F)") %>%
+  dySeries("Greene", label = "Greene") %>%
+  dySeries("Albemarle", label = "Albemarle") %>%
+  dySeries("Charlottesville", label = "Charlottesville") %>%
+  dySeries("Fluvanna", label = "Fluvanna") %>%
+  dySeries("Louisa", label = "Louisa") %>%
+  dySeries("Nelson", label = "Nelson") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 3)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(6, "Set2"))
+```
 
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Avg_Tempmax") %>% 
+  filter(varname == "Julmin") %>% 
   select(about) %>% 
   as.list()
 ```
 
-#### Warming Stripes Showing Average Yearly Temperature for Each County
+
+## Average Yearly Temperatures 
+
+### Average Yearly Maximum Temperature for Each County for all Years 
 ```{r  warming6, echo = TRUE, warning = FALSE, message = FALSE}
 
 #select only the annual temperature and year column
@@ -359,7 +249,26 @@ cville_sf1_yrl <- filter(cville_sf1_yr, NAME == "Louisa")
 cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
 ```
 
-##### Greene County Warming Stripes: Average Yearly Maximum Temperature
+```{r  warming4, echo = TRUE, warning = FALSE, message = FALSE}
+
+#Create the theme for the stripes image
+
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       axis.text.x = element_text(vjust = 3),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 14, face = "bold")
+                       )
+
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+#### Greene County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes1ad,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yrg,
              aes(x = date, y = 1, fill = ta))+
@@ -375,7 +284,7 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-##### Louisa County Warming Stripes: Average Yearly Maximum Temperature
+#### Louisa County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes2ad,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yrl,
              aes(x = date, y = 1, fill = ta))+
@@ -391,7 +300,7 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-##### Nelson County Warming Stripes: Average Yearly Maximum Temperature
+#### Nelson County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes3ad,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yrn,
              aes(x = date, y = 1, fill = ta))+
@@ -407,7 +316,7 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-##### Albemarle County Warming Stripes: Average Yearly Maximum Temperature
+#### Albemarle County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes4ad,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yra,
              aes(x = date, y = 1, fill = ta))+
@@ -423,7 +332,7 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-##### Charlottesville County Warming Stripes: Average Yearly Maximum Temperature
+#### Charlottesville County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes5ad,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yrc,
              aes(x = date, y = 1, fill = ta))+
@@ -439,7 +348,7 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-##### Fluvanna County Warming Stripes: Average Yearly Maximum Temperature
+#### Fluvanna County Warming Stripes: Average Yearly Maximum Temperature
 ```{r stripes6ad,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
  ggplot(cville_sf1_yrf,
              aes(x = date, y = 1, fill = ta))+
@@ -455,192 +364,59 @@ cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
               theme_strip
 ```
 
-
-### Minimum Temperature
-
-#### Minimum Temperature in July across Counties for all Years 
-
-```{r}
-cville_sf2a <- 
-  ggplot(cville_sf1) +
-  geom_sf(aes(fill = Julmin), color = "black", alpha = .9, na.rm = TRUE) +
-   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
-  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 7) +
-     theme_void() +
-  guides(fill =
-           guide_colourbar(title.position="top", title.hjust = 0.5,
-                           barwidth = 1)
-  )  + 
-  labs(fill = "Temperature ", title = 'Year: {frame_time}',
-       caption = "Minimum Temperature in July for Charlottesville Counties") + 
- transition_time(as.integer(Year)) +
-ease_aes('linear') 
-```
-
-```{r}
-animate(cville_sf2a, fps = 1, detail = 1, nframes = 127)
-```
-
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Julmin") %>% 
+  filter(varname == "Avg_Tempmax") %>% 
   select(about) %>% 
   as.list()
 ```
 
-#### Warming Stripes Showing Minimum Temperature in July for Each County for all Years 
-```{r warming1a, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
-#select only the july temperature and year column
-cville_sf2_jl <- select(cville_sf1, NAME, Year, Julmin)
-
-#rename the temperature column
-cville_sf2_jl <- rename(cville_sf2_jl, ta = Julmin)
-
+### Average Yearly Minimum Temperature across Counties for all Years 
+  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year. 
+  
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1am <- mutate(cville_sf1, date = str_c(Year, "12-16", sep = "-") %>% ymd())
 ```
 
-```{r warming2ad, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-#create a date column because stripes only works with format = date
-cville_sf2_jl <- mutate(cville_sf2_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
-
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1pm <- select(cville_sf1am, NAME, date, Avg_Tempmin)
+cville_sf1pm <- as.data.frame(cville_sf1pm)
+cville_sf1pm <- select(cville_sf1pm, -starts_with("geometry"))
+cville_sf1gm <- filter(cville_sf1pm, NAME == "Greene")
+cville_sf1alm <- filter(cville_sf1pm, NAME == "Albemarle")
+cville_sf1alm <- rename(cville_sf1alm, NAME1 = NAME, Avg_Tempmin1 = Avg_Tempmin, date1 = date)
+cville_sf1cm<- filter(cville_sf1pm, NAME == "Charlottesville")
+cville_sf1cm <- rename(cville_sf1cm, NAME2 = NAME, Avg_Tempmin2 = Avg_Tempmin, date2 = date)
+cville_sf1fm<- filter(cville_sf1pm, NAME == "Fluvanna")
+cville_sf1fm <- rename(cville_sf1fm, NAME3 = NAME, Avg_Tempmin3 = Avg_Tempmin, date3 = date)
+cville_sf1lm <- filter(cville_sf1pm, NAME == "Louisa")
+cville_sf1lm <- rename(cville_sf1lm, NAME4 = NAME, Avg_Tempmin4 = Avg_Tempmin, date4 = date)
+cville_sf1nm <- filter(cville_sf1pm, NAME == "Nelson")
+cville_sf1nm <- rename(cville_sf1nm, NAME5 = NAME, Avg_Tempmin5 = Avg_Tempmin, date5 = date)
+cville_sf1xm <- cbind(cville_sf1gm, cville_sf1alm, cville_sf1cm, cville_sf1fm, cville_sf1lm, cville_sf1nm)
+cville_sf1xm <- rename(cville_sf1xm, Greene = Avg_Tempmin, Albemarle = Avg_Tempmin1, Charlottesville = Avg_Tempmin2, Fluvanna = Avg_Tempmin3, Louisa = Avg_Tempmin4, Nelson = Avg_Tempmin5)
+cville_sf1xm <- cville_sf1xm[ , -which(names(cville_sf1xm) %in% c("date1","date2", "date3", "date4", "date5", "NAME", "NAME1", "NAME2", "NAME3", "NAME4","NAME5"))]
 ```
 
-```{r  warming3ad, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf2_jlg <- filter(cville_sf2_jl, NAME == "Greene")
-cville_sf2_jla <- filter(cville_sf2_jl, NAME == "Albemarle")
-cville_sf2_jlc <- filter(cville_sf2_jl, NAME == "Charlottesville")
-cville_sf2_jlf <- filter(cville_sf2_jl, NAME == "Fluvanna")
-cville_sf2_jll <- filter(cville_sf2_jl, NAME == "Louisa")
-cville_sf2_jln <- filter(cville_sf2_jl, NAME == "Nelson")
-```
-
-
-##### Greene County Warming Stripes: July Minimum Temperature
-```{r stripes1a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jlg,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Greene County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Louisa County Warming Stripes: July Minimum Temperature
-```{r stripes2q,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jll,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Louisa County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Nelson County Warming Stripes: July Minimum Temperature
-```{r stripes3a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jln,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Nelson County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Albemarle County Warming Stripes: July Minimum Temperature
-```{r stripes4a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jla,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Albemarle County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Charlottesville County Warming Stripes: July Minimum Temperature
-```{r stripes5a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jlc,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Charlottesville County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Fluvanna County Warming Stripes: July Minimum Temperature
-```{r stripes6a,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_jlf,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Fluvanna County July Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-
-#### Average Yearly Minimum Temperature across Counties
-
-```{r}
-cville_sf2b <- 
-  ggplot(cville_sf1) +
-  geom_sf(aes(fill = Avg_Tempmin), color = "black", alpha = .9, na.rm = TRUE) +
-   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
-  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
-     theme_void() +
-  guides(fill =
-           guide_colourbar(title.position="top", title.hjust = 0.5,
-                           barwidth = 1)
-  )  + 
-  labs(fill = "Temperature ", title = 'Year: {frame_time}',
-       caption = "Average Yearly Minimum 
-       Temperature For Charlottesville Counties") + 
- transition_time(as.integer(Year)) +
-ease_aes('linear') 
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1xm <- xts(x = cville_sf1xm, order.by = cville_sf1xm$date)
 ```
 
 ```{r}
-animate(cville_sf2b, fps = 1, detail = 1, nframes = 127)
+dygraph(cville_sf1xm, main = "Average Yearly Minimum Temperature across Counties for all Years", ylab = "Temperature (F)") %>%
+  dySeries("Greene", label = "Greene") %>%
+  dySeries("Albemarle", label = "Albemarle") %>%
+  dySeries("Charlottesville", label = "Charlottesville") %>%
+  dySeries("Fluvanna", label = "Fluvanna") %>%
+  dySeries("Louisa", label = "Louisa") %>%
+  dySeries("Nelson", label = "Nelson") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 3)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(6, "Set2"))
 ```
-
 
 ```{r, results = "asis"}
 meta %>%
@@ -649,448 +425,58 @@ meta %>%
   as.list()
 ```
 
-#### Warming Stripes Showing Average Yearly Temperature for Each County
-```{r  warming6a, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+## Precipitation
 
-#select only the annual temperature and year column
-cville_sf2_yr <- select(cville_sf1, NAME, Year, Avg_Tempmin)
+### Total Yearly Precipitation across Counties for all Years 
 
-#rename the temperature column
-cville_sf2_yr <- rename(cville_sf2_yr, ta = Avg_Tempmin)
-
+  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year.
+  
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1ap <- mutate(cville_sf1, date = str_c(Year, "12-16", sep = "-") %>% ymd())
 ```
 
-```{r  warming7a, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-#create a date column because stripes only works with format = date
-
-cville_sf2_yr <- mutate(cville_sf2_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
-
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1pp <- select(cville_sf1ap, NAME, date, Tot_Temppcp)
+cville_sf1pp <- as.data.frame(cville_sf1pp)
+cville_sf1pp <- select(cville_sf1pp, -starts_with("geometry"))
+cville_sf1gp <- filter(cville_sf1pp, NAME == "Greene")
+cville_sf1alp <- filter(cville_sf1pp, NAME == "Albemarle")
+cville_sf1alp <- rename(cville_sf1alp, NAME1 = NAME, Tot_Temppcp1 = Tot_Temppcp, date1 = date)
+cville_sf1cp<- filter(cville_sf1pp, NAME == "Charlottesville")
+cville_sf1cp <- rename(cville_sf1cp, NAME2 = NAME, Tot_Temppcp2 = Tot_Temppcp, date2 = date)
+cville_sf1fp<- filter(cville_sf1pp, NAME == "Fluvanna")
+cville_sf1fp <- rename(cville_sf1fp, NAME3 = NAME, Tot_Temppcp3 = Tot_Temppcp, date3 = date)
+cville_sf1lp <- filter(cville_sf1pp, NAME == "Louisa")
+cville_sf1lp <- rename(cville_sf1lp, NAME4 = NAME, Tot_Temppcp4 = Tot_Temppcp, date4 = date)
+cville_sf1np <- filter(cville_sf1pp, NAME == "Nelson")
+cville_sf1np <- rename(cville_sf1np, NAME5 = NAME, Tot_Temppcp5 = Tot_Temppcp, date5 = date)
+cville_sf1xp <- cbind(cville_sf1gp, cville_sf1alp, cville_sf1cp, cville_sf1fp, cville_sf1lp, cville_sf1np)
+cville_sf1xp <- rename(cville_sf1xp, Greene = Tot_Temppcp, Albemarle = Tot_Temppcp1, Charlottesville = Tot_Temppcp2, Fluvanna = Tot_Temppcp3, Louisa = Tot_Temppcp4, Nelson = Tot_Temppcp5)
+cville_sf1xp <- cville_sf1xp[ , -which(names(cville_sf1xp) %in% c("date1","date2", "date3", "date4", "date5", "NAME", "NAME1", "NAME2", "NAME3", "NAME4","NAME5"))]
 ```
 
-```{r warming8a, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf2_yrg <- filter(cville_sf2_yr, NAME == "Greene")
-cville_sf2_yra <- filter(cville_sf2_yr, NAME == "Albemarle")
-cville_sf2_yrc <- filter(cville_sf2_yr, NAME == "Charlottesville")
-cville_sf2_yrf <- filter(cville_sf2_yr, NAME == "Fluvanna")
-cville_sf2_yrl <- filter(cville_sf2_yr, NAME == "Louisa")
-cville_sf2_yrn <- filter(cville_sf2_yr, NAME == "Nelson")
-```
-
-##### Greene County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes1ab,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yrg,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Greene County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Louisa County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes2ab,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yrl,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Louisa County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Nelson County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes3ab,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yrn,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Nelson County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Albemarle County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes4ab,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yra,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Albemarle County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Charlottesville County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes5ab,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yrc,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Charlottesville County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Fluvanna County Warming Stripes: Average Yearly Minimum Temperature
-```{r stripes6ab,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf2_yrf,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Fluvanna County Average Yearly Minimum Temperature 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-
-### Precipitation
-
-#### Precipitation in July across Counties for all Years 
-
-```{r}
-cville_sf3a <- 
-  ggplot(cville_sf1) +
-  geom_sf(aes(fill = Julpcp), color = "black", alpha = .9, na.rm = TRUE) +
-   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
-  scale_fill_fermenter(palette = "PuBuGn", direction = 1,   type = "seq", n.breaks = 7) +
-     theme_void() +
-  guides(fill =
-           guide_colourbar(title.position="top", title.hjust = 0.5,
-                           barwidth = 1)
-  )  + 
-  labs(fill = "Precipitation", title = 'Year: {frame_time}',
-       caption = "Precipitation in July for Charlottesville Counties") + 
- transition_time(as.integer(Year)) +
-ease_aes('linear') 
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+cville_sf1xp <- xts(x = cville_sf1xp, order.by = cville_sf1xp$date)
 ```
 
 ```{r}
-animate(cville_sf3a, fps = 1, detail = 1, nframes = 127)
+dygraph(cville_sf1xp, main = "Total Yearly Precipitation across Counties for all Years", ylab = "Precipitation") %>%
+  dySeries("Greene", label = "Greene") %>%
+  dySeries("Albemarle", label = "Albemarle") %>%
+  dySeries("Charlottesville", label = "Charlottesville") %>%
+  dySeries("Fluvanna", label = "Fluvanna") %>%
+  dySeries("Louisa", label = "Louisa") %>%
+  dySeries("Nelson", label = "Nelson") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 3)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(6, "Set2"))
 ```
 
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Julpcp") %>% 
+  filter(varname == "Tot_Temppcp") %>% 
   select(about) %>% 
   as.list()
-```
-
-#### Warming Stripes Showing Precipitation in July for Each County for all Years 
-```{r warming1b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-#select only the july temperature and year column
-cville_sf3_jl <- select(cville_sf1, NAME, Year, Julpcp)
-
-#rename the temperature column
-cville_sf3_jl <- rename(cville_sf3_jl, ta = Julpcp)
-
-```
-
-```{r warming2b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf3_jl <- mutate(cville_sf3_jl, date = str_c(Year, "01-01", sep = "-") %>% ymd())
-
-```
-
-```{r  warming3b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf3_jlg <- filter(cville_sf3_jl, NAME == "Greene")
-cville_sf3_jla <- filter(cville_sf3_jl, NAME == "Albemarle")
-cville_sf3_jlc <- filter(cville_sf3_jl, NAME == "Charlottesville")
-cville_sf3_jlf <- filter(cville_sf3_jl, NAME == "Fluvanna")
-cville_sf3_jll <- filter(cville_sf3_jl, NAME == "Louisa")
-cville_sf3_jln <- filter(cville_sf3_jl, NAME == "Nelson")
-```
-
-##### Greene County Warming Stripes: July Precipitation
-```{r stripes1b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jlg,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Greene County July Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Louisa County Warming Stripes: July Precipitation
-```{r stripes2b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jll,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Louisa County July Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Nelson County Warming Stripes: July Precipitation
-```{r stripes3b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jln,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Nelson County July Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Albemarle County Warming Stripes: July Precipitation
-```{r stripes4b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jla,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Albemarle County July Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Charlottesville County Warming Stripes: July Precipitation
-```{r stripes5b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jlc,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Charlottesville County Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Fluvanna County Warming Stripes: July Precipitation
-```{r stripes6b,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_jlf,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Fluvanna County July Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-
-#### Average Yearly Precipitation across Counties
-
-```{r}
-cville_sf3b <- 
-  ggplot(cville_sf1) +
-  geom_sf(aes(fill = Avg_Temppcp), color = "black", alpha = .9, na.rm = TRUE) +
-   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
-  scale_fill_fermenter(palette = "RdPu", direction = 1,   type = "seq", n.breaks = 6) +
-     theme_void() +
-  guides(fill =
-           guide_colourbar(title.position="top", title.hjust = 0.5,
-                           barwidth = 1)
-  )  + 
-  labs(fill = "Precipitation", title = 'Year: {frame_time}',
-       caption = "Average Yearly Precipitation For Charlottesville Counties") + 
- transition_time(as.integer(Year)) +
-ease_aes('linear') 
-```
-
-```{r}
-animate(cville_sf3b, fps = 1, detail = 1, nframes = 127)
-```
-
-
-```{r, results = "asis"}
-meta %>%
-  filter(varname == "Avg_Temppcp") %>% 
-  select(about) %>% 
-  as.list()
-```
-
-
-#### Warming Stripes Showing Average Yearly Precipitation for Each County
-```{r  warming6b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-#select only the annual temperature and year column
-cville_sf3_yr <- select(cville_sf1, NAME, Year, Avg_Temppcp)
-
-#rename the temperature column
-cville_sf3_yr <- rename(cville_sf3_yr, ta = Avg_Temppcp)
-
-```
-
-```{r  warming7b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf3_yr <- mutate(cville_sf3_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
-
-```
-
-```{r warming8b, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-cville_sf3_yrg <- filter(cville_sf3_yr, NAME == "Greene")
-cville_sf3_yra <- filter(cville_sf3_yr, NAME == "Albemarle")
-cville_sf3_yrc <- filter(cville_sf3_yr, NAME == "Charlottesville")
-cville_sf3_yrf <- filter(cville_sf3_yr, NAME == "Fluvanna")
-cville_sf3_yrl <- filter(cville_sf3_yr, NAME == "Louisa")
-cville_sf3_yrn <- filter(cville_sf3_yr, NAME == "Nelson")
-```
-
-##### Greene County Warming Stripes: Average Yearly Precipitation
-```{r stripes1ac,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yrg,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Greene County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Louisa County Warming Stripes: Average Yearly Precipitation
-```{r stripes2ac,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yrl,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Louisa County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Nelson County Warming Stripes: Average Yearly Precipitation
-```{r stripes3ac,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yrn,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Nelson County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Albemarle County Warming Stripes: Average Yearly Precipitation
-```{r stripes4ac,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yra,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Albemarle County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Charlottesville County Warming Stripes: Average Yearly Precipitation
-```{r stripes5ac,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yrc,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Charlottesville County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
-```
-
-##### Fluvanna County Warming Stripes: Average Yearly Precipitation
-```{r stripes6ac,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
- ggplot(cville_sf3_yrf,
-             aes(x = date, y = 1, fill = ta))+
-        geom_tile()+
-           scale_x_date(date_breaks = "6 years",
-                     date_labels = "%Y",
-                     expand = c(0, 0))+
-           scale_y_continuous(expand = c(0, 0))+
-           scale_fill_gradientn(colors = rev(col_strip))+
-             guides(fill = guide_colorbar(barwidth = 1))+
-            labs(title = "Fluvanna County Average Yearly Precipitation 1895-2020",
-                caption = "Data: NOAA Surface Temperature Analysis")+
-              theme_strip
 ```

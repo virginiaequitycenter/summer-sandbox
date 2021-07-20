@@ -11,11 +11,11 @@ library(naniar)
 ##Minimum Temperature
 
 # Pull NOAA County Climate Data: Found at (https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
-url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmincy-v1.0.0-20210604"
+url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmincy-v1.0.0-20210707"
 download.file(url = url,
-              destfile = paste(getwd(), "/", "climdiv-tmincy-v1.0.0-20210604.txt", sep = ""))
+              destfile = paste(getwd(), "/", "climdiv-tmincy-v1.0.0-20210707.txt", sep = ""))
 
-va_noaa <- read.table(file = "climdiv-tmincy-v1.0.0-20210604.txt", header = FALSE)
+va_noaa <- read.table(file = "climdiv-tmincy-v1.0.0-20210707.txt", header = FALSE)
 head(va_noaa)
 
 cville_noaa <- rename(va_noaa, Fipsyear=V1, Jan=V2, Feb=V3, Mar=V4, Apr=V5, May=V6, Jun=V7, 
@@ -113,11 +113,11 @@ eastern_noaa <- rename(eastern_noaa, Fipsyear=Fipsyear, Janmin=Jan, Febmin=Feb, 
 ## Maximum Temperature
 
 # Pull NOAA County Climate Data: Found at (https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
-url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210604"
+url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmaxcy-v1.0.0-20210707"
 download.file(url = url,
-              destfile = paste(getwd(), "/", "climdiv-tmaxcy-v1.0.0-20210604.txt", sep = ""))
+              destfile = paste(getwd(), "/", "climdiv-tmaxcy-v1.0.0-20210707.txt", sep = ""))
 
-va_noaa1 <- read.table(file = "climdiv-tmaxcy-v1.0.0-20210604.txt", header = FALSE)
+va_noaa1 <- read.table(file = "climdiv-tmaxcy-v1.0.0-20210707.txt", header = FALSE)
 head(va_noaa)
 
 # Rename variables of interest
@@ -215,11 +215,11 @@ eastern_noaa2 <- rename(eastern_noaa2, Fipsyear=Fipsyear, Janmax=Jan, Febmax=Feb
 ## Precipitation
 
 # Pull NOAA County Climate Data: Found at (https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
-url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-pcpncy-v1.0.0-20210604"
+url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-pcpncy-v1.0.0-20210707"
 download.file(url = url,
-              destfile = paste(getwd(), "/", "climdiv-pcpncy-v1.0.0-20210604.txt", sep = ""))
+              destfile = paste(getwd(), "/", "climdiv-pcpncy-v1.0.0-20210707.txt", sep = ""))
 
-va_noaa2 <- read.table(file = "climdiv-pcpncy-v1.0.0-20210604.txt", header = FALSE)
+va_noaa2 <- read.table(file = "climdiv-pcpncy-v1.0.0-20210707.txt", header = FALSE)
 head(va_noaa)
 
 # Rename variables of interest
@@ -285,7 +285,7 @@ eastern_noaa4 <- eastern_noaa4 %>% replace_with_na(replace = list(Temperature = 
 cville_noaa4 <- spread(cville_noaa4, key="Months", value ="Temperature")
 eastern_noaa4 <- spread(eastern_noaa4, key="Months", value ="Temperature")
 
-# Create Yearly Mean
+# Create Yearly Mean and Sum
 cville_noaa4 <- cville_noaa4 %>%
   dplyr::select(CNTY_FIPS, Year, TempType, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, 
                 Sep, Oct, Nov, Dec, Fipsyear)
@@ -296,14 +296,16 @@ eastern_noaa4 <- eastern_noaa4 %>%
 cville_noaa4$Avg_Temppcp = rowMeans(cville_noaa4[,c(4:15)], na.rm = TRUE)
 eastern_noaa4$Avg_Temppcp = rowMeans(eastern_noaa4[,c(4:15)], na.rm = TRUE)
 
+cville_noaa4$Tot_Temppcp = rowSums(cville_noaa4[,c(4:15)], na.rm = TRUE)
+eastern_noaa4$Tot_Temppcp = rowSums(eastern_noaa4[,c(4:15)], na.rm = TRUE)
 
 cville_noaa4 <- cville_noaa4 %>%
   dplyr::select(CNTY_FIPS, Year, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, 
-                Sep, Oct, Nov, Dec, Avg_Temppcp, Fipsyear)
+                Sep, Oct, Nov, Dec, Tot_Temppcp, Avg_Temppcp, Fipsyear)
 
 eastern_noaa4 <- eastern_noaa4 %>%
   dplyr::select(CNTY_FIPS, Year, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, 
-                Sep, Oct, Nov, Dec, Avg_Temppcp, Fipsyear)
+                Sep, Oct, Nov, Dec, Tot_Temppcp, Avg_Temppcp, Fipsyear)
 
 cville_noaa4$Year = as.numeric(cville_noaa4$Year)
 eastern_noaa4$Year = as.numeric(eastern_noaa4$Year)
