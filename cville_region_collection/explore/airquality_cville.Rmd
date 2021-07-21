@@ -172,7 +172,7 @@ cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
 
 ### Percentile in 1981
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$percentile_1981)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_1981)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -198,7 +198,7 @@ meta %>%
 
 ### Percentile in 2016
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$percentile_2016)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_2016)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -250,7 +250,7 @@ meta %>%
 
 ### PM~2.5~ Concentration in 2016
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pm2_5_2016)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$pm2_5_2016)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,

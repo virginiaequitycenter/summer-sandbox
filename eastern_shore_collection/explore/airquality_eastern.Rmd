@@ -170,7 +170,7 @@ easternshapes <- st_transform(easternshapes, crs = 4326) # to WGS84, given error
 
 ### Percentile in 1981
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$percentile_1981)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percentile_1981)
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -196,7 +196,7 @@ meta %>%
 
 ### Percentile in 2016
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$percentile_2016)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percentile_2016)
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -246,7 +246,34 @@ meta %>%
   as.list()
 ```
 
-### Change in PM~2.5~
+
+### PM~2.5~ Concentration in 2016
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$pm2_5_2016)
+leaflet(easternshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = easternshapes,
+              fillColor = ~pal(pm2_5_2016),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", easternshapes$GEOID, "<br>",
+                             "Concentration: ", easternshapes$pm2_5_2016)) %>%
+  addLegend("bottomright", pal = pal, values = easternshapes$pm2_5_2016,
+            title = "PM2.5 Concentration, 2016", opacity = 0.7)
+```
+
+```{r}
+meta %>% 
+  filter(varname=="pm2_5_2016") %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+### Change in PM~2.5~, 1981-2016
 ```{r}
 pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$PM_change)
 leaflet(easternshapes) %>%
