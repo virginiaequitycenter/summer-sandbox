@@ -130,12 +130,18 @@ ejscreen <- ejscreen %>%
 ejscreen %>%
   filter(OZONE!=0 & PM25!=0) %>% 
   ggplot() +
-  geom_point(aes(x=OZONE, y=PM25, color=county))
+  geom_point(aes(x=OZONE, y=PM25, color=county)) +
+  labs(x="Ozone level",
+       y="PM2.5 level") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 
 ejscreen %>%
   filter(OZONE!=0 & PM25!=0) %>% 
   ggplot() +
-  geom_point(aes(x=P_OZONE, y=P_PM25, color=county))
+  geom_point(aes(x=P_OZONE, y=P_PM25, color=county)) +
+  labs(x="Ozone percentile",
+       y="PM2.5 percentile") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 ```
   
 ### Proximity to traffic vs. air toxics cancer risk
@@ -145,12 +151,18 @@ These scatterplots show the relationship between a block group's proximity to tr
 ejscreen %>%
   filter(PTRAF!=0 & CANCER!=0) %>% 
   ggplot() +
-  geom_point(aes(x=PTRAF, y=CANCER, color=county))
+  geom_point(aes(x=PTRAF, y=CANCER, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Cancer risk") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 
 ejscreen %>%
   filter(PTRAF!=0 & CANCER!=0) %>%
   ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county))
+  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Cancer risk percentile") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 ```
 
 ### Proximity to traffic vs. diesel particulate matter level
@@ -160,12 +172,18 @@ These scatterplots show the relationship between a block group's proximity to tr
 ejscreen %>%
   filter(PTRAF!=0 & DSLPM!=0) %>% 
   ggplot() +
-  geom_point(aes(x=PTRAF, y=DSLPM, color=county))
+  geom_point(aes(x=PTRAF, y=DSLPM, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 
 ejscreen %>%
   filter(PTRAF!=0 & DSLPM!=0) %>%
   ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county))
+  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 ```
 
 ### PM~2.5~ vs. diesel particulate matter level
@@ -175,12 +193,18 @@ These scatterplots show the relationship between PM~2.5~ and diesel particulate 
 ejscreen %>%
   filter(PM25!=0 & DSLPM!=0) %>% 
   ggplot() +
-  geom_point(aes(x=PM25, y=DSLPM, color=county))
+  geom_point(aes(x=PM25, y=DSLPM, color=county)) +
+  labs(x="PM2.5 level",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 
 ejscreen %>%
   filter(PM25!=0 & DSLPM!=0) %>%
   ggplot() +
-  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county))
+  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county)) +
+  labs(x="PM2.5 percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
 ```
 
 
@@ -324,3 +348,5 @@ leaflet(easternshapes) %>%
 ## Important Notes
 
 PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract.
+
+Certain variables contain "NA" values for some block groups in this region. It is unclear to me why there are NAs, but my guess would be that it is due to small populations in these areas.

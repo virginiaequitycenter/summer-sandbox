@@ -133,11 +133,17 @@ ejscreen <- ejscreen %>%
 
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=OZONE, y=PM25, color=county))
+  geom_point(aes(x=OZONE, y=PM25, color=county)) +
+  labs(x="Ozone level",
+       y="PM2.5 level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=P_OZONE, y=P_PM25, color=county))
+  geom_point(aes(x=P_OZONE, y=P_PM25, color=county)) +
+  labs(x="Ozone percentile",
+       y="PM2.5 percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 ```
   
 ### Proximity to traffic vs. air toxics cancer risk
@@ -146,11 +152,17 @@ These scatterplots show the relationship between a block group's proximity to tr
 ```{r}
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=PTRAF, y=CANCER, color=county))
+  geom_point(aes(x=PTRAF, y=CANCER, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Cancer risk") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county))
+  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Cancer risk percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 ```
 
 ### Proximity to traffic vs. diesel particulate matter level
@@ -159,11 +171,17 @@ These scatterplots show the relationship between a block group's proximity to tr
 ```{r}
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=PTRAF, y=DSLPM, color=county))
+  geom_point(aes(x=PTRAF, y=DSLPM, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county))
+  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 ```
 
 ### PM~2.5~ vs. diesel particulate matter level
@@ -172,11 +190,17 @@ These scatterplots show the relationship between PM~2.5~ and diesel particulate 
 ```{r}
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=PM25, y=DSLPM, color=county))
+  geom_point(aes(x=PM25, y=DSLPM, color=county)) +
+  labs(x="PM2.5 level",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 
 ejscreen %>%
   ggplot() +
-  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county))
+  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county)) +
+  labs(x="PM2.5 percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
 ```
 
 
