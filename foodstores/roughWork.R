@@ -67,16 +67,13 @@ df <- as.data.frame(cbind(lon,lat))
 
 
 # getting the map
-mapgilbert <- get_map(location = c(lon = mean(lon), lat = mean(lat)), zoom = 4,
+mapgilbert <- get_map(location = c(lon = mean(lon), lat = mean(lat)), zoom = 11,
                       maptype = "satellite")
 view(mapgilbert)
 
 # plotting the map with some points on it
 ggmap(mapgilbert) +
   geom_point(data = df, aes(x = lon, y = lat, fill = "red", alpha = 0.8))
-
-register_google(key = "AIzaSyB6dD2cbwvpBydrc4WLyAU9LIr2VzeQk-k")
-
 
 leaflet() %>% 
   addProviderTiles("CartoDB.Positron") %>% 
