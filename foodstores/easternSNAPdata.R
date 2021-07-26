@@ -56,22 +56,26 @@ storeNames <- dplyr::pull(easternstores, Store_Name) # creating vector to use in
 keyWords <- c("Enterprises|Markets|Dollar|Deli|Royal|Remolino|Variety|Seafood|
               |Roses|Casa|Shore|Convenience|CVS|Goose|Walgreens|E & C")
 
-groceryOnly <- easternstores %>% 
+snap_eastern <- easternstores %>% 
   filter(str_detect(storeNames, regex(keyWords, ignore_case = T), negate = T))
 
-groceryOnly[!groceryOnly$Store_Name%in%included$Store_Name,] # looks good :)
+snap_eastern[!snap_eastern$Store_Name%in%included$Store_Name,] # looks good :)
 
 # Save csv
 
-write_csv(groceryOnly, path = "snap_eastern.csv")
+write_csv(snap_eastern, path = "snap_eastern.csv")
 
 
 # Map
-lon <- pull(groceryOnly, Longitude)
-lat <- pull(groceryOnly, Latitude)
+lon <- pull(snap_eastern, Longitude)
+lat <- pull(snap_eastern, Latitude)
+
+PopUpInfo <- paste0(snap_eastern$Store_Name, "<br>",
+                    snap_eastern$Address, "<br>",
+                    snap_eastern$City, ", ", snap_eastern$State, " ", snap_eastern$Zip5)
 
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%  
   setView(lng = mean(lon), lat = mean(lat), zoom = 9) %>% 
-  addMarkers(lng = lon, lat = lat, popup = groceryOnly$Store_Name,
+  addMarkers(lng = lon, lat = lat, popup = PopUpInfo,
              clusterOptions = markerClusterOptions())

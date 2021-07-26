@@ -30,7 +30,6 @@ stores_4326 <- stores_4326 %>%
 stores <- stores %>% 
   filter(County %in% cvilleCounties)
 
-
 # Manually filtering to only grocery stores, supermarkets 
 # not convenience stories, pharmacies, dollar stores, warehouse clubs, etc.
 
@@ -77,32 +76,27 @@ keyWords <- c("Lion|Kroger|Whole Foods|Reid|Hilltop|Tio|Depot|African|Trader|Nat
 
 storeNames <- dplyr::pull(stores, Store_Name) # creating vector to use in str_detect
 
-groceryOnly <- stores %>% 
+snap_cville <- stores %>% 
   filter(str_detect(storeNames, regex(keyWords, ignore_case = T), negate = F))
 
-groceryOnly[!groceryOnly$Store_Name%in%included$Store_Name,] # looks good :)
+snap_cville[!snap_cville$Store_Name%in%included$Store_Name,] # looks good :)
 
 # save csv 
-write_csv(groceryOnly, path = "snap_cville.csv")
-
+write_csv(snap_cville, path = "snap_cville.csv")
 
 # Map
-lon <- pull(groceryOnly, Longitude)
-lat <- pull(groceryOnly, Latitude)
+lon <- pull(snap_cville, Longitude)
+lat <- pull(snap_cville, Latitude)
+
+PopUpInfo <- paste0(snap_cville$Store_Name, "<br>",
+                    snap_cville$Address, "<br>",
+                    snap_cville$City, ", ", snap_cville$State, " ", snap_cville$Zip5)
 
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%  
   setView(lng = mean(lon), lat = mean(lat), zoom = 8) %>% 
-  addMarkers(lng = lon, lat = lat, popup = groceryOnly$Store_Name)
+  addMarkers(lng = lon, lat = lat, popup = PopUpInfo,
+  clusterOptions = markerClusterOptions())
 
-
-# was trying to get it to display store name, address, and city within popup
-# but did not exactly go as planned
-PopUpInfo <- paste(groceryOnly$Store_Name,
-                  groceryOnly$Address,
-                  groceryOnly$City,
-                  sep = "<br/>", collapse = "")
-
-clusterOptions = markerClusterOptions() 
-# originally added this argument to make it cleaner but felt it kind of took away from data
+# not sure about clusterOptions argument because I worry it kind of takes away from the data for this region
 
