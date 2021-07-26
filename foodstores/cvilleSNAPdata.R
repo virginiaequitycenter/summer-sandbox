@@ -94,9 +94,6 @@ PopUpInfo <- paste0(snap_cville$Store_Name, "<br>",
 
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%  
-  setView(lng = mean(lon), lat = mean(lat), zoom = 8) %>% 
+  setView(lng = mean(lon), lat = mean(lat), zoom = 9) %>% 
   addMarkers(lng = lon, lat = lat, popup = PopUpInfo,
   clusterOptions = markerClusterOptions())
-
-# not sure about clusterOptions argument because I worry it kind of takes away from the data for this region
-
