@@ -1,7 +1,6 @@
 library(tidyverse)
 library(jsonlite)
 library(sf)
-library(leaflet)
 
 # get spatial extent for api query
 cville_tracts <- readRDS("../spatial_units/data/cville_tracts.RDS")
@@ -32,23 +31,10 @@ stores <- stores %>%
 
 # Manually filtering to only grocery stores, supermarkets 
 # not convenience stories, pharmacies, dollar stores, warehouse clubs, etc.
-
-write_csv(stores_4326, path = "rawCvilleStores.csv")   # split screen / make counting easier
-
 included <- stores_4326[c(4, 6, 10:13, 19:20, 33:34, 44:45, 47:49, 52:53, 56:58,
                           65, 74, 76, 78, 80, 84, 88:89, 92, 94, 101, 105:107, 
                           111:112, 114:115, 117, 125, 127, 144, 146, 156, 161:163,
                           165, 167, 169), ] 
-#20: international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for some people so going to include
-#44: african market place ^
-#49: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options?
-#57: integral yoga-- same issue ^
-#65: asian market-- int'l food...
-#112: La Guadalupana ^
-#127: indian bazar-- int'l food
-#161: latin market...
-#169: indian & nepali
-
 excluded <- stores_4326[c(1:3, 5, 7:9, 14:18, 21:32, 35:43, 46, 50:51, 54:55, 59:64,
                           66:73, 75, 77, 79, 81:83, 85:87, 90:91, 93, 95:100, 102:104,
                           108:110, 113, 116, 118:124, 126, 128:143, 145, 147:155,
@@ -64,10 +50,9 @@ excluded <- stores_4326[c(1:3, 5, 7:9, 14:18, 21:32, 35:43, 46, 50:51, 54:55, 59
 #151: market central-- Saturdays 8:00 am-12:00 pm .. not accessible
 
 # if not mentioned by row specifically, it fell into category of convenience, dollar store, gas station, etc.
-
+# 'included' comments are the in explore file
 
 # Reproducible method
-
 keyWords <- c("Lion|Kroger|Whole Foods|Reid|Hilltop|Tio|Depot|African|Trader|Natural|
               |Millers|Teeter|Yoga|Valu|Asian|Aldi|Medina|Target|Blue|Nx|Thomas INC|
               |Caul’s|Guadalupana|Mercado|Oriental|Walmart|Indian|Giant|Latino|Lidl|
@@ -83,17 +68,3 @@ snap_cville[!snap_cville$Store_Name%in%included$Store_Name,] # looks good :)
 
 # save csv 
 write_csv(snap_cville, path = "snap_cville.csv")
-
-# Map
-lon <- pull(snap_cville, Longitude)
-lat <- pull(snap_cville, Latitude)
-
-PopUpInfo <- paste0(snap_cville$Store_Name, "<br>",
-                    snap_cville$Address, "<br>",
-                    snap_cville$City, ", ", snap_cville$State, " ", snap_cville$Zip5)
-
-leaflet() %>%
-  addProviderTiles("CartoDB.Positron") %>%  
-  setView(lng = mean(lon), lat = mean(lat), zoom = 9) %>% 
-  addMarkers(lng = lon, lat = lat, popup = PopUpInfo,
-  clusterOptions = markerClusterOptions())
