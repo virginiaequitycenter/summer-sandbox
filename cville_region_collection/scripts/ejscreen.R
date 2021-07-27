@@ -33,12 +33,6 @@ cville_area <- virginia %>%
            ID%in%511259501001:511259503004 |
            ID%in%515400002011:515400010003)
 
-# Replace NAs with 0s
-cville_area <- cville_area %>% 
-  mutate(PTRAF = replace_na(PTRAF, 0),
-         PWDIS = replace_na(PWDIS, 0),
-         P_PTRAF = replace_na(P_PTRAF, 0),
-         P_PWDIS = replace_na(P_PWDIS, 0))
 
 # Get rid of unnecessary state name variable
 cville_area <- cville_area %>% 

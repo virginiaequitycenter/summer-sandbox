@@ -216,7 +216,7 @@ cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
 
 ### Proximity to treatment storage and disposal facilities (TSDFs)
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PTSDF)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$PTSDF)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -234,7 +234,7 @@ leaflet(cvilleshapes) %>%
 
 ### Proximity to traffic
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PTRAF)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$PTRAF)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -306,7 +306,7 @@ leaflet(cvilleshapes) %>%
 
 ### Diesel Particulate Matter Level
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$DSLPM)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$DSLPM)
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
