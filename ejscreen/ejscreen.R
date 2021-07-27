@@ -5,6 +5,7 @@ library(tidyverse)
 library(leaflet)
 library(sf)
 library(stargazer)
+library(corrplot) #for correlation matrix
 
 
 # Pull EJSCREEN
@@ -36,9 +37,6 @@ cville_area <- virginia %>%
            ID%in%511099501001:511099505003 |
            ID%in%511259501001:511259503004 |
            ID%in%515400002011:515400010003)
-eastern_shore <- virginia %>%
-  filter(ID%in%510010901001:510019902000 |
-            ID%in%511319301001:511319901000)
 
 # Some spatial explorations
 # Load shapefile
@@ -126,6 +124,13 @@ cville_area %>% select(-c(GEOID, STATE_NAME, B_DSLPM:T_PM25, NPL_CNT, TSDF_CNT))
             summary.stat = c("mean", "sd", "min", "median", "max"))
 
 # Visual Distributions
+# Correlation Matrix
+correlation <- cville_area %>%
+  select(PRE1960PCT:PM25)
+num_correlation <- cor(correlation, use = "complete.obs")
+num_correlation <- round(num_correlation, digits = 2)
+corrplot(num_correlation, type = {"upper"}, method = "shade", shade.col = NA, tl.col = "black", diag = F, addCoef.col = "black")
+
 # Ozone vs. PM25
 cville_area %>%
   ggplot() +

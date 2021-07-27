@@ -1,0 +1,346 @@
+---
+title: "EJSCREEN Exploration File"
+subtitle: "Data for Charlottesville Region"
+author: "Marisa Lemma"
+date: "7/20/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries and data
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(viridis)
+library(leaflet)
+library(rgdal)
+library(sf)
+library(googlesheets4)
+library(corrplot)
+
+ejscreen <- read_csv("../data/ejscreen_cville_blkgps.csv")
+
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=840479384", sheet = "ejscreen", gs4_deauth())
+
+```
+
+
+## Data Source
+
+Source: US Environmental Protection Agency EJSCREEN Tool, 2020 data (last modified 7/1/21)
+
+* Download URL: https://gaftp.epa.gov/EJSCREEN/
+* Technical Documentation: https://www.epa.gov/sites/production/files/2021-04/documents/ejscreen_technical_document.pdf
+
+## About the Data
+
+EJSCREEN is an "environmental justice (EJ) mapping and screening tool" produced by the EPA.
+
+## Variable Descriptions
+```{r}
+glimpse(ejscreen)
+```
+
+Observations are block group estimates of key environmental indicators:
+
+* Lead paint (`PRE1960PCT`)
+* Particulate matter levels in the air (`DSLPM` and `PM25`)
+* Air toxics cancer risk (`CANCER`)
+* Air toxics respiratory hazard index (`RESP`)
+* Traffic proximity (`PTRAF`)
+* Proximity to National Priorities List sites (`PNPL`)
+* Proximity to Risk Management Plan facilities (`PRMP`)
+* Proximity to Treatment Storage and Disposal facilities (`PTSDF`)
+* Ozone level in the air (`OZONE`)
+* Major direct dischargers to water (`PWDIS`)
+
+`P_` indicates percentile ranks for each variable, and `T_` indicates map popup text.
+
+
+```{r}
+meta %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+
+## Summary Statistics
+
+```{r}
+ejscreen %>% select(-c(ID, T_LDPNT:T_PM25)) %>%
+  select(where(~is.numeric(.x) && !is.na(.x))) %>%
+  as.data.frame() %>%
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+
+## Visual Distributions
+
+### Correlation Matrices
+
+The following charts show the correlations between all combinations of variables. The darker the color, the more highly correlated a pair of variables are. The first correlation matrix shows correlations among the levels of each environmental indicator, and the second shows correlations among the percentiles of each indicator.
+```{r}
+correlation <- ejscreen %>% 
+  select(PRE1960PCT:PM25)
+num_correlation <- cor(correlation, use = "complete.obs")
+num_correlation <- round(num_correlation, digits = 2)
+corrplot(num_correlation, type = {"upper"}, method = "shade", 
+         shade.col = NA, tl.col = "black", 
+         diag = F, addCoef.col = "black")
+```
+
+```{r}
+meta %>% 
+  filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+
+```{r}
+correlation2 <- ejscreen %>% 
+  select(P_LDPNT:P_PM25)
+num_correlation2 <- cor(correlation2, use = "complete.obs")
+num_correlation2 <- round(num_correlation2, digits = 2)
+corrplot(num_correlation2, type = {"upper"}, method = "shade", 
+         shade.col = NA, tl.col = "black", 
+         diag = F, addCoef.col = "black")
+```
+
+```{r}
+meta %>% 
+  filter(varname %in% c("P_LDPNT", "P_DSLPM", "P_CANCR", "P_RESP", "P_PTRAF", "P_PWDIS", "P_PNPL", "P_PRMP", "P_PTSDF", "P_OZONE", "P_PM25")) %>% 
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+
+### Ozone vs. PM~2.5~
+
+These scatterplots show the relationship between ozone and PM~2.5~, broken down by county. The first scatterplot shows the correlation between the levels of ozone and PM~2.5~, and the second scatterplot shows the correlation between the percentiles.
+```{r}
+ejscreen <- ejscreen %>% 
+  mutate(county = str_sub(ID, 3, 5))
+
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=OZONE, y=PM25, color=county)) +
+  labs(x="Ozone level",
+       y="PM2.5 level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=P_OZONE, y=P_PM25, color=county)) +
+  labs(x="Ozone percentile",
+       y="PM2.5 percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+```
+  
+### Proximity to traffic vs. air toxics cancer risk
+
+These scatterplots show the relationship between a block group's proximity to traffic and air toxics cancer risk, broken down by county. The first one shows the correlation between the levels, and the second one shows the correlation between the percentiles.
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PTRAF, y=CANCER, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Cancer risk") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Cancer risk percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+```
+
+### Proximity to traffic vs. diesel particulate matter level
+
+These scatterplots show the relationship between a block group's proximity to traffic and its diesel particulate matter level, broken down by county. The first shows the correlation between the levels, and the second shows the correlation between the percentiles.
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PTRAF, y=DSLPM, color=county)) +
+  labs(x="Proximity to traffic",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county)) +
+  labs(x="Traffic proximity percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+```
+
+### PM~2.5~ vs. diesel particulate matter level
+
+These scatterplots show the relationship between PM~2.5~ and diesel particulate matter, broken down by county. The first shows the correlation between the levels, and the second shows the correlation between the percentiles.
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PM25, y=DSLPM, color=county)) +
+  labs(x="PM2.5 level",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county)) +
+  labs(x="PM2.5 percentile",
+       y="Diesel particulate matter percentile") +
+  scale_color_brewer(type = "qual", labels = c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson", "Charlottesville"))
+```
+
+
+## Spatial Distributions
+
+```{r, include = F}
+cville_blkgps <- readRDS("../data/cville_blkgps.RDS")
+ejscreen <- ejscreen %>% rename(GEOID = ID)
+
+cvilleshapes <- merge(cville_blkgps, ejscreen, by = 'GEOID', all.x = T)
+cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
+```
+
+### Proximity to treatment storage and disposal facilities (TSDFs)
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PTSDF)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(PTSDF),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "Proximity to TSDF: ", cvilleshapes$T_PTSDF)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$PTSDF,
+            title = "Proximity to TSDF", opacity = 0.7)
+```
+
+### Proximity to traffic
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PTRAF)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(PTRAF),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "Proximity to traffic: ", cvilleshapes$T_PTRAF)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$PTRAF,
+            title = "Traffic Proximity", opacity = 0.7)
+```
+
+### PM~2.5~ Percentile
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$P_PM25)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(P_PM25),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "PM2.5 Percentile: ", cvilleshapes$P_PM25)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$P_PM25,
+            title = "PM2.5 Percentiles", opacity = 0.7)
+```
+
+### Distribution of PM~2.5~
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PM25)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(PM25),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "PM2.5 Level: ", cvilleshapes$T_PM25)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$PM25,
+            title = "PM2.5 Concentrations", opacity = 0.7)
+```
+
+### Air toxics cancer risk
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$CANCER)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(CANCER),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "Cancer Risk: ", cvilleshapes$T_CANCR)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$CANCER,
+            title = "Air Toxics Cancer Risk", opacity = 0.7)
+```
+
+### Diesel Particulate Matter Level
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$DSLPM)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(DSLPM),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "DSLPM: ", cvilleshapes$T_DSLPM)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$DSLPM,
+            title = "Diesel Particulate Matter Level", opacity = 0.7)
+```
+
+### Ozone Levels
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$OZONE)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(OZONE),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
+                             "Ozone Level: ", cvilleshapes$T_OZONE)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$OZONE,
+            title = "Ozone Levels in the Air", opacity = 0.7)
+```
+
+
+## Important Notes
+
+PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract. All other variables were collected at the block group level.

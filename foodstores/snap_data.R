@@ -21,6 +21,15 @@ stores_4326 <- st_as_sf(stores,
                         coords = c("Longitude", "Latitude"),
                         crs = 4326)
 
+# Filter to main counties
+cvilleCounties <- c("CHARLOTTESVILLE", "ALBEMARLE", "LOUISA", "NELSON", "GREENE", "FLUVANNA")
+
+stores_4326 <- stores_4326 %>% 
+  filter(County %in% cvilleCounties)
+
+stores <- stores %>% 
+  filter(County %in% cvilleCounties)
+
 # From these, we want only grocery stores, supermarkets
 # not convenience stories, pharmacies, dollar stores, warehouse clubs
 # so need to devise a mostly reproducible way of identifying these from the list
