@@ -177,6 +177,7 @@ cville_area <- cville_area %>%
 
 # Load data
 airquality <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/airquality_cville_tract.csv")
+# airquality <- read_csv("../cville_region_collection/data/airquality_cville_tract.csv")
 airquality_eastern <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/airquality_eastern_tract.csv")
 
 # Merge datasets
