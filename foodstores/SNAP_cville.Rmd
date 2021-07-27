@@ -1,0 +1,72 @@
+---
+title: "Charlottesville SNAP Data"
+author: "Khalila Karefa-Kargbo"
+date: "7/27/2021"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(leaflet)
+```
+
+## Data Source
+
+Source: ...
+
+* Source URL: ...
+* Download URL: ...
+
+```{r}
+snap_cville <- read_csv("~/DemofData/summer-sandbox/cville_region_collection/data/snap_cville.csv")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'snap')
+```
+
+### The Data Used Here
+...
+explain SNAP data, filtering process, etc
+
+```{r}
+knitr::kable(glimpse(snap_cville), "simple")
+```
+
+## Map
+```{r}
+lon <- pull(snap_cville, Longitude)
+lat <- pull(snap_cville, Latitude)
+
+PopUpInfo <- paste0(snap_cville$Store_Name, "<br>",
+                    snap_cville$Address, "<br>",
+                    snap_cville$City, ", ", snap_cville$State, " ", snap_cville$Zip5)
+
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>%  
+  setView(lng = mean(lon), lat = mean(lat), zoom = 9) %>% 
+  addMarkers(lng = lon, lat = lat, popup = PopUpInfo,
+  clusterOptions = markerClusterOptions())
+```
+
+## Exploration
+
+use this space to explain some more about the grocery stores, maybe copy and paste script list here
+
+number of grocery stores?
+etc
+etc
+etc
+
+included <- stores_4326[c(4, 6, 10:13, 19:20, 33:34, 44:45, 47:49, 52:53, 56:58,
+                          65, 74, 76, 78, 80, 84, 88:89, 92, 94, 101, 105:107, 
+                          111:112, 114:115, 117, 125, 127, 144, 146, 156, 161:163,
+                          165, 167, 169), ] 
+20: international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for some people so going to include
+44: african market place ^
+49: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options?
+57: integral yoga-- same issue ^
+65: asian market-- int'l food...
+112: La Guadalupana ^
+127: indian bazar-- int'l food
+161: latin market...
+169: indian & nepali
+
