@@ -1,0 +1,111 @@
+---
+title: "NOAA Temp Data Clean"
+author: "Tolu"
+date: "6/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libs, message=FALSE, warning=FALSE}
+library(knitr)
+library(dplyr)
+library(tidyverse)
+library(plotly)
+library(gridExtra)
+library(vars)
+library(urca)
+library(MASS)
+library(stargazer)
+library(sf)
+library(stringi)
+library(leaflet)
+library(raster)
+library(tmap)
+library(mapdeck)
+library(mapview)
+library(RColorBrewer)
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(transformr)
+library(gifski)
+library(ggrepel)
+library(hrbrthemes)
+```
+
+
+```{r, load new data}
+climcounty <- read.table(file = "climdiv-tmpccy-v1.0.0-20210604.txt", header = FALSE)
+head(climcounty)
+```
+
+
+```{r, load new data shp}
+ccshape <- read_sf("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Data/counties")
+```
+
+
+```{r, filter}
+ccshape1 <- ccshape %>% filter(FIPS %in% c(51540, 51003, 51065, 51079, 51109, 51125, 51001, 51131))
+```
+
+```{r}
+climcounty <- rename(climcounty, Fipsyear=V1, Jan=V2, Feb=V3, Mar=V4, Apr=V5, May=V6, Jun=V7, Jul=V8, Aug=V9, Sep=V10, Oct=V11, Nov=V12, Dec=V13)
+```
+
+```{r filter counties}
+countyavgtemp <- climcounty %>% filter(Fipsyear %in% c(44540021895:44540022021, 44003021895:44003022021, 44065021895:44065022021, 44079021895:44079022021, 44109021895:44109022021, 44125021895:44125022021, 44001021895:44001022021, 44131021895:44131022021))
+```
+
+
+```{r}
+countyavgtemp1 <- countyavgtemp %>%
+  group_by(Fipsyear) %>% mutate(year = as.numeric(str_sub(Fipsyear, 8, )), CNTY_FIPS = str_sub(Fipsyear, 3, -7))
+```
+
+```{r}
+countyavgtemp1 <- countyavgtemp1 %>%
+                      dplyr::select(CNTY_FIPS, year, Jan, Feb,
+                                Mar, Apr, May, Jun, Jul, Aug, Sep,
+                                Oct, Nov, Dec, Fipsyear)
+```
+
+```{r}
+ccshapegf <- left_join(ccshape1, countyavgtemp1, by ="CNTY_FIPS")
+```
+
+
+```{r}
+countyavgsf <- st_as_sf(ccshapegf)
+```
+
+```{r}
+ccshapegf <- cbind(ccshapegf, st_coordinates(st_centroid(ccshapegf)))
+```
+
+
+```{r}
+ccshapeggf <- 
+  ggplot(ccshapegf) +
+  geom_sf(aes(fill = Jul), color = "black", alpha = .9) +
+   geom_text_repel(data = ccshapegf, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 8) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Average temperature in July for 7 Counties") + 
+ transition_time(as.integer(year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(ccshapeggf, fps = 1, detail = 1, nframes = 127)
+```
+
+

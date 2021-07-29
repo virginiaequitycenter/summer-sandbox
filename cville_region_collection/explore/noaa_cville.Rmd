@@ -38,6 +38,7 @@ library(dygraphs)
 library(xts)
 library(lubridate)
 library(zoo)
+library(kableExtra)
 noaa <- read_csv("noaa_cville_county.csv")
 cvillefips <- c("540", "003", "065", "079", "109", "125")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
@@ -73,10 +74,10 @@ cville_sf1 <-  cville_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na
 
 # Data Source
 
-Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release
+Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release. The first link is to download the shapefile for the geography of the counties, while the second link is to download the data files containing the temperature data information. The three codes below are the document names for the datasets of interest. 
 
-* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
-* Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
+* Shapefile Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
+* Temperature Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
 
     * Maximum Temperature: climdiv-tmaxcy-v1.0.0-20210707
     * Minimum Temperature: climdiv-tmincy-v1.0.0-20210707
@@ -98,10 +99,15 @@ To Learn More, See:
 ## Variable Descriptions
 
 ```{r}
-glimpse(cville_sf1)
+cville_sfe1 <- filter(cville_sf1, Year == "1895")
+kbl(cville_sfe1) %>%
+  kable_paper(full_width = F) %>% 
+   scroll_box(width = "800px", height = "350px")
 ```
 
-Observations are county level estimates of...
+The data has the name of the county, the federal information processing system (FIPS) codes which are used to identify a geographical location, both the state and county FIPS code are in the data. The geometry is the location data for plotting the maps, and the rest of the data has years of observation (1895-2020) and the temperature data for each county for all months, for all years.
+  
+Temperature observations are county level estimates of...
 
 * Monthly maximum temperature for each county for years 1895-2021
     * Yearly average maximum temperature for each county for those years. 
@@ -130,6 +136,8 @@ noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>%
 
 # Maps, Warming Stripes, and Timeplots
 
+  The goal of the project is to identify the effects of climate change on the hot weather patterns in the counties. We chose July as the month of interest because we believe it is the hottest month of the year which allows us to observe temperature fluctuations in a stable month. 
+  
 ## July Temperatures 
 
 ###  Maximum Temperature in July across Counties for all Years 
@@ -146,7 +154,7 @@ cville_sf11a <-
                            barwidth = 1)
   )  + 
   labs(fill = "Temperature ", title = 'Year: {frame_time}',
-       caption = "Maximum Temperature in July for Charlottesville Counties") + 
+       caption = "Maximum Temperature in July for Charlottesville Counties", size = 10) + 
  transition_time(as.integer(Year)) +
 ease_aes('linear') 
 ```
@@ -259,9 +267,12 @@ theme_strip <- theme_minimal()+
                        axis.title = element_blank(),
                        panel.grid.major = element_blank(),
                        legend.title = element_blank(),
-                       axis.text.x = element_text(vjust = 3),
+                       legend.text = element_text(size = 10),
+                       axis.text.x = element_text(vjust = 3, size = 10),
                        panel.grid.minor = element_blank(),
-                        plot.title = element_text(size = 14, face = "bold")
+                        plot.title = element_text(size = 15, face = "bold"),
+                       plot.caption = element_text(size = 10) 
+                     
                        )
 
 

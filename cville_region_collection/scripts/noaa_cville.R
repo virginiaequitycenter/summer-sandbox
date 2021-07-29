@@ -1,4 +1,4 @@
-# Get NOAA Minimum Temperature Data 
+# Get NOAA Temperature Data 
 # 2021-07-03
 # Tolu Odukoya
 
@@ -11,8 +11,9 @@ library(naniar)
 ##Minimum Temperature
 
 # Pull NOAA County Climate Data: Found at (https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
+
 url <- "https://www.ncei.noaa.gov/pub/data/cirs/climdiv/climdiv-tmincy-v1.0.0-20210707"
-download.file(url = url,
+              download.file(url = url,
               destfile = paste(getwd(), "/", "climdiv-tmincy-v1.0.0-20210707.txt", sep = ""))
 
 va_noaa <- read.table(file = "climdiv-tmincy-v1.0.0-20210707.txt", header = FALSE)
@@ -48,8 +49,8 @@ eastern_noaa <- eastern_noaa %>%
 cville_noaa1 <- gather(cville_noaa, key="Months", value ="Temperature", Jan:Dec)
 eastern_noaa1 <- gather(eastern_noaa, key="Months", value ="Temperature", Jan:Dec)
 
-cville_noaa1 <- cville_noaa1 %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa1 <- eastern_noaa1 %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa1 <- cville_noaa1 %>% replace_with_na(replace = list(Temperature = -99.99))
+eastern_noaa1 <- eastern_noaa1 %>% replace_with_na(replace = list(Temperature = -99.99))
 
 cville_noaa1 <- cville_noaa1 %>% arrange(Fipsyear) %>% group_by(Year) %>% 
   mutate(row = row_number())
@@ -74,8 +75,8 @@ eastern_noaa <- gather(eastern_noaa, key="Months", value ="Temperature", Jan:Dec
 cville_noaa <- cville_noaa %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 eastern_noaa <- eastern_noaa %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 
-cville_noaa <- cville_noaa %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa <- eastern_noaa %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa <- cville_noaa %>% replace_with_na(replace = list(Temperature = -99.99))
+eastern_noaa <- eastern_noaa %>% replace_with_na(replace = list(Temperature = -99.99))
 
 cville_noaa <- spread(cville_noaa, key="Months", value ="Temperature")
 eastern_noaa <- spread(eastern_noaa, key="Months", value ="Temperature")
@@ -151,8 +152,8 @@ eastern_noaa2 <- eastern_noaa2 %>%
 cville_noaa3 <- gather(cville_noaa2, key="Months", value ="Temperature", Jan:Dec)
 eastern_noaa3 <- gather(eastern_noaa2, key="Months", value ="Temperature", Jan:Dec)
 
-cville_noaa3 <- cville_noaa3 %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa3 <- eastern_noaa3 %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa3 <- cville_noaa3 %>% replace_with_na(replace = list(Temperature = -99.99))
+eastern_noaa3 <- eastern_noaa3 %>% replace_with_na(replace = list(Temperature = -99.99))
 
 cville_noaa3 <- cville_noaa3 %>% arrange(Fipsyear) %>% group_by(Year) %>% 
   mutate(row = row_number())
@@ -177,8 +178,8 @@ eastern_noaa2 <- gather(eastern_noaa2, key="Months", value ="Temperature", Jan:D
 cville_noaa2 <- cville_noaa2 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 eastern_noaa2 <- eastern_noaa2 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 
-cville_noaa2 <- cville_noaa2 %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa2 <- eastern_noaa2 %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa2 <- cville_noaa2 %>% replace_with_na(replace = list(Temperature = -99.99))
+eastern_noaa2 <- eastern_noaa2 %>% replace_with_na(replace = list(Temperature = -99.99))
 
 cville_noaa2 <- spread(cville_noaa2, key="Months", value ="Temperature")
 eastern_noaa2 <- spread(eastern_noaa2, key="Months", value ="Temperature")
@@ -253,8 +254,8 @@ eastern_noaa4 <- eastern_noaa4 %>%
 cville_noaa5 <- gather(cville_noaa4, key="Months", value ="Temperature", Jan:Dec)
 eastern_noaa5 <- gather(eastern_noaa4, key="Months", value ="Temperature", Jan:Dec)
 
-cville_noaa5 <- cville_noaa5 %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa5 <- eastern_noaa5 %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa5 <- cville_noaa5 %>% replace_with_na(replace = list(Temperature = -9.99))
+eastern_noaa5 <- eastern_noaa5 %>% replace_with_na(replace = list(Temperature = -9.99))
 
 cville_noaa5 <- cville_noaa5 %>% arrange(Fipsyear) %>% group_by(Year) %>% 
   mutate(row = row_number())
@@ -271,7 +272,7 @@ eastern_noaa5 <- eastern_noaa5 %>% group_by(Year) %>%
 cville_noaa5 <- cville_noaa5 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 eastern_noaa5 <- eastern_noaa5 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 
-# Remove -99.9 and replace with NA
+# Remove -9.99 and replace with NA
 
 cville_noaa4 <- gather(cville_noaa4, key="Months", value ="Temperature", Jan:Dec)
 eastern_noaa4 <- gather(eastern_noaa4, key="Months", value ="Temperature", Jan:Dec)
@@ -279,8 +280,8 @@ eastern_noaa4 <- gather(eastern_noaa4, key="Months", value ="Temperature", Jan:D
 cville_noaa4 <- cville_noaa4 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 eastern_noaa4 <- eastern_noaa4 %>% arrange(CNTY_FIPS, match(Months, month.abb)) 
 
-cville_noaa4 <- cville_noaa4 %>% replace_with_na(replace = list(Temperature = -99.9))
-eastern_noaa4 <- eastern_noaa4 %>% replace_with_na(replace = list(Temperature = -99.9))
+cville_noaa4 <- cville_noaa4 %>% replace_with_na(replace = list(Temperature = -9.99))
+eastern_noaa4 <- eastern_noaa4 %>% replace_with_na(replace = list(Temperature = -9.99))
 
 cville_noaa4 <- spread(cville_noaa4, key="Months", value ="Temperature")
 eastern_noaa4 <- spread(eastern_noaa4, key="Months", value ="Temperature")
