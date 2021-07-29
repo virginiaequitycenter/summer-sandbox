@@ -12,12 +12,11 @@ library(leaflet)
 ```
 
 ## Data Source
+Source: USDA, SNAP Retailer Locator, July 2021
 
-Source: USDA...
-
-* Source URL: ...
+* Source URL: [https://www.fns.usda.gov/snap/retailer-locator](https://www.fns.usda.gov/snap/retailer-locator)
 * Reference URL: [https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5](https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5)
-* Download URL: ...
+* Download URL: [https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about](https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about)
 
 ```{r}
 snap_cville <- read_csv("~/DemofData/summer-sandbox/cville_region_collection/data/snap_cville.csv")
