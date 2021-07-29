@@ -16,15 +16,16 @@ library(leaflet)
 Source: ...
 
 * Source URL: ...
+* Reference URL: [https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5](https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5)
 * Download URL: ...
 
 ```{r}
 snap_eastern <- read_csv("~/DemofData/summer-sandbox/eastern_shore_collection/data/snap_eastern.csv")
 ```
-
 ### The Data Used Here
-...
-explain SNAP data, filtering process, etc
+The data here consists of regional data of SNAP retailers used to estimate those with access to a "wide variety of healthy foods at affordable prices." Supermarkets, supercenters, and large grocery stores are used here as proxies for the complete set of stores that provide this. In this data, "we exclude military commissaries and warehouse club stores such as Sam’s Club, Costco, and BJ’s. While many such stores offer a wide variety of foods and accept SNAP benefits, military commissaries are only accessible to a select group of individuals and club stores are only available to those who pay an annual membership fee. Drug stores, dollar stores, and convenience stores were also, again, excluded. Even though some of these store types may sell a variety of healthy foods, they vary widely in the extent of offerings. Excluding these types of food retailers from our store directory is likely to result in an overestimate of the number of people who lack access to nutritious food" (USDA, 2009). 
+
+After retrieving the full list of regional SNAP retailers, it was manually filtered to exclude all retailers that did not fit as a supermarket, supercenter, or grocery store. Then, a list of key words was retrieved to recreate the filtered list in a reproducible way.
 
 ```{r}
 knitr::kable(glimpse(snap_eastern), "simple")
@@ -47,18 +48,15 @@ leaflet() %>%
 ```
 
 ## Exploration
+```{r}
+nrow(snap_eastern)
+```
+14 stores in the Eastern Shore fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
 
-use this space to explain some more about the grocery stores, maybe copy and paste script list here
+#### Notes on specific retailers
+2: Cordova Mexican Store-- Mexican grocery store so some may not consider this "wide variety," but it would for its targeted audience and sells fresh produce and fit the criteria
+3, 4: El Crucero-- same as above
+8: Village General Store-- general store so not exactly supermarket or large grocery store, but sells fresh produce
+14: Maranatha Supermarket-- including because it has supermarket in the name, but the store doesn't seem to exist? Doesn't come up in a Google search (even when searching address)
 
-number of grocery stores?
-
-etc
-etc
-etc
-
-included <- easternstores[c(1, 14:15, 17, 19:20, 33:34, 39:40, 46, 58:59, 65), ] 
-14: mexican grocery store
-15: el crucero-- fresh produce so including
-34: general store but sells produce
-65: including bc supermarket in the name, but store doesn't seem to exist? doesn't come up in google search (even when searching address)
-
+*Those not specifically mentioned by row number easily fall into category of supermarket, supercenter, or grocery store ie. Walmart, Kroger, Food Lion, etc*

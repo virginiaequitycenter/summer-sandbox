@@ -16,16 +16,16 @@ library(leaflet)
 Source: ...
 
 * Source URL: ...
+* Reference URL: [https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5](https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5)
 * Download URL: ...
 
 ```{r}
 snap_cville <- read_csv("~/DemofData/summer-sandbox/cville_region_collection/data/snap_cville.csv")
-meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'snap')
 ```
-
 ### The Data Used Here
-...
-explain SNAP data, filtering process, etc
+The data here consists of regional data of SNAP retailers used to estimate those with access to a "wide variety of healthy foods at affordable prices." Supermarkets, supercenters, and large grocery stores are used here as proxies for the complete set of stores that provide this. In this data, "we exclude military commissaries and warehouse club stores such as Sam’s Club, Costco, and BJ’s. While many such stores offer a wide variety of foods and accept SNAP benefits, military commissaries are only accessible to a select group of individuals and club stores are only available to those who pay an annual membership fee. Drug stores, dollar stores, and convenience stores were also, again, excluded. Even though some of these store types may sell a variety of healthy foods, they vary widely in the extent of offerings. Excluding these types of food retailers from our store directory is likely to result in an overestimate of the number of people who lack access to nutritious food" (USDA, 2009). 
+
+After retrieving the full list of regional SNAP retailers, it was manually filtered to exclude all retailers that did not fit as a supermarket, supercenter, or grocery store. Then, a list of key words was retrieved to recreate the filtered list in a reproducible way.
 
 ```{r}
 knitr::kable(glimpse(snap_cville), "simple")
@@ -49,24 +49,21 @@ leaflet() %>%
 
 ## Exploration
 
-use this space to explain some more about the grocery stores, maybe copy and paste script list here
+```{r}
+nrow(snap_cville)
+```
+50 stores in the Charlottesville region fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
 
-number of grocery stores
-etc
-etc
-etc
 
-included <- stores_4326[c(4, 6, 10:13, 19:20, 33:34, 44:45, 47:49, 52:53, 56:58,
-                          65, 74, 76, 78, 80, 84, 88:89, 92, 94, 101, 105:107, 
-                          111:112, 114:115, 117, 125, 127, 144, 146, 156, 161:163,
-                          165, 167, 169), ] 
-20: international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for some people so going to include
-44: african market place ^
-49: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options?
-57: integral yoga-- same issue ^
-65: asian market-- int'l food...
-112: La Guadalupana ^
-127: indian bazar-- int'l food
-161: latin market...
-169: indian & nepali
+#### Notes on specific retailers
+8: El Tio-- international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for its target audience so going to include
+11: African Market Place-- same as above
+13: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options
+18: Integral Yoga-- same as above
+21: Asian Market-- international food...
+36: La Guadalupana-- international food...
+41: Indian Bazar-- international food...
+45: Charlottesville Latino Market-- international food...
+50: Express Grocery Stores-- indian & nepali (international) food...
 
+*Those not specifically mentioned by row number easily fall into category of supermarket, supercenter, or grocery store ie. Walmart, Kroger, Food Lion, etc*
