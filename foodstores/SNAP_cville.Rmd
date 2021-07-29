@@ -51,7 +51,7 @@ leaflet() %>%
 
 use this space to explain some more about the grocery stores, maybe copy and paste script list here
 
-number of grocery stores?
+number of grocery stores
 etc
 etc
 etc
