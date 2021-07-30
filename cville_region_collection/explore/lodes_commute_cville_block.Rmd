@@ -2,7 +2,7 @@
 title: "LEHD LODES"
 subtitle: "Charlottesville Region 2018 Commuting Data"
 author: "Lee LeBoeuf"
-date: "07/26/2021"
+date: "07/29/2021"
 output: 
   html_document:
     toc: yes
@@ -29,8 +29,12 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 * This datafile uses data from the Origin-Destination (OD) data files from LEHD. The OD datafile lists each pair the census blocks for where workers live and work, enabling us to calculate the average commute distance by calculating the distance between each home and workplace census block pairing. 
 * Distance calculations: All distances are "as the crow flies" and calulated using the Vincenty Ellipsoid method based on the latitude and longitudes of the centroids of each census block. These distances are then aggregated to the census block group and tract level.
 * Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002. 
-* The data contains average commute distances for each SU calculated based on the following groups: (1) People who live *and* work in the Charlottesville region (avgc_workinRegion); (2) Charlottesville area residents who work within 150 miles of their home census block (avgc_within150); (3) Charlottesville area residents who work in a tract outside the Charlottesville area that employs at least 25 Charlottsville area residents (avgc_25_employees); (4) All Charlottesville area residents represented in the LODES OD data (avg_all)
-* Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
+* The data contains average and median commute distances for each SU calculated based on the following groups: (1) People who live *and* work in the Charlottesville region; (2) Charlottesville area residents who work within 40 miles of their home census block; (3) Charlottesville area residents who work in a tract outside the Charlottesville area that employs at least 25 Charlottsville area residents; (4) All Charlottesville area residents represented in the LODES OD data. The data also contains the number of residents within each SU who fall into those 4 categories. 
+* Some limitations: 
+    + The data are prone to imperfect geocoding for certain jobs; jobs for companies with multiple branches are often all coded in the same location. This means that distance calculations are likely to be an overestimate if many residents within one SU are employed by a company with multiple branches or a company whose headquarters is far away. There is also no way to differentiate between remote workers or the frequency with which any worker actually travels to their place of emplyoment (though note: these data were collected prior to the COVID-19 pandemic when fewer people were working remotely). For these reasons, we include calculations of average and median commute distances based on multiple groups of workers. The estimates based on all residents in an SU are most likely to be an overestimate, while those based on residents working within 40 miles of home are likely to be the most conservative. 
+    + The distances are "as the crow flies" and therefore imprecise estimates of actual commute distances on the road. 
+    + These data do not include workers in defense-related industries. 
+    + Student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
 
 ## Variable descriptions
 ```{r}
@@ -38,7 +42,7 @@ meta %>%
   filter(su_block == 1) %>%
   select(varname, about) %>% as.list()
 glimpse(lodes)
-lodes %>% select(avgc_all, avgc_within150, avgc_25_employees, avgc_workinRegion) %>% 
+lodes %>% select(avgc_all, avgc_within40, avgc_25_employees, avgc_workinRegion, medc_all, medc_within40, medc_25_employees, medc_workinRegion) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 2,
@@ -47,17 +51,21 @@ lodes %>% select(avgc_all, avgc_within150, avgc_25_employees, avgc_workinRegion)
 
 ## Visual distribution 
 ```{r}
-lodes %>% select(c(h_geocode, avgc_all, avgc_within150, avgc_25_employees, avgc_workinRegion)) %>% 
-  pivot_longer(-h_geocode, names_to = "measure", values_to = "value") %>% 
-  ggplot(aes(x = value, fill = measure)) + 
+long <- lodes %>% select(c( h_geocode, avgc_all, avgc_within40, avgc_25_employees, avgc_workinRegion, medc_all, medc_within40, medc_25_employees, medc_workinRegion)) %>% 
+  pivot_longer(-h_geocode, names_to = "measure", values_to = "value")
+long$measure <- factor(long$measure,
+                         levels = c("avgc_all", "medc_all", "avgc_within40", "medc_within40", "avgc_25_employees", "medc_25_employees", "avgc_workinRegion",
+                                    "medc_workinRegion"))
+long %>% 
+  ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
   geom_histogram() + 
-  facet_wrap(~measure, scales = "free")
+  facet_wrap(~measure, scales = "free", ncol = 2)
 ```
 
 ```{r, results = "asis"}
 meta %>% 
-  filter(varname %in% c("avgc_all", "avgc_within150", "avgc_25_employees", "avgc_workinRegion")) %>%
+  filter(varname %in% c("avgc_all", "avgc_within40", "avgc_25_employees", "avgc_workinRegion", "medc_all", "medc_within40", "medc_25_employees", "medc_workinRegion")) %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
@@ -99,13 +107,13 @@ meta %>%
   as.list()
 ``` 
 
-### Charlottesvile region workers who work within 150 miles of home
+### Charlottesvile region workers who work within 40 miles of home
 ```{r}
-pal <- colorNumeric("plasma", reverse = T, domain = cvl_lodes$avgc_within150)
+pal <- colorNumeric("plasma", reverse = T, domain = cvl_lodes$avgc_within40)
 leaflet(cvl_lodes) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = cvl_lodes,
-              fillColor = ~pal(avgc_within150),
+              fillColor = ~pal(avgc_within40),
               weight = 1,
               opacity = 1,
               color = "white", 
@@ -114,14 +122,14 @@ leaflet(cvl_lodes) %>%
                 weight = 1, fillOpacity = 0.8, bringToFront = T
               ),
               popup = paste0("GEOID: ", cvl_lodes$h_geocode, "<br>",
-                             "Average commute (mi): ", round(cvl_lodes$avgc_within150, 2))) %>% 
-  addLegend("bottomright", pal = pal, values = cvl_lodes$avgc_within150, 
+                             "Average commute (mi): ", round(cvl_lodes$avgc_within40, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$avgc_within40, 
             title = "Average commute (mi)", opacity = 0.7)
 ```
 
 ```{r, results = "asis"}
 meta %>% 
-  filter(varname %in% c("avgc_within150")) %>%
+  filter(varname %in% c("avgc_within40")) %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
