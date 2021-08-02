@@ -41,9 +41,11 @@ out_all <- lapply(seq_along(list_dfs_all),
 
 ---
 
-[2.] I've begun work on a write-up for the housing justice advisory committee displaying some key eviction data for the Charlottesville and Richmond regions. I've been finalizing plots first; prose will be filled in around them. Currently, we've got by-year and by-quarter plots, and by-ZIP maps are in progress (I'm working on a way to overlap ZIP polygons with locality polylines to make regional distinctions obvious even when mapping by-ZIP data). An example of a by-quarter plot is below (Richmond region):
+[2.] I've begun work on a write-up for the housing justice advisory committee displaying some key eviction data for the Charlottesville and Richmond regions. I've been finalizing plots first; prose will be filled in around them. Currently, we've got by-year and by-quarter plots, and by-ZIP maps. Examples of a by-quarter plot (Richmond region) and a by-ZIP map (with the Charlottesville + Richmond regions outlined) are below:
 
 ![](jgg-update-week-of-7-26-image.png){width=75%}
+
+![](jgg-update-week-of-7-26-map-still.png){width=65%}
 
 ---
 
