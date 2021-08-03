@@ -171,7 +171,7 @@ leaflet(cvlshapes) %>%
 ### Average Yearly Household Energy Expenditures
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$avg_hh_exp)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$avg_hh_exp)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -191,7 +191,7 @@ leaflet(cvlshapes) %>%
 ### Number of Energy Burdened Households
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$numberburdened)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$numberburdened)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -329,7 +329,7 @@ leaflet(cvlshapes) %>%
 
 #### Renters
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$percent_burdened_renters)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_burdened_renters)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -348,7 +348,7 @@ leaflet(cvlshapes) %>%
 
 #### Owners
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$percent_burdened_owners)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_burdened_owners)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
