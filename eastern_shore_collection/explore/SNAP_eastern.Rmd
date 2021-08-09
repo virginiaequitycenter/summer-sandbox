@@ -1,7 +1,7 @@
 ---
 title: "Eastern Shore SNAP Data"
 author: "Khalila Karefa-Kargbo"
-date: "7/29/2021"
+date: "8/9/2021"
 output: html_document
 ---
 ```{r setup, include=FALSE}
@@ -29,8 +29,13 @@ After retrieving the full list of regional SNAP retailers, it was manually filte
 ReferenceUSA, an online database of current establishment-level business data from Infogroup, was also meant to be used as a resource for this map. After analyzing the SNAP data, however, ReferenceUSA did not seem to be as relevant and did not add much to the data. Therefore, it was excluded from this explore file. 
 
 ```{r}
-knitr::kable(glimpse(snap_eastern), "simple")
+knitr::kable(glimpse(head(snap_eastern)), "simple")
 ```
+
+```{r}
+nrow(snap_eastern)
+```
+14 stores in the Eastern Shore fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
 
 ## Map
 ```{r}
@@ -48,16 +53,13 @@ leaflet() %>%
              clusterOptions = markerClusterOptions())
 ```
 
-## Exploration
-```{r}
-nrow(snap_eastern)
-```
-14 stores in the Eastern Shore fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
-
 #### Notes on specific retailers
-2: Cordova Mexican Store-- Mexican grocery store so some may not consider this "wide variety," but it would for its targeted audience and sells fresh produce and fit the criteria
-3, 4: El Crucero-- same as above
-8: Village General Store-- general store so not exactly supermarket or large grocery store, but sells fresh produce
-14: Maranatha Supermarket-- including because it has supermarket in the name, but the store doesn't seem to exist? Doesn't come up in a Google search (even when searching address)
+- 2: Cordova Mexican Store-- Mexican grocery store so some may not consider this "wide variety," but it would for its targeted audience and sells fresh produce and fit the criteria
+- 3, 4: El Crucero-- same as above
+- 8: Village General Store-- general store so not exactly supermarket or large grocery store, but sells fresh produce
+- 14: Maranatha Supermarket-- including because it has supermarket in the name, but the store doesn't seem to exist? Doesn't come up in a Google search (even when searching address)
 
 *Those not specifically mentioned by row number easily fall into category of supermarket, supercenter, or grocery store ie. Walmart, Kroger, Food Lion, etc*
+
+#### Future directions
+A food desert is an area that has limited access to affordable and nutritious food, opposed to food oases where the opposite is true. This is a very informative map that can be used to identify these deserts and oases and use them for a variety of different projects, such as discovering the relationships between areas with food deserts/oases and variables such as socioeconomic status, racial makeup, environmental concerns, health issues, and so on.

@@ -1,7 +1,7 @@
 ---
 title: "Charlottesville SNAP Data"
 author: "Khalila Karefa-Kargbo"
-date: "7/29/2021"
+date: "8/9/2021"
 output: html_document
 ---
 ```{r setup, include=FALSE}
@@ -29,10 +29,15 @@ After retrieving the full list of regional SNAP retailers, it was manually filte
 ReferenceUSA, an online database of current establishment-level business data from Infogroup, was also meant to be used as a resource for this map. After analyzing the SNAP data, however, ReferenceUSA did not seem to be as relevant and did not add much to the data. Therefore, it was excluded from this explore file. 
 
 ```{r}
-knitr::kable(glimpse(snap_cville), "simple")
+knitr::kable(glimpse(head(snap_cville)), "simple")
 ```
 
-## Map
+```{r}
+nrow(snap_cville)
+```
+50 stores in the Charlottesville region fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
+
+### Map
 ```{r}
 lon <- pull(snap_cville, Longitude)
 lat <- pull(snap_cville, Latitude)
@@ -48,23 +53,18 @@ leaflet() %>%
   clusterOptions = markerClusterOptions())
 ```
 
-## Exploration
-
-```{r}
-nrow(snap_cville)
-```
-50 stores in the Charlottesville region fit the criteria of a "supermarket, supercenter, or grocery store that provide a wide variety of healthy foods at affordable prices."
-
-
 #### Notes on specific retailers
-8: El Tio-- international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for its target audience so going to include
-11: African Market Place-- same as above
-13: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options
-18: Integral Yoga-- same as above
-21: Asian Market-- international food...
-36: La Guadalupana-- international food...
-41: Indian Bazar-- international food...
-45: Charlottesville Latino Market-- international food...
-50: Express Grocery Stores-- indian & nepali (international) food...
+- 8: El Tio-- international food grocery stores so may not fit criteria of "wide variety" of healthy foods, but does for its target audience so going to include
+- 11: African Market Place-- same as above
+- 13: Rebecca's Natural Food-- definitely not a large grocery store but it does provide healthy food options
+- 18: Integral Yoga-- same as above
+- 21: Asian Market-- international food...
+- 36: La Guadalupana-- international food...
+- 41: Indian Bazar-- international food...
+- 45: Charlottesville Latino Market-- international food...
+- 50: Express Grocery Stores-- indian & nepali (international) food...
 
 *Those not specifically mentioned by row number easily fall into category of supermarket, supercenter, or grocery store ie. Walmart, Kroger, Food Lion, etc*
+
+#### Future directions
+A food desert is an area that has limited access to affordable and nutritious food, opposed to food oases where the opposite is true. This is a very informative map that can be used to identify these deserts and oases and use them for a variety of different projects, such as discovering the relationships between areas with food deserts/oases and variables such as socioeconomic status, racial makeup, environmental concerns, health issues, and so on.
