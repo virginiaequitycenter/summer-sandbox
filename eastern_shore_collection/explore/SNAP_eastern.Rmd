@@ -26,6 +26,8 @@ The data here consists of regional data of SNAP retailers used to estimate those
 
 After retrieving the full list of regional SNAP retailers, it was manually filtered to exclude all retailers that did not fit as a supermarket, supercenter, or grocery store. Then, a list of key words was retrieved to recreate the filtered list in a reproducible way.
 
+ReferenceUSA, an online database of current establishment-level business data from Infogroup, was also meant to be used as a resource for this map. After analyzing the SNAP data, however, ReferenceUSA did not seem to be as relevant and did not add much to the data. Therefore, it was excluded from this explore file. 
+
 ```{r}
 knitr::kable(glimpse(snap_eastern), "simple")
 ```
