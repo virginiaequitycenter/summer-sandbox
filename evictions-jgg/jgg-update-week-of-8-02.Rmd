@@ -1,0 +1,91 @@
+---
+title: "JGG update for the week of August 2, 2021"
+author: "Jacob Goldstein-Greenwood"
+date: "08/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+Below is an overview of what I've been working on this past week.
+
+---
+
+[1.] I prepped a deck for the end-of-summer presentation; that's stored on the GitHub under summer-sandbox/EOS_presentations/jgg-eos-presentation/jgg-eos-presentation.html
+
+---
+
+[2.] For the TJPDC grant Michele received, part of the work involves identifying, to the best of our ability, which cases were likely filed by a management company as opposed to an individual landlord. I've begun work on a regex pattern for identifying those cases. The current iteration of the pattern is below. Note for Michele: We spoke last week about the potential need to decide how we want to treat cases where the plaintiff is something like "Susan and Eric Johnson, LLC"; in that case, the landlords have created a separate (and separately liable) legal entity, but their business entity is meaningfully different than "Virginia Apartment Management Corp., LLC," which likely has 10s or 100s of times the number of units as the Johnsons. I mentioned last week that I thought that the Cville/Alb data contained a number of those instances ("Johnsons, LLC," etc.); I scrolled through the raw data, and I actually think it's a far smaller problem than I'd initially sold: I didn't see a case stood out as an *obvious* instance of a plaintiff  that the regex below would tag but that we may think is critical to separate out from more traditionally insidious companies. That said: I'll continue looking through and seeing what types of cases are caught up by the regex. It may well still be worth contacting someone at TJPD/KAG to get their input on how we want to treat different types of plaintiffs, but I'll take a bit more time to really nail down the pertinent questions if that's alright.
+
+```{r, echo = F, eval  = T}
+mgmt_comp_pattern <- paste0('(?i)', paste0(c(# Indicative general keywords
+                                             '(\\bap(ar)?t(ment)?(s)?(\\.)?\\b)',
+                                             '(\\bass(et|ociate)s\\b)',
+                                             '(\\bbank\\b)',
+                                             '(\\bcapital\\b)',
+                                             '(\\bco(mpany)?(\\.)?\\b)',
+                                             '(\\bcorp(oration|\\.)?\\b)',
+                                             '(\\bdevelop(ers?|ments?)\\b)',
+                                             '(\\bestate\\b)',
+                                             '(\\bfoundation\\b)',
+                                             '(\\bgroup\\b)',
+                                             '(\\bho(ld|us)ings?\\b)',
+                                             '(\\binvestments?\\b)',
+                                             '(\\bleasing\\b)',
+                                             '(\\bl(imi)?t(e)?d(\\.)?\\b)',
+                                             '(\\bpartners(hips?)?\\b)',
+                                             '(\\bpropert(ies|y)\\b)',
+                                             '(\\brealty\\b)',
+                                             '(\\brentals?\\b)',
+                                             '(\\bs(ervice|olution)s?\\b)',
+                                             '(\\bsolutions\\b)',
+                                             '(\\btenants?\\b)',
+                                             '(\\btrust\\b)',
+                                             '(\\bunits?\\b)',
+                                             '(\\bventures?\\b)',
+                                             # Indicative abbreviations and characters
+                                             '(\\b(p)?l(l?c|td|l{0,2}?p)\\.?\\b)',
+                                             '(\\binc\\.?\\b)',
+                                             '(\\d+)',
+                                             '(\\&)',
+                                             # Indicative prepositions and articles
+                                             '(\\bof\\b)',
+                                             '(\\bon\\b)',
+                                             '(\\bat\\b)',
+                                             '(\\bthe\\b)',
+                                             # Charlottesville-/Albemarle-specific patterns
+                                             '(\\bcommonwealth\\b)',
+                                             '(\\bcrha\\b)',
+                                             '(\\bhrec\\.?\\b)',
+                                             '(\\bcharlottesville\\b)',
+                                             '(\\balbemarle\\b)'),
+                                            collapse = '|')
+                             )
+mgmt_comp_pattern
+```
+
+[3.] I made some updates to the regex pattern we use to identify non-residential defendants. For example, I added a number of prepositions as search terms, given that the presence of "[ ]of[ ]" or "[ ]at[ ]" in a defendant name is a pretty good clue that it's not a residential party. (Excluding, of course, any medieval nobles in the data---apologies to the "[5th Earl of Atoll](https://en.wikipedia.org/wiki/John_Stewart,_5th_Earl_of_Atholl") if he happens to hold title to some Albemarle County property. But the chance isn't keeping me up at night.)
+
+---
+
+[4.] I updated the cleaning code to better address possible typographic/data-entry errors in the plaintiff and defendant names. For example, there are a few instances where a court clerk may have accidentally entered two spaces in a name; we now convert those to single spaces so that `group_by()` calls don't fail to catch all instances of a given name ("John[ ][ ]Smith --> "John[ ]Smith").
+
+E.g.:
+```{r, echo = T, eval  = F}
+dedoublespacer <- function(x) {
+  x[, c('pla_1', 'def_1')] <- apply(x[, c('pla_1', 'def_1')], 2, function(q) gsub('\\s{2,}', ' ', q))
+  x
+}
+cases <- dedoublespacer(cases)
+```
+
+---
+
+[5.] I prepped some choropleths for the doc that the eviction-project advisory group will eventually receive with some details on evictions in the Cville and RVA regions. One map colors ZIP codes based on raw filing counts across both regions; the other normalizes filing counts "within-region" between 0 and 1 (e.g., the ZIP code with the max count in the Cville region is the same color as the ZIP code with the max count in the RVA region). Maps are at the bottom of [this page](https://virginiaequitycenter.github.io/va-evictions/cville-rva-update.html).
+
+---
+
+Some next steps: I'll be adding additional functions to the code to better clean defendant and plaintiff names; e.g., our `group_by()` calls when identifying serial cases will probably be more accurate if we clean names so that "XYZ L.L.C." and "XYZ LLC" are treated as the same entity, given that the difference in period usage is a function of court-clerk data-entry proclivities, not a legal distinction. I'm also continuing to check off elements of the TJPDC work, and I've almost got code finalized for all of the steps we promised them (e.g., identifying judgment costs, etc.).
