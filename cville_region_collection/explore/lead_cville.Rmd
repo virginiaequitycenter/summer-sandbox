@@ -150,7 +150,7 @@ cvlshapes <- st_transform(cvlshapes, crs = 4326) # to WGS84, given error
 ### Average Energy Burden
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$averageburden)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$averageburden)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -171,7 +171,7 @@ leaflet(cvlshapes) %>%
 ### Average Yearly Household Energy Expenditures
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$avg_hh_exp)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$avg_hh_exp)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -191,7 +191,7 @@ leaflet(cvlshapes) %>%
 ### Number of Energy Burdened Households
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$numberburdened)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$numberburdened)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -208,10 +208,12 @@ leaflet(cvlshapes) %>%
 ```
 
 
-### Percent of Energy Burdened Households
+### Percent of Energy Burdened Households{.tabset}
+
+#### All AMI Levels
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$percentburdened)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percentburdened)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -222,20 +224,112 @@ leaflet(cvlshapes) %>%
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
               popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
-                             "Pct. Burdened: ", round(cvlshapes$percentburdened, 2), "<br>",
-                             "Pct. Burdened - 0-30% AMI: ", round(cvlshapes$percent_0_30, 2), "<br>",
-                             "Pct. Burdened - 30-60% AMI: ", round(cvlshapes$percent_30_60, 2), "<br>",
-                             "Pct. Burdened - 60-80% AMI: ", round(cvlshapes$percent_60_80, 2), "<br>",
-                             "Pct. Burdened - 80-100% AMI: ", round(cvlshapes$percent_80_100, 2), "<br>",
-                             "Pct. Burdened - 100%+ AMI: ", round(cvlshapes$percent_over_100, 2))) %>%
+                            "Pct. Burdened: ", round(cvlshapes$percentburdened, 2))) %>%
   addLegend("bottomright", pal = pal, values = cvlshapes$percentburdened,
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
-### Percent of Energy Burdened Rented Households
 
+#### 0-30% AMI
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$percent_burdened_renters)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_0_30)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_0_30),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                            "Pct. Burdened - 0-30% AMI: ", round(cvlshapes$percent_0_30, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_0_30,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+
+#### 30-60% AMI
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_30_60)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_30_60),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                            "Pct. Burdened - 30-60% AMI: ", round(cvlshapes$percent_30_60, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_30_60,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+
+#### 60-80% AMI
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_60_80)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_60_80),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                            "Pct. Burdened - 60-80% AMI: ", round(cvlshapes$percent_60_80, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_60_80,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+
+#### 80-100% AMI
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_80_100)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_80_100),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                            "Pct. Burdened - 80-100% AMI: ", round(cvlshapes$percent_80_100, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_80_100,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+
+#### 100%+ AMI
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_over_100)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percent_over_100),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$tract, "<br>",
+                            "Pct. Burdened - 100%+ AMI: ", round(cvlshapes$percent_over_100, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percent_over_100,
+            title = "Percent of Energy Burdened Households", opacity = 0.7)
+```
+
+
+### Percent of Energy Burdened Renters/Owners{.tabset}
+
+#### Renters
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_burdened_renters)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,
@@ -252,10 +346,9 @@ leaflet(cvlshapes) %>%
 ```
 
 
-### Percent of Energy Burdened Owned Households
-
+#### Owners
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvlshapes$percent_burdened_owners)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percent_burdened_owners)
 leaflet(cvlshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvlshapes,

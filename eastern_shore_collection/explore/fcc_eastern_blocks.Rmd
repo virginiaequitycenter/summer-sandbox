@@ -1,0 +1,167 @@
+---
+title: "Eastern Shore Broadband Availability"
+author: "Lee LeBoeuf"
+date: "7/29/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "fcc_broadband", gs4_deauth())
+eastdat <- read.csv("fcc_broadband_eastern_block.csv")
+```
+
+## Data Source
+* These data come from the FCC's data on broadband availability. 
+* FCC data is released biannually on a year and half delay from when it was collected. New data can be downloaded from this [link](https://www.fcc.gov/general/broadband-deployment-data-fcc-form-477). 
+* Data presented here are from June of 2020. 
+
+## Data specifics 
+* All internet providers must submit form 477 to the FCC biannually detailing the Maximum download and upload speeds (Mbps) they advertise to consumers along with other information about the company. 
+* The FCC makes these data publicly available on a year and a half delay from when all 477 forms are submitted. 
+    + Limitations: (1) The data are available at the census block level, but are likely to overstate coverage because if an internet provider provides internet to a single person in a census block, the entire census block is marked as having coverage by that provider. 
+    + Strengths: (1) These are the same data used by the government to make policy decisions regarding broadband access. (2) Trump signed an [act into law](https://www.commerce.senate.gov/2020/3/bill-to-improve-broadband-data-maps-signed-into-law) in March of 2020 that is supposed to improve the limitation listed above. 
+    
+## Variable descriptions
+```{r}
+meta %>% 
+  filter(su_block == 1) %>%
+  select(varname, about) %>% as.list()
+glimpse(eastdat)
+eastdat %>% select(consproviders, busproviders, avgMaxAdDown, avgMaxAdUp, under25.3mbps) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual distribution 
+```{r}
+eastdat %>% select(c(BlockCode, consproviders, busproviders, avgMaxAdDown, avgMaxAdUp)) %>% 
+  pivot_longer(-BlockCode, names_to = "measure", values_to = "value") %>%
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free", ncol = 2)
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("consproviders", "busproviders", "avgMaxAdDown", "avgMaxAdUp")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+   
+## Mapping the data 
+```{r, echo = FALSE}
+shape <- readRDS('eastshore_blocks.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(BlockCode = GEOID10)
+mapdat <- merge(shape, eastdat, by = 'BlockCode', all.x = T)
+```
+  
+### Number of consumer internet providers
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$consproviders)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(consproviders),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$BlockCode, "<br>",
+                             "Number of internet providers: ", mapdat$consproviders)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$consproviders, 
+            title = "Number of internet <br> providers per block", opacity = 0.7)
+```
+
+### Average maximum advertised download speeds 
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avgMaxAdDown) 
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avgMaxAdDown),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$BlockCode, "<br>",
+                             "Average max advertised <br> download speeds: ", round(mapdat$avgMaxAdDown, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avgMaxAdDown, 
+            title = "Average maximum <br> advertised download <br> speeds per block", opacity = 0.7)
+```
+
+### Average maximum advertised upload speeds 
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avgMaxAdUp)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avgMaxAdUp),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$BlockCode, "<br>",
+                             "Average max <br> advertised upload speeds: ", round(mapdat$avgMaxAdUp, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avgMaxAdUp, 
+            title = "Average maximum <br> advertised <br> upload speeds per block", opacity = 0.7)
+```
+
+### Blocks that don't meet the FCC threshold for "advanced telecommunications capability"
+* Blocks with a value of one on this map do not meet the 25/3 Mbps bandwidth based on their providers' average maximum advertised download and upload speeds 
+```{r }
+pal <- colorFactor("plasma", reverse = TRUE, domain = mapdat$under25.3mbps)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(under25.3mbps),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$BlockCode, "<br>",
+                             "No advanced <br>telecommunications capability: ", mapdat$under25.3mbps)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = c(0,1), 
+            title = "No advanced  <br>telecommunications <br>capability", opacity = 0.7)
+```
+
+

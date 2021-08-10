@@ -28,13 +28,13 @@ Source: FEMA, NFIP Redacted Claims, last updated July 2020
 * Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims)
 * Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv](https://www.fema.gov/api/open/v1/FimaNfipClaims.csv)
 
-### The Data Used Here
-Congress created the National Flood Insurance Program (NFIP) in 1968 in order to provide insurance protection and reduce future flood losses through flood hazard identification. FEMA offers NFIP insurance coverage for building structures as well as for contents and personal property within the building structures to eligible and insurable properties. The original data set is updated approximately monthly and represents more than 2,000,000 claims transactions. We have filtered these claims to include only those in the Charlottesville region filed from 2010 upwards. This filtered data summarizes the **number of flood claims per tract** as well as the **total coverage amounts and claim amounts in dollars for each tract** in this region. It is meant to provide information in understanding the degree of damage experienced in a place.
-
 ```{r}
 easternAmountPaidByTract <- read_csv("../data/fema_nfip_eastern_tract.csv")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
+
+### The Data Used Here
+Congress created the National Flood Insurance Program (NFIP) in 1968 in order to provide insurance protection and reduce future flood losses through flood hazard identification. FEMA offers NFIP insurance coverage for building structures as well as for contents and personal property within the building structures to eligible and insurable properties. The original data set is updated approximately monthly and represents more than 2,000,000 claims transactions. We have filtered these claims to include only those in the Charlottesville region filed from 2010 upwards. This filtered data summarizes the **number of flood claims per tract** as well as the **total coverage amounts and claim amounts in dollars for each tract** in this region. It is meant to provide information in understanding the degree of damage experienced in a place.
 
 ## Exploration
 ```{r}

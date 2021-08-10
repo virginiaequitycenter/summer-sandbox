@@ -159,7 +159,7 @@ meta %>%
 This scatterplot shows the relationship between a census tract's percentile in 2016 and its change in percentile from 1981 to 2016.
 
 
-## Spatial Distributions
+## Spatial Distributions{.tabset}
 
 ```{r, include = F}
 cville_tracts <- readRDS("~/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_tracts.RDS")
@@ -170,7 +170,9 @@ cvilleshapes <- merge(cville_tracts, airquality, by = 'GEOID', all.x = T)
 cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
 ```
 
-### Percentile in 1981
+### 1981{.tabset}
+
+#### Percentile
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_1981)
 leaflet(cvilleshapes) %>%
@@ -196,7 +198,35 @@ meta %>%
   as.list()
 ```
 
-### Percentile in 2016
+#### PM~2.5~ Concentration
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$pm2_5_1981)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(pm2_5_1981),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
+                             "Concentration: ", cvilleshapes$pm2_5_1981)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$pm2_5_1981,
+            title = "PM2.5 Concentration, 1981", opacity = 0.7)
+```
+
+```{r}
+meta %>% 
+  filter(varname=="pm2_5_1981") %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+### 2016{.tabset}
+
+#### Percentile
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_2016)
 leaflet(cvilleshapes) %>%
@@ -222,33 +252,7 @@ meta %>%
   as.list()
 ```
 
-### Percentile Change, 1981-2016
-```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pctile_change)
-leaflet(cvilleshapes) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
-              fillColor = ~pal(pctile_change),
-              weight = 1,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
-                             "Percentile Change: ", round(cvilleshapes$pctile_change, 2))) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$pctile_change,
-            title = "Percentile Change, 1981-2016", opacity = 0.7)
-```
-
-```{r}
-meta %>% 
-  filter(varname=="pctile_change") %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
-### PM~2.5~ Concentration in 2016
+#### PM~2.5~ Concentration
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$pm2_5_2016)
 leaflet(cvilleshapes) %>%
@@ -274,7 +278,36 @@ meta %>%
   as.list()
 ```
 
-### Change in PM~2.5~, 1981-2016
+
+## Percentile Change, 1981-2016
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pctile_change)
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(pctile_change),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
+                             "Percentile Change: ", round(cvilleshapes$pctile_change, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$pctile_change,
+            title = "Percentile Change, 1981-2016", opacity = 0.7)
+```
+
+```{r}
+meta %>% 
+  filter(varname=="pctile_change") %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+
+
+## Change in PM~2.5~, 1981-2016
 ```{r}
 pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PM_change)
 leaflet(cvilleshapes) %>%
