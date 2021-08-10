@@ -1,0 +1,253 @@
+---
+title: "Equity Center Presentation"
+author: "Tolu Odukoya"
+date: "8/10/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+--- 
+
+```{r libs, message=FALSE, warning=FALSE, include=FALSE}
+# 0. Load libraries and data
+library(tidyverse)
+library(stargazer) # for summary table
+library(janitor) # for tabyl
+library(tigris) # for shapefiles
+library(sf) # for spatial joins
+library(leaflet) # for map
+library(viridis)
+library(googlesheets4)
+library(RColorBrewer)
+library(ggplot2)
+library(gganimate)
+library(gapminder)
+library(transformr)
+library(gifski)
+library(ggrepel)
+library(hrbrthemes)
+library(devtools)
+library(climatestripes)
+library(lubridate)
+library(ggExtra)
+library(tidyr)
+library(dygraphs)
+library(xts)
+library(lubridate)
+library(zoo)
+library(tidyselect)
+```
+
+## NOAA and DAYMET Data 
+
+This summer I have worked on collecting, cleaning, and analyzing data on Climate Divisional Dataset from National Center For Environmental Information (NOAA) and Daily Surface Weather and Climatological Summaries from ORNL (DAYMET) for the Charlottesville and Eastern Shore regions.
+
+Observations in NOAA are county level estimates of...
+
+* Monthly and Yearly averagemaximum temperature for each county for years 1895-2021
+
+* Monthly and Yearly average  minimum temperature for each county for years 1895-2021
+   
+* Monthly and Total yearly precipitation for each county for years 1895-2021
+   
+
+While observations in DAYMET are block, block groups, and tract level estimates of...
+
+* Average maximum temperature for the months of June, July, and August, for each county for those years. 
+    
+* Total yearly precipitation for each county for those years. 
+    
+
+## Data Source
+
+The data used in the example below comes from the NOAA data set and features the temperature fluctuations in July accross all Charlottesville counties,  total yearly precipitation for counties in the eastern shore. 
+
+
+## MAPS
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+noaa <- read_csv("noaa_cville_county.csv")
+cvillefips <- c("540", "003", "065", "079", "109", "125")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
+```
+
+```{r load and clean new data shp12, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf <- read_sf("/Users/msbugatti/Documents/GitHub/EQCSummer2021/counties")
+cville_sf <- cville_sf %>% filter(FIPS %in% c(51540, 51003, 51065, 51079, 51109, 51125))
+cville_sf <- cville_sf %>%
+                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
+cville_sf1 <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
+```
+
+
+```{r transpose the data1, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1 <- st_as_sf(cville_sf1)
+cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
+```
+
+```{r remove na1, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1 <- cville_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+cville_sf1$Year = as.numeric(cville_sf1$Year)
+cville_sf1 <-  cville_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+```
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+noaa <- read_csv("noaa_eastern_county.csv")
+easternfips <- c("001", "131")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
+```
+
+```{r load and clean new data shp2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf <- read_sf("/Users/msbugatti/Documents/GitHub/EQCSummer2021/counties")
+eastern_sf <- eastern_sf %>% filter(FIPS %in% c(51001, 51131))
+eastern_sf <- eastern_sf %>%
+                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
+eastern_sf1 <- left_join(eastern_sf, noaa, by ="CNTY_FIPS")
+```
+
+
+```{r transpose the data, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- st_as_sf(eastern_sf1)
+eastern_sf1 <- cbind(eastern_sf1, st_coordinates(st_centroid(eastern_sf1)))
+```
+
+```{r remove na, , include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- eastern_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+eastern_sf1$Year = as.numeric(eastern_sf1$Year)
+eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+```
+
+### July Temperature from 1895 - 2020 for all Charlottesville counties
+
+```{r}
+cville_sf11a <- 
+  ggplot(cville_sf1) +
+  geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_sf1, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 7) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "Maximum Temperature in July for Charlottesville Counties") + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r}
+animate(cville_sf11a, fps = 1, detail = 1, nframes = 127)
+```
+
+
+
+```{r  warming6a, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#select only the annual temperature and year column
+cville_sf1_yr <- select(cville_sf1, NAME, Year, Avg_Tempmax)
+
+#rename the temperature column
+cville_sf1_yr <- rename(cville_sf1_yr, ta = Avg_Tempmax)
+
+```
+
+```{r  warming7a, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+#create a date column because stripes only works with format = date
+
+cville_sf1_yr <- mutate(cville_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r warming8a, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#Filter out each County. No need to do theme again it's already set 
+cville_sf1_yrc <- filter(cville_sf1_yr, NAME == "Charlottesville")
+```
+
+```{r  warming4a, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#Create the theme for the stripes image
+
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       legend.text = element_text(size = 10),
+                       axis.text.x = element_text(vjust = 3, size = 10),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 15, face = "bold"),
+                       plot.caption = element_text(size = 10) 
+                     
+                       )
+
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+### Charlottesville County Warming Stripes: Average Yearly Maximum Temperature
+
+```{r stripes5ad,fig.width=10, fig.height=3, message=FALSE, warning=FALSE}
+ ggplot(cville_sf1_yrc,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Charlottesville County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+eastern_sf1ap <- mutate(eastern_sf1, date = str_c(Year, "12-16", sep = "-") %>% ymd())
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+eastern_sf1pp <- select(eastern_sf1ap, NAME, date, Tot_Temppcp)
+eastern_sf1pp <- as.data.frame(eastern_sf1pp)
+eastern_sf1pp <- select(eastern_sf1pp, -starts_with("geometry"))
+eastern_sf1gp <- filter(eastern_sf1pp, NAME == "Accomack")
+eastern_sf1alp <- filter(eastern_sf1pp, NAME == "Northampton")
+eastern_sf1alp <- rename(eastern_sf1alp, NAME1 = NAME, Tot_Temppcp1 = Tot_Temppcp, date1 = date)
+eastern_sf1xp <- cbind(eastern_sf1gp, eastern_sf1alp)
+eastern_sf1xp <- rename(eastern_sf1xp, Accomack = Tot_Temppcp, Northampton = Tot_Temppcp1)
+eastern_sf1xp <- eastern_sf1xp[ , -which(names(eastern_sf1xp) %in% c("date1", "NAME", "NAME1"))]
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+eastern_sf1xp <- xts(x = eastern_sf1xp, order.by = eastern_sf1xp$date)
+```
+
+### Total Precipitation from 1895 - 2020 forthe Eastern Shore Counties
+```{r}
+dygraph(eastern_sf1xp, main = "Total Yearly Precipitation across Counties for all Years", ylab = "Precipitation") %>%
+  dySeries("Accomack", label = "Accomack") %>%
+  dySeries("Northampton", label = "Northampton") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 3)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(3, "Set1"))
+```
