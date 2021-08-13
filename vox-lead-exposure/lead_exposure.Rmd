@@ -1,0 +1,156 @@
+---
+title: "Vox Lead Exposure"
+author: "Marisa Lemma"
+date: "8/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries and data
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(viridis)
+library(leaflet)
+library(rgdal)
+library(sf)
+library(googlesheets4)
+
+leadrisk <- read_csv("../vox-lead-exposure/leadexposure_cville_tract.csv")
+
+```
+
+## Data Source
+The data here are a re-creation of the 2016 analysis from [Vox](https://github.com/voxmedia/data-projects/tree/master/vox-lead-exposure-risk), which Vox originally modeled off of the [Washington State Department of Health](https://fortress.wa.gov/doh/wtn/WTNIBL/)'s analysis. They were derived from tract-level Census Bureau data for "poverty status in the last 12 months" (Table S1701) and "year structure built" (Table B25034).
+
+## How the Data Were Constructed
+The final product in this dataset is a lead risk score ranging from 1-10, 1 indicating very little lead exposure risk and 10 indicating very high lead exposure risk. These lead risk scores take into account both the age of housing and poverty status, which have both been shown to influence the risk of [lead poisoning in children](https://s3.documentcloud.org/documents/2644455/Expert-Panel-Childhood-Lead-Screening-Guidelines.pdf). (There are other factors that influence lead exposure, but it is often hard to get good data on those things.)
+
+First, I imported the poverty and housing data from the US Census Bureau for all 50 states. Then I removed all census tracts that had missing observations for number of households or number of individuals for whom poverty status is determined.
+
+Then I created five categories for housing risk:
+
+* `age_39`, which is the number of households built before 1930, multiplied by 0.68
+* `age40_59`, which is the number of households built between 1940 and 1959, multiplied by 0.43
+* `age60_79`, which is the number of households built between 1960 and 1979, multiplied by 0.08
+* `age80_99`, which is the number of households built between 1980 and 1999, multiplied by 0.03
+* `age00_plus`, which is the number of households built in 2000 or later, multiplied by 0
+
+The numbers that each category is multiplied by indicate the percentage of households in that age range that contain lead paint, as established by [Jacobs et al (2002)](https://ehp.niehs.nih.gov/doi/pdf/10.1289/ehp.021100599).
+
+I then calculated the housing risk for each census tract by adding together the five age categories and dividing that by the total number of households.
+
+To calculate poverty risk, I divided the number of people under 125% of the poverty line by the total number of people.
+
+Then I standardized the housing and poverty risks by calculating z-scores for them. After standardizing them, I created a weighted lead risk, with housing weighted at 0.58, and poverty weighted at 0.42. Then I added the weighted lead risks to create a combined lead risk. Those combined risks were then split up into deciles to create the lead risk scores from 1-10.
+
+All of this was done at the national level first and then restricted to the Charlottesville area, so all lead risk scores are relative to the rest of the country.
+
+## Variable Descriptions
+```{r}
+glimpse(leadrisk)
+```
+
+## Summaries
+```{r, message = F}
+leadrisk %>% select(-c(GEOID:NAME)) %>% 
+  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual Distributions
+
+```{r, message=F}
+leadrisk %>% 
+  ggplot() +
+  geom_histogram(aes(x=lead_risk_rank)) +
+  scale_x_continuous("Lead risk rank", breaks=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), labels=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+```
+
+```{r}
+leadrisk %>% 
+  ggplot() +
+  geom_point(aes(x=housing_risk, y=poverty_risk)) +
+  xlim(0, 100) +
+  ylim(0, 100)
+```
+
+
+## Spatial Distributions
+```{r}
+cville_shapes <- readRDS("../cville_region_collection/data/cville_tracts.RDS")
+leadrisk <- merge(cville_shapes, leadrisk, by = 'GEOID', all.x = TRUE)
+leadrisk <- st_transform(leadrisk, crs = 4326)
+```
+
+```{r}
+pal <- colorFactor("viridis", reverse = TRUE, domain = leadrisk$lead_risk_rank)
+leaflet(leadrisk) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = leadrisk,
+              fillColor = ~pal(lead_risk_rank),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(leadrisk$NAME.y, "<br>",
+                             "Lead Risk Rank: ", leadrisk$lead_risk_rank)) %>% 
+  addLegend("bottomright", pal = pal, values = leadrisk$lead_risk_rank,
+            title = "Lead Risk Rank", opacity = 0.7)
+```
+
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$housing_risk)
+leaflet(leadrisk) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = leadrisk,
+              fillColor = ~pal(housing_risk),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(leadrisk$NAME.y, "<br>",
+                             "Housing Risk: ", round(leadrisk$housing_risk, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = leadrisk$housing_risk,
+            title = "Housing Risk", opacity = 0.7)
+```
+
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$poverty_risk)
+leaflet(leadrisk) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = leadrisk,
+              fillColor = ~pal(poverty_risk),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(leadrisk$NAME.y, "<br>",
+                             "Poverty Risk: ", round(leadrisk$poverty_risk, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = leadrisk$poverty_risk,
+            title = "Poverty Risk", opacity = 0.7)
+```
+
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$leadriskscore_raw)
+leaflet(leadrisk) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = leadrisk,
+              fillColor = ~pal(leadriskscore_raw),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(leadrisk$NAME.y, "<br>",
+                             "Raw Lead Risk Score: ", round(leadrisk$leadriskscore_raw, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = leadrisk$leadriskscore_raw,
+            title = "Raw Lead Risk Score", opacity = 0.7)
+```
