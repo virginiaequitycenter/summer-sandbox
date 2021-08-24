@@ -19,7 +19,7 @@ Source: USDA, SNAP Retailer Locator, July 2021
 * Download URL: [https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about](https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about)
 
 ```{r}
-snap_cville <- read_csv("~/DemofData/summer-sandbox/cville_region_collection/data/snap_cville.csv")
+snap_cville <- read_csv("../data/snap_cville.csv")
 ```
 ### The Data Used Here
 The data here consists of regional data of SNAP retailers used to estimate those with access to a "wide variety of healthy foods at affordable prices." Supermarkets, supercenters, and large grocery stores are used here as proxies for the complete set of stores that provide this. In this data, "we exclude military commissaries and warehouse club stores such as Sam’s Club, Costco, and BJ’s. While many such stores offer a wide variety of foods and accept SNAP benefits, military commissaries are only accessible to a select group of individuals and club stores are only available to those who pay an annual membership fee. Drug stores, dollar stores, and convenience stores were also, again, excluded. Even though some of these store types may sell a variety of healthy foods, they vary widely in the extent of offerings. Excluding these types of food retailers from our store directory is likely to result in an overestimate of the number of people who lack access to nutritious food" (USDA, 2009). 
