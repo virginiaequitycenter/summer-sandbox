@@ -15,8 +15,7 @@ Building a data collection for Eastern Shore climate/environmental justice platf
 * [FCC Broadband Availability - Block level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern_blocks.html)
 * [FCC Broadband Availability - Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern_blkgps.html)
 * [FCC Broadband Availability - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern_tracts.html)
-* [LANDSAT8 Surface Temperature - in progress](https://virginiaequitycenter.github.io/summer-sandbox/landsat8_explore.html)
-)
+* [LANDSAT8 Surface Temperature - (in progress)](https://virginiaequitycenter.github.io/summer-sandbox/landsat8_explore.html)
 
 ### People/Economic
 
