@@ -27,3 +27,4 @@ Building a data collection for Eastern Shore climate/environmental justice platf
 * [LEHD Origin-Destination Commutes - Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_eastern_blkgp.html)
 * [LEHD Origin-Destination Commutes - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_eastern_tract.html)
 * [Food Retailers Locations](https://virginiaequitycenter.github.io/summer-sandbox/SNAP_eastern.html)
+* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/Walkability.html)
