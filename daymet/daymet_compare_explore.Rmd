@@ -1,0 +1,1219 @@
+---
+title: "NOAA and DAYMET Comparative Explore"
+subtitle: "Data for Charlottesville and Eastern Shore Region"
+author: "Tolu Odukoya"
+date: "8/23/2021"
+output: 
+    html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+# 0. Load libraries and data
+library(tidyverse)
+library(stargazer) # for summary table
+library(janitor) # for tabyl
+library(tigris) # for shapefiles
+library(sf) # for spatial joins
+library(leaflet) # for map
+library(viridis)
+library(googlesheets4)
+library(mapview)
+library(RColorBrewer)
+library(ggplot2)
+library(gganimate)
+library(transformr)
+library(shiny)
+library(shinydashboard)
+library(shinythemes) # this might be for the sidebar/story widges, or just a holdover from an earlier version
+library(shinyWidgets) # this might be a holdover from an earlier version of selectors?
+library(shinyhelper) # for information popups/helper()
+library(gapminder)
+library(rgdal)
+library(ggrepel)
+library(hrbrthemes)
+library(operators)
+library(magrittr)
+library(lubridate)
+library(maps)
+library(magick)
+library(extrafont)
+library(showtext)
+library('Cairo')
+library(rnaturalearth)
+library(kableExtra)
+library(devtools)
+library(climatestripes)
+library(dygraphs)
+library(xts)
+library(tools)
+library(zoo)
+library(geosphere)
+daymet1 <- read_csv("daymet_cville_block.csv")
+daymet2 <- read_csv("daymet_cville_blkgrps.csv")
+daymet3 <- read_csv("daymet_cville_tract.csv")
+daymet4 <- read_csv("daymet_cville_county.csv")
+daymet1e <- read_csv("daymet_eastern_block.csv")
+daymet2e <- read_csv("daymet_eastern_blkgrps.csv")
+daymet3e <- read_csv("daymet_eastern_tract.csv")
+daymet4e <- read_csv("daymet_eastern_county.csv")
+noaa <- read_csv("noaa_cville_county.csv")
+noaae <- read_csv("noaa_eastern_county.csv")
+cvillefips <- c("540", "003", "065", "079", "109", "125")
+easternfips <- c("001", "131")
+metad <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "DAYMET")
+metae <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
+```
+
+# Data Source
+
+NOAA Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release. The first link is to download the shapefile for the geography of the counties, while the second link is to download the data files containing the temperature data information. The three codes below are the document names for the datasets of interest. 
+
+* Shapefile Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
+* Temperature Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
+
+
+DAYMET Source: Daymet: Monthly Climate Summaries on a 1-km Grid for North America, Version 4, December 2020 release. The first link is a direct download link from the Daymet website, however, you have to register and sign in to download the file. The second link is to the fedData documentation which allows you to directly download the dayment data without signing in.
+
+
+* DAYMET Direct Data Download URL: [https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1855](https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1855)
+
+* FedData Documentation URL: [https://ropensci.org/blog/2017/08/24/feddata-release/](hhttps://ropensci.org/blog/2017/08/24/feddata-release/)
+
+
+## The Data Used Here
+
+NOAA: The Climate Divisional Dataset from the National Center For Environmental Information began as the only long-term temporally and spatially complete dataset from which to generate historical climate analyses (1895-2013) for the contiguous United States (CONUS). It was originally developed for climate division, statewide, regional, national, and population-weighted monitoring of drought, temperature, precipitation, and heating/cooling degree day values. 
+
+The data here is the county data from all the states in the contigous United States. While NOAA includes information on a variety of climate measures, we are focusing on the maximum, minimum temperature, and precipitation of the counties of interest. 
+
+DAYMET: Daymet is a data product derived from a collection of algorithms and computer software designed to interpolate and extrapolate from daily meteorological observations to produce gridded estimates of daily weather parameters. Weather parameters generated include daily surfaces of minimum and maximum temperature, precipitation, vapor pressure, radiation, snow water equivalent, and day length produced on a 1 km x 1 km gridded surface. 
+
+The data here is the monthly data at the block, block groups, and tract level for Accomack and Northampton counties in the Eastern Shore Region of Virginia . While DAYMET includes information on a variety of climate measures, we are focusing on the maximum temperature and precipitation of the counties of interest. The maximum temperature was originally recorded in Celsuis and the precipitation in Millimeters, they were both converted to Fahrenheit and Inches respectively to make it easier for our audience.  
+
+
+# Analysis {.tabset} 
+
+This document is to visualize differences between the NOAA and DAYMET data sets with the goal of showing why one data set would be more useful than the other one depending on the goal of the project.
+
+# Charlottesville {.tabset} 
+
+
+## County {.tabset}
+
+This is a map of the counties side by side with NOAA data on the left side and DAYMET on the right side. This is for the temperature in July for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. 
+
+```{r load and clean new data shp, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf <- read_sf("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Work/counties")
+cville_sf <- cville_sf %>% filter(FIPS %in% c(51540, 51003, 51065, 51079, 51109, 51125))
+cville_sf <- cville_sf %>%
+                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
+cville_sf1 <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
+```
+
+
+```{r transpose the data, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1 <- st_as_sf(cville_sf1)
+cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
+```
+
+```{r remove na, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cville_sf1 <- cville_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+cville_sf1$Year = as.numeric(cville_sf1$Year)
+cville_sf1 <-  cville_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+```
+
+```{r, include=FALSE}
+  cville_blocks <- blocks(state = "51", county = cvillefips)
+  cville_blocks <- cville_blocks %>%
+    dplyr::select(GEOID10, geometry) %>% mutate(GEOID = GEOID10)
+  cville_daymet1 <- merge(daymet1, cville_blocks, by = 'GEOID', all.y = T)
+  
+  
+  cville_daymet1 <- cville_daymet1  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAME, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  cville_daymet1$Year = as.numeric(cville_daymet1$Year)
+  cville_daymet1 <-  cville_daymet1 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  cville_daymet1 <- st_as_sf(cville_daymet1)
+  cville_daymet1 <- st_transform(cville_daymet1, crs = "WGS84")
+  cville_daymet1 <- cbind(cville_daymet1, st_coordinates(st_centroid(cville_daymet1)))
+
+  
+  cville_blkgps <- block_groups(state = "51", county = cvillefips)
+  cville_blkgps <- cville_blkgps %>%
+    dplyr::select(GEOID, geometry)
+  cville_daymet2 <- merge(daymet2, cville_blkgps, by = 'GEOID', all.y = T)
+  
+  
+  
+  cville_daymet2 <- cville_daymet2  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  cville_daymet2$Year = as.numeric(cville_daymet2$Year)
+  cville_daymet2 <-  cville_daymet2 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  cville_daymet2 <- st_as_sf(cville_daymet2)
+  cville_daymet2 <- st_transform(cville_daymet2, crs = "WGS84")
+   cville_daymet2 <- cbind(cville_daymet2, st_coordinates(st_centroid(cville_daymet2)))
+ 
+  cville_tract <- tracts(state = "51", county = cvillefips)
+  cville_tract <- cville_tract %>%
+    dplyr::select(GEOID, geometry)
+  cville_daymet3 <- merge(daymet3, cville_tract, by = 'GEOID', all.y = T)
+  
+  
+  
+  cville_daymet3 <- cville_daymet3  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  cville_daymet3$Year = as.numeric(cville_daymet3$Year)
+  cville_daymet3 <-  cville_daymet3 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  cville_daymet3 <- st_as_sf(cville_daymet3)
+  cville_daymet3 <- st_transform(cville_daymet3, crs = "WGS84")
+  cville_daymet3 <- cbind(cville_daymet3, st_coordinates(st_centroid(cville_daymet3)))
+  
+cville_cty <- counties(state = "VA")
+cville_cty <- cville_cty %>% subset(COUNTYFP %in% cvillefips)
+  cville_cty <- cville_cty %>%
+    dplyr::select(GEOID, geometry)
+  cville_daymet4 <- merge(daymet4, cville_cty, by = 'GEOID', all.y = T)
+  
+  
+  
+  cville_daymet4 <-  cville_daymet4  %>%
+    dplyr::select(COUNTYFP, NAME, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  cville_daymet4$Year = as.numeric(cville_daymet4$Year)
+  cville_daymet4 <-  cville_daymet4 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  cville_daymet4 <- st_as_sf(cville_daymet4)
+  cville_daymet4 <- st_transform(cville_daymet4, crs = "WGS84")
+  cville_daymet4 <- cbind(cville_daymet4, st_coordinates(st_centroid(cville_daymet4)))
+```
+
+```{r, include=FALSE}
+dyMultiColumn <- function(dygraph) {
+  dyPlotter(dygraph = dygraph,
+            name = "MultiColumn",
+            path = system.file("plotters/multicolumn.js",
+                               package = "dygraphs"))
+}
+dyBarChart <- function(dygraph) {
+  dyPlotter(dygraph = dygraph,
+            name = "BarChart",
+            path = system.file("plotters/barchart.js",
+                               package = "dygraphs"))
+}
+dyCrosshair <- function(dygraph, 
+                        direction = c("both", "horizontal", "vertical")) {
+  dyPlugin(
+    dygraph = dygraph,
+    name = "Crosshair",
+    path = system.file("plugins/crosshair.js", 
+                       package = "dygraphs"),
+    options = list(direction = match.arg(direction))
+  )
+}
+dyBarChart <- function(dygraph) {
+  dyPlotter(dygraph = dygraph,
+            name = "BarChart",
+            path = system.file("plotters/barchart.js",
+                               package = "dygraphs"))
+}
+```
+
+
+```{r, include=FALSE}
+cville_sf12 <- cville_sf1 %>% filter(Year %in% c(1980, 1990, 2000, 2010, 2020))
+```
+
+```{r, include=FALSE}
+cville_sf1a <- 
+  ggplot(cville_sf12) +
+  geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in July for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif <- animate(cville_sf1a, fps = 1, detail = 1, nframes = 5)
+```
+
+```{r, include=FALSE}
+daymetc <- 
+  ggplot(cville_daymet4) +
+  geom_sf(aes(fill = JulyF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_daymet4, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in July for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif <- animate(daymetc, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif <- image_read(a_gif)
+b_mgif <- image_read(b_gif)
+
+new_gif <- image_append(c(a_mgif[1], b_mgif[1]))
+for(i in 2:5){
+  combined <- image_append(c(a_mgif[i], b_mgif[i]))
+  new_gif <- c(new_gif, combined)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif
+```
+
+```{r, include=FALSE}
+cville_sf1aju <- 
+  ggplot(cville_sf12) +
+  geom_sf(aes(fill = Junmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in June for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif1 <- animate(cville_sf1aju, fps = 1, detail = 1, nframes = 5)
+```
+
+## Tracts {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET tract level data for the counties on the right side. This is for the temperature in June for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. 
+
+
+```{r, include=FALSE}
+cville_daymet3a<- cville_daymet3 %>% filter(NAMES %in% c("Greene", "Albemarle", "Charlottesville", "Fluvanna", "Louisa", "Nelson") & GEOID %in% c("51003010100", "51065020101", "51079030101", "51109950100", "51125950100", "51540000201") & Year %in% 1980)
+
+```
+
+```{r, include=FALSE}
+cville_daymet3$Name <- ""
+# Let's just label these items.
+ix_label <- c(1, 111, 131, 146, 176, 191)
+
+
+cville_daymet3$Name[ix_label] <- rownames(cville_daymet3)[ix_label]
+cville_daymet3$Name[ix_label] <- cville_daymet3a$NAMES
+
+```
+
+```{r, include=FALSE}
+daymetcju <- 
+  ggplot(cville_daymet3) +
+  geom_sf(aes(fill = JuneF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_daymet4, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in June for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif1 <- animate(daymetcju, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif1 <- image_read(a_gif1)
+b_mgif1 <- image_read(b_gif1)
+
+new_gif1 <- image_append(c(a_mgif1[1], b_mgif1[1]))
+for(i in 2:5){
+  combined1 <- image_append(c(a_mgif1[i], b_mgif1[i]))
+  new_gif1 <- c(new_gif1, combined1)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif1
+```
+
+## Block Groups {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET block group level data for the counties on the right side. This is for the temperature in August for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. 
+
+```{r, include=FALSE}
+cville_sf1aau <- 
+  ggplot(cville_sf12) +
+  geom_sf(aes(fill = Augmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in August for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif2 <- animate(cville_sf1aau, fps = 1, detail = 1, nframes = 5)
+```
+
+
+```{r, include=FALSE}
+daymetcau <- 
+  ggplot(cville_daymet2) +
+  geom_sf(aes(fill = AugustF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_daymet4, aes(X, Y, label = NAME), size = 5, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in August for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif2 <- animate(daymetcau, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif2 <- image_read(a_gif2)
+b_mgif2 <- image_read(b_gif2)
+
+new_gif2 <- image_append(c(a_mgif2[1], b_mgif2[1]))
+for(i in 2:5){
+  combined2 <- image_append(c(a_mgif2[i], b_mgif2[i]))
+  new_gif2 <- c(new_gif2, combined2)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif2
+```
+
+
+## Time Graphs {.tabset}
+
+This is a two time graphs of the counties on top of each other with NOAA counties data on the top and DAYMET counties level data for the counties on the bottom. This is for the temperature in June for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. The graphs are connected, click on one and control both graphs to view the temperature.
+
+```{r, include=FALSE}
+cville_sf1c <- filter(cville_sf1, Year %in% c("1980", "1990", "2000", "2010", "2020"))
+cville_sf1b <- mutate(cville_sf1c, date = str_c(Year, "07-16", sep = "-") %>% ymd())
+```
+
+```{r, include=FALSE}
+cville_sf1p <- dplyr::select(cville_sf1b, NAME, date, Junmax)
+cville_sf1p <- as.data.frame(cville_sf1p)
+cville_sf1p <- dplyr::select(cville_sf1p, -starts_with("geometry"))
+cville_sf1g <- filter(cville_sf1p, NAME == "Greene")
+cville_sf1al <- filter(cville_sf1p, NAME == "Albemarle")
+cville_sf1al <- rename(cville_sf1al, NAME1 = NAME, Junmax1 = Junmax, date1 = date)
+cville_sf1c <- filter(cville_sf1p, NAME == "Charlottesville")
+cville_sf1c <- rename(cville_sf1c, NAME2 = NAME, Junmax2 = Junmax, date2 = date)
+cville_sf1f<- filter(cville_sf1p, NAME == "Fluvanna")
+cville_sf1f <- rename(cville_sf1f, NAME3 = NAME, Junmax3 = Junmax, date3 = date)
+cville_sf1l <- filter(cville_sf1p, NAME == "Louisa")
+cville_sf1l <- rename(cville_sf1l, NAME4 = NAME, Junmax4 = Junmax, date4 = date)
+cville_sf1n <- filter(cville_sf1p, NAME == "Nelson")
+cville_sf1n <- rename(cville_sf1n, NAME5 = NAME, Junmax5 = Junmax, date5 = date)
+cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, cville_sf1l, cville_sf1n)
+cville_sf1x <- rename(cville_sf1x, Greene = Junmax, Albemarle = Junmax1, Charlottesville = Junmax2, Fluvanna = Junmax3, Louisa = Junmax4, Nelson = Junmax5)
+cville_sf1x <- cville_sf1x[ , -which(names(cville_sf1x) %in% c("date1","date2", "date3", "date4", "date5", "NAME", "NAME1", "NAME2", "NAME3", "NAME4","NAME5"))]
+```
+
+```{r, include=FALSE}
+cville_sf1x <- xts(x = cville_sf1x, order.by = cville_sf1x$date)
+
+```
+
+
+
+```{r, include=FALSE}
+daymet4a <- mutate(daymet4, date = str_c(Year, "07-16", sep = "-") %>% ymd())
+```
+
+
+```{r, include=FALSE}
+daymet4ap <- dplyr::select(daymet4a, NAME, date, JuneF)
+daymet4ap <- as.data.frame(daymet4ap)
+daymet4ap <- dplyr::select(daymet4ap, -starts_with("geometry"))
+daymet4ag <- filter(daymet4ap, NAME == "Greene")
+daymet4aal <- filter(daymet4ap, NAME == "Albemarle")
+daymet4aal <- rename(daymet4aal, NAME1 = NAME, JuneF1 = JuneF, date1 = date)
+daymet4ac<- filter(daymet4ap, NAME == "Charlottesville")
+daymet4ac <- rename(daymet4ac, NAME2 = NAME, JuneF2 = JuneF, date2 = date)
+daymet4af<- filter(daymet4ap, NAME == "Fluvanna")
+daymet4af <- rename(daymet4af, NAME3 = NAME, JuneF3 = JuneF, date3 = date)
+daymet4al <- filter(daymet4ap, NAME == "Louisa")
+daymet4al <- rename(daymet4al, NAME4 = NAME, JuneF4 = JuneF, date4 = date)
+daymet4an <- filter(daymet4ap, NAME == "Nelson")
+daymet4an <- rename(daymet4an, NAME5 = NAME, JuneF5 = JuneF, date5 = date)
+daymet4ax <- cbind(daymet4ag, daymet4aal, daymet4ac, daymet4af, daymet4al, daymet4an)
+daymet4ax <- rename(daymet4ax, Greene = JuneF, Albemarle = JuneF1, Charlottesville = JuneF2, Fluvanna = JuneF3, Louisa = JuneF4, Nelson = JuneF5)
+daymet4ax <- daymet4ax[ , -which(names(daymet4ax) %in% c("date1","date2", "date3", "date4", "date5", "NAME", "NAME1", "NAME2", "NAME3", "NAME4","NAME5"))]
+```
+
+```{r, include=FALSE}
+daymet4ax <- xts(x = daymet4ax, order.by = daymet4ax$date)
+```
+
+```{r, echo=FALSE}
+dygraph(cville_sf1x, main = "NOAA Maximum Temperature in June across Counties for all Years", ylab = "Temperature (F)", group = "Temperature") %>%
+  dySeries("Greene", label = "Greene") %>%
+  dySeries("Albemarle", label = "Albemarle") %>%
+  dySeries("Charlottesville", label = "Charlottesville") %>%
+  dySeries("Fluvanna", label = "Fluvanna") %>%
+  dySeries("Louisa", label = "Louisa") %>%
+  dySeries("Nelson", label = "Nelson") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 5)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(6, "Set2")) %>% 
+   dyCrosshair(direction = "vertical")
+```
+
+
+```{r, echo=FALSE}
+dygraph(daymet4ax, main = "DAYMET Maximum Temperature in June across Counties for all Years", ylab = "Temperature (F)", group = "Temperature") %>%
+  dySeries("Greene", label = "Greene") %>%
+  dySeries("Albemarle", label = "Albemarle") %>%
+  dySeries("Charlottesville", label = "Charlottesville") %>%
+  dySeries("Fluvanna", label = "Fluvanna") %>%
+  dySeries("Louisa", label = "Louisa") %>%
+  dySeries("Nelson", label = "Nelson") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 5)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(6, "Set2")) %>% 
+   dyCrosshair(direction = "vertical")
+```
+
+
+
+## Warming Stripes {.tabset}
+
+These are warming stripes of the data for all counties stacked on top of each other so its easy to visualize the differences between the two datasets. With NOAA counties data on the top and DAYMET counties data on the bottom. This is for the temperature in July for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. 
+
+
+```{r  warming, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#select only the annual temperature and year column
+cville_sf1_yr <- dplyr::select(cville_sf1, NAME, Year, Augmax)
+cville_sf1_yr <- dplyr::filter(cville_sf1_yr, Year %in% c("1980", "1990", "2000", "2010", "2020"))
+
+#rename the temperature column
+cville_sf1_yr <- rename(cville_sf1_yr, ta = Augmax)
+
+```
+
+```{r  warming7, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+#create a date column because stripes only works with format = date
+
+cville_sf1_yr <- mutate(cville_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+```{r  warming4, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#Create the theme for the stripes image
+
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       legend.text = element_text(size = 10),
+                       axis.text.x = element_text(vjust = 3, size = 6),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 12, face = "bold"),
+                       plot.caption = element_text(size = 10) 
+                     
+                       )
+
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+
+```{r stripes1a,fig.width=12, fig.height=3,  message=FALSE, warning=FALSE, echo=FALSE}
+ ggplot(cville_sf1_yr,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(limit = date,
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "NOAA Charlottesville Counties Average August Maximum Temperature",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip +
+ facet_grid(~NAME)
+
+```
+
+
+```{r  warming1, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#select only the annual temperature and year column
+daymet4_yr <- dplyr::select(daymet4, NAME, Year, AugustF)
+
+#rename the temperature column
+daymet4_yr <- rename(daymet4_yr, ta = AugustF)
+
+```
+
+```{r  warming3, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+#create a date column because stripes only works with format = date
+
+daymet4_yr <- mutate(daymet4_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+
+
+```{r stripes1d,fig.width=12, fig.height=3,  message=FALSE, warning=FALSE, echo=FALSE}
+ ggplot(daymet4_yr,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(limit = date,
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "DAYMET Charlottesville Counties Average August Maximum Temperature",
+                caption = "Data: DAYMET Surface Temperature Analysis")+
+              theme_strip +
+ facet_grid(~NAME)
+
+```
+
+## Precipitation {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET block group level data for the counties on the right side. This is for the total yearly precipitation  for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. 
+
+```{r, include=FALSE}
+cville_sf1apcp <- 
+  ggplot(cville_sf12) +
+  geom_sf(aes(fill = Tot_Temppcp), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "BuGn", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Total Yearly Precipitation for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif3 <- animate(cville_sf1apcp, fps = 1, detail = 1, nframes = 5)
+```
+
+```{r, include=FALSE}
+daymetcpcp <- 
+  ggplot(cville_daymet2) +
+  geom_sf(aes(fill = Totpcpinch), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = cville_daymet4, aes(X, Y, label = NAME), size = 5, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "BuGn", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Total Yearly Precipitation for Charlottesville Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif3 <- animate(daymetcpcp, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif3 <- image_read(a_gif3)
+b_mgif3 <- image_read(b_gif3)
+
+new_gif3 <- image_append(c(a_mgif3[1], b_mgif3[1]))
+for(i in 2:5){
+  combined3 <- image_append(c(a_mgif3[i], b_mgif3[i]))
+  new_gif3 <- c(new_gif3, combined3)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif3
+```
+
+
+# Eastern Shore {.tabset} 
+
+## County {.tabset}
+
+This is a map of the counties side by side with NOAA data on the left side and DAYMET on the right side. This is for the temperature in July for all Eastern Shore Region Counties for 1980, 1990, 2000, 2010, 2020. 
+
+
+```{r load and clean new data shpe, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf <- read_sf("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Work/counties")
+eastern_sf <- eastern_sf %>% filter(FIPS %in% c(51001, 51131))
+eastern_sf <- eastern_sf %>%
+                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
+eastern_sf1 <- left_join(eastern_sf, noaae, by ="CNTY_FIPS")
+```
+
+
+```{r transpose the datae, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- st_as_sf(eastern_sf1)
+eastern_sf1 <- cbind(eastern_sf1, st_coordinates(st_centroid(eastern_sf1)))
+```
+
+```{r remove nae, , include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+eastern_sf1 <- eastern_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+eastern_sf1$Year = as.numeric(eastern_sf1$Year)
+eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+```
+
+
+```{r, include=FALSE}
+  eastern_blocks <- blocks(state = "51", county = easternfips)
+  eastern_blocks <- eastern_blocks %>%
+    dplyr::select(GEOID10, geometry) %>% mutate(GEOID = GEOID10)
+  eastern_daymet1 <- merge(daymet1e, eastern_blocks, by = 'GEOID', all.y = T)
+  
+  
+  eastern_daymet1 <- eastern_daymet1  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAME, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  eastern_daymet1$Year = as.numeric(eastern_daymet1$Year)
+  eastern_daymet1 <-  eastern_daymet1 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  eastern_daymet1 <- st_as_sf(eastern_daymet1)
+  eastern_daymet1 <- st_transform(eastern_daymet1, crs = "WGS84")
+  eastern_daymet1 <- cbind(eastern_daymet1, st_coordinates(st_centroid(eastern_daymet1)))
+  
+  eastern_blkgps <- block_groups(state = "51", county = easternfips)
+  eastern_blkgps <- eastern_blkgps %>%
+    dplyr::select(GEOID, geometry)
+  eastern_daymet2 <- merge(daymet2e, eastern_blkgps, by = 'GEOID', all.y = T)
+  
+  
+  
+  eastern_daymet2 <- eastern_daymet2  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  eastern_daymet2$Year = as.numeric(eastern_daymet2$Year)
+  eastern_daymet2 <-  eastern_daymet2 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  eastern_daymet2 <- st_as_sf(eastern_daymet2)
+  eastern_daymet2 <- st_transform(eastern_daymet2, crs = "WGS84")
+   eastern_daymet2 <- cbind(eastern_daymet2, st_coordinates(st_centroid(eastern_daymet2)))
+ 
+  eastern_tract <- tracts(state = "51", county = easternfips)
+  eastern_tract <- eastern_tract %>%
+    dplyr::select(GEOID, geometry)
+  eastern_daymet3 <- merge(daymet3e, eastern_tract, by = 'GEOID', all.y = T)
+  
+  
+  
+  eastern_daymet3 <- eastern_daymet3  %>%
+    dplyr::select(COUNTYFP, NAMES, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  eastern_daymet3$Year = as.numeric(eastern_daymet3$Year)
+  eastern_daymet3 <-  eastern_daymet3 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  eastern_daymet3 <- st_as_sf(eastern_daymet3)
+  eastern_daymet3 <- st_transform(eastern_daymet3, crs = "WGS84")
+  eastern_daymet3 <- cbind(eastern_daymet3, st_coordinates(st_centroid(eastern_daymet3)))
+  
+  east_cty <- counties(state = "VA")
+east_cty <- east_cty %>% subset(COUNTYFP %in% easternfips)
+  east_cty <- east_cty %>%
+    dplyr::select(GEOID, geometry)
+  eastern_daymet4 <- merge(daymet4e, east_cty, by = 'GEOID', all.y = T)
+  
+  
+  
+eastern_daymet4 <-  eastern_daymet4  %>%
+    dplyr::select(COUNTYFP, NAME, GEOID, Year, NAMELSAD, JuneF, JulyF, AugustF,Totpcpinch, geometry)
+  eastern_daymet4$Year = as.numeric(eastern_daymet4$Year)
+  eastern_daymet4 <-  eastern_daymet4 %>% filter_at(vars(JuneF:Totpcpinch),all_vars(!is.na(.)))
+  eastern_daymet4 <- st_as_sf(eastern_daymet4)
+  eastern_daymet4 <- st_transform(eastern_daymet4, crs = "WGS84")
+  eastern_daymet4 <- cbind(eastern_daymet4, st_coordinates(st_centroid(eastern_daymet4)))
+
+```
+
+
+```{r, include=FALSE}
+eastern_sf12 <- eastern_sf1 %>% filter(Year %in% c(1980, 1990, 2000, 2010, 2020))
+```
+
+
+```{r, include=FALSE}
+eastern_sf11a <- 
+  ggplot(eastern_sf12) +
+  geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in July for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+
+```
+
+```{r, include=FALSE}
+a_gif4 <- animate(eastern_sf11a, fps = 1, detail = 1, nframes = 5)
+
+```
+
+
+```{r, include=FALSE}
+daymetce <- 
+  ggplot(eastern_daymet4) +
+  geom_sf(aes(fill = JulyF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_daymet4, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlOrRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in July for Eastern Shore  Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif4 <- animate(daymetce, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif4 <- image_read(a_gif4)
+b_mgif4 <- image_read(b_gif4)
+
+new_gif4 <- image_append(c(a_mgif4[1], b_mgif4[1]))
+for(i in 2:5){
+  combined4 <- image_append(c(a_mgif4[i], b_mgif4[i]))
+  new_gif4 <- c(new_gif4, combined4)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif4
+```
+
+
+
+## Tracts {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET tract level data for the counties on the right side. This is for the temperature in June for all Eastern Shore Region Counties for 1980, 1990, 2000, 2010, 2020. 
+
+```{r, include=FALSE}
+eastern_sf1aju <- 
+  ggplot(eastern_sf12) +
+  geom_sf(aes(fill = Junmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in June for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif5 <- animate(eastern_sf1aju, fps = 1, detail = 1, nframes = 5)
+```
+
+
+```{r, include=FALSE}
+daymetcjue <- 
+  ggplot(eastern_daymet3) +
+  geom_sf(aes(fill = JuneF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_daymet4, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "YlGnBu", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in June for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif5 <- animate(daymetcjue, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif5 <- image_read(a_gif5)
+b_mgif5 <- image_read(b_gif5)
+
+new_gif5 <- image_append(c(a_mgif5[1], b_mgif5[1]))
+for(i in 2:5){
+  combined5 <- image_append(c(a_mgif5[i], b_mgif5[i]))
+  new_gif5 <- c(new_gif5, combined5)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif5
+```
+
+## Block Groups {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET block group level data for the counties on the right side. This is for the temperature in August for all Eastern Shore Region Counties for 1980, 1990, 2000, 2010, 2020. 
+
+```{r, include=FALSE}
+eastern_sf1aau <- 
+  ggplot(eastern_sf12) +
+  geom_sf(aes(fill = Augmax), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Maximum Temperature in August for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif6 <- animate(eastern_sf1aau, fps = 1, detail = 1, nframes = 5)
+```
+
+
+```{r, include=FALSE}
+daymetcaue <- 
+  ggplot(eastern_daymet2) +
+  geom_sf(aes(fill = AugustF), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_daymet4, aes(X, Y, label = NAME), size = 5, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "PuRd", direction = 1,   type = "seq", n.breaks = 6) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Maximum Temperature in August for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif6 <- animate(daymetcaue, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif6 <- image_read(a_gif6)
+b_mgif6 <- image_read(b_gif6)
+
+new_gif6 <- image_append(c(a_mgif6[1], b_mgif6[1]))
+for(i in 2:5){
+  combined6 <- image_append(c(a_mgif6[i], b_mgif6[i]))
+  new_gif6 <- c(new_gif6, combined6)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif6
+```
+
+
+## Time Graphs {.tabset}
+
+This is a two time graphs of the counties on top of each other with NOAA counties data on the top and DAYMET counties level data for the counties on the bottom. This is for the temperature in June for all Charlottesville Counties for 1980, 1990, 2000, 2010, 2020. The graphs are connected, click on one and control both graphs to view the temperature.
+
+
+```{r, include=FALSE}
+eastern_sf1c <- filter(eastern_sf1, Year %in% c("1980", "1990", "2000", "2010", "2020"))
+eastern_sf1b <- mutate(eastern_sf1c, date = str_c(Year, "07-16", sep = "-") %>% ymd())
+```
+
+```{r, include=FALSE}
+eastern_sf1p <- dplyr::select(eastern_sf1b, NAME, date, Junmax)
+eastern_sf1p <- as.data.frame(eastern_sf1p)
+eastern_sf1p <- dplyr::select(eastern_sf1p, -starts_with("geometry"))
+eastern_sf1g <- filter(eastern_sf1p, NAME == "Accomack")
+eastern_sf1al <- filter(eastern_sf1p, NAME == "Northampton")
+eastern_sf1al <- rename(eastern_sf1al, NAME1 = NAME, Junmax1 = Junmax, date1 = date)
+eastern_sf1x <- cbind(eastern_sf1g, eastern_sf1al)
+eastern_sf1x <- rename(eastern_sf1x, Accomack = Junmax, Northampton = Junmax1)
+eastern_sf1x <- eastern_sf1x[ , -which(names(eastern_sf1x) %in% c("date1", "NAME", "NAME1"))]
+```
+
+
+```{r, include=FALSE}
+eastern_sf1x <- xts(x = eastern_sf1x, order.by = eastern_sf1x$date)
+```
+
+
+```{r, include=FALSE}
+daymet4ae <- mutate(daymet4e, date = str_c(Year, "07-16", sep = "-") %>% ymd())
+```
+
+```{r, include=FALSE}
+daymet4ape <- dplyr::select(daymet4ae, NAME, date, JuneF)
+daymet4ape <- as.data.frame(daymet4ape)
+daymet4ape <- dplyr::select(daymet4ape, -starts_with("geometry"))
+daymet4apeg <- filter(daymet4ape, NAME == "Accomack")
+daymet4apeal <- filter(daymet4ape, NAME == "Northampton")
+daymet4apeal <- rename(daymet4apeal, NAME1 = NAME, JuneF1 = JuneF, date1 = date)
+daymet4axe <- cbind(daymet4apeg, daymet4apeal)
+daymet4axe <- rename(daymet4axe, Accomack = JuneF, Northampton = JuneF1)
+daymet4axe <- daymet4axe[ , -which(names(daymet4axe) %in% c("date1", "NAME", "NAME1"))]
+```
+
+
+```{r, include=FALSE}
+daymet4axe <- xts(x = daymet4axe, order.by = daymet4axe$date)
+```
+
+```{r, echo=FALSE}
+dygraph(eastern_sf1x, main = "NOAA Maximum Temperature in June across Counties for all Years", ylab = "Temperature (F)", group = "Temperature") %>%
+  dySeries("Accomack", label = "Accomack") %>%
+  dySeries("Northampton", label = "Northampton") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 5)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(2, "Set1"))
+```
+
+
+```{r, echo=FALSE}
+dygraph(daymet4axe, main = "DAYMET Maximum Temperature in June across Counties for all Years", ylab = "Temperature (F)", group = "Temperature") %>%
+   dySeries("Accomack", label = "Accomack") %>%
+  dySeries("Northampton", label = "Northampton") %>%
+  dyHighlight(highlightCircleSize = 3, 
+              highlightSeriesBackgroundAlpha = 0.2,
+              hideOnMouseOut = FALSE, highlightSeriesOpts = list(strokeWidth = 5)) %>% 
+dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>% 
+    dyRangeSelector(height = 20) %>%  dyOptions(colors = RColorBrewer::brewer.pal(2, "Set1"))
+```
+
+## Warming Stripes {.tabset}
+
+These are warming stripes of the data for all counties stacked on top of each other so its easy to visualize the differences between the two datasets. With NOAA counties data on the top and DAYMET counties data on the bottom. This is for the temperature in July for all Eastern Shore Region Counties for 1980, 1990, 2000, 2010, 2020. 
+
+
+```{r  warminge, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#select only the annual temperature and year column
+eastern_sf1_yr <- dplyr::select(eastern_sf1, NAME, Year, Augmax)
+eastern_sf1_yr <- dplyr::filter(eastern_sf1_yr, Year %in% c("1980", "1990", "2000", "2010", "2020"))
+
+#rename the temperature column
+eastern_sf1_yr <- rename(eastern_sf1_yr, ta = Augmax)
+
+```
+
+
+```{r  warming7e, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+#create a date column because stripes only works with format = date
+
+eastern_sf1_yr <- mutate(eastern_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+
+
+```{r stripes1ae,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE, echo=FALSE}
+ ggplot(eastern_sf1_yr,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(limit = date,
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "NOAA Eastern Shore Counties Average August Maximum Temperature",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip +
+ facet_grid(~NAME)
+
+```
+
+
+```{r  warming1e, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+
+#select only the annual temperature and year column
+daymet4e_yr <- dplyr::select(daymet4e, NAME, Year, AugustF)
+
+#rename the temperature column
+daymet4e_yr <- rename(daymet4e_yr, ta = AugustF)
+
+```
+
+```{r  warming3e, echo = TRUE, warning = FALSE, message = FALSE, include=FALSE}
+#create a date column because stripes only works with format = date
+
+daymet4e_yr <- mutate(daymet4e_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+```
+
+
+
+```{r stripes1de,fig.width=10, fig.height=3,  message=FALSE, warning=FALSE, echo=FALSE}
+ ggplot(daymet4e_yr,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(limit = date,
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "DAYMET Eastern Shore Counties Average August Maximum Temperature",
+                caption = "Data: DAYMET Surface Temperature Analysis")+
+              theme_strip +
+ facet_grid(~NAME)
+
+```
+
+## Precipitation {.tabset}
+
+This is a map of the counties side by side with NOAA counties data on the left side and DAYMET block group level data for the counties on the right side. This is for the total yearly precipitation  for all Eastern Shore Region Counties for 1980, 1990, 2000, 2010, 2020. 
+
+
+```{r, include=FALSE}
+eastern_sf1apcp <- 
+  ggplot(eastern_sf12) +
+  geom_sf(aes(fill = Tot_Temppcp), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_sf12, aes(X, Y, label = NAME), size = 4, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "BuGn", direction = 1,   type = "seq", n.breaks = 5) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "NOAA Total Yearly Precipitation for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+a_gif7 <- animate(eastern_sf1apcp, fps = 1, detail = 1, nframes = 5)
+```
+
+```{r, include=FALSE}
+daymetcpcpe <- 
+  ggplot(eastern_daymet2) +
+  geom_sf(aes(fill = Totpcpinch), color = "black", alpha = .9, na.rm = TRUE) +
+   geom_text_repel(data = eastern_daymet4, aes(X, Y, label = NAME), size = 5, nudge_x = 1, nudge_y = 0.3, fontface = "bold", hjust = 0.9) +
+  scale_fill_fermenter(palette = "BuGn", direction = 1,   type = "seq", n.breaks = 5) +
+     theme_void() +
+  guides(fill =
+           guide_colourbar(title.position="top", title.hjust = 0.5,
+                           barwidth = 1)
+  )  + 
+  labs(fill = "Temperature ", title = 'Year: {frame_time}',
+       caption = "DAYMET Total Yearly Precipitation for Eastern Shore Counties", size = 15) + 
+ transition_time(as.integer(Year)) +
+ease_aes('linear') 
+```
+
+```{r, include=FALSE}
+b_gif7 <- animate(daymetcpcpe, fps = 1, detail = 1, nframes = 5)
+
+```
+
+```{r, include=FALSE}
+a_mgif7 <- image_read(a_gif7)
+b_mgif7 <- image_read(b_gif7)
+
+new_gif7 <- image_append(c(a_mgif7[1], b_mgif7[1]))
+for(i in 2:5){
+  combined7 <- image_append(c(a_mgif7[i], b_mgif7[i]))
+  new_gif7 <- c(new_gif7, combined7)
+}
+
+```
+
+```{r, echo=FALSE}
+  new_gif7
+```
+
+# Results {.tabset}
+
+The visualizations show us that the DAYMET has higher temperature readings than the NOAA data most likely because the DAYMET data is aggregated from smaller grids which makes the final data richer. 
