@@ -13,7 +13,7 @@ Building a data collection for Cville Region climate justice work/platform
 ### Hazards
 * [Natural hazard risk/FEMA's National Risk Index](https://virginiaequitycenter.github.io/summer-sandbox/fema_nri_cville.html)
 * [FEMA National Flood Insurance Program Claims](https://virginiaequitycenter.github.io/summer-sandbox/femaclaims_cville.html)
-* [EJSSCREEN Environmental Indicators](https://virginiaequitycenter.github.io/summer-sandbox/ejscreen_cville.html)
+* [EJSCREEN Environmental Indicators](https://virginiaequitycenter.github.io/summer-sandbox/ejscreen_cville.html)
 
 
 ### Community Assets
@@ -22,7 +22,7 @@ Building a data collection for Cville Region climate justice work/platform
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_cville.html)
 * FCC Broadband Availability
 
-    - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blocks.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blkgr.html), [Tract level]((https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_tracts.html)
+  - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blocks.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_tracts.html)
 
 * LEHD Origin-Destination Employment Statistics (LODES)
 
@@ -30,8 +30,7 @@ Building a data collection for Cville Region climate justice work/platform
 
 
 ### Transportation
+* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/Walkability.html)
 * LEHD Origin-Destination Commutes
 
-    - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_block.html), [Block Group level](ttps://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_blkgp.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_tract.html)
-
-* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/Walkability.html)
+  - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_block.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_blkgp.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_tract.html)
