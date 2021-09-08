@@ -13,3 +13,4 @@
 # shapefiles? what else?
 .Rproj.user
 nfhl/data
+landsat8/.env
