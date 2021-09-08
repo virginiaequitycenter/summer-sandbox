@@ -1,0 +1,127 @@
+---
+title: "JGG update for the week of July 12, 2021"
+author: "Jacob Goldstein-Greenwood"
+date: "7/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+Below is an overview of what I've been working on this past week.
+
+---
+
+[1.] At our meeting with the full housing-justice group on Wednesday, we talked about adopting a different approach than we had been using to identify serial cases. (For our purposes, a serial case is a repeat filing by a given plaintiff against a given defendant in a given ZIP code _within 12 months of an initial filing_.) We want to keep the _latest_ case in any group of serial filings.
+
+Previously, we had been doing the following:
+
+- Begin with separate data frames containing cases filed in a given year
+- Group each of those data frames by plaintiff, defendant, and defendant ZIP
+- Take the latest case in each group as the most recent of a string of serial cases
+
+This approach does have a significant shortcoming: If a case is filed by John against Jane in ZIP 12345 in December 2020, and a second case is filed involving the same parties and the same property in January 2021, we would fail to identify those as serial cases.
+
+Per our definition of serial cases, though, we need to catch both of those cases as being part of the same serial "group" and just keep the second in our data.
+
+For example, in the following data frame, we want to flag and drop the red cases while keeping the blue ones.
+```{r, echo = F, eval = T}
+df <- data.frame(plaintiff = rep('john', 5),
+                 defendant = rep('jane', 5),
+                 filing_date = c('2018-01-05', '2019-01-30', '2019-04-13', '2020-02-10', '2020-06-04'))
+knitr::kable(df) %>% 
+  kableExtra::kable_styling() %>% 
+  kableExtra::row_spec(c(1, 3, 5), color = 'navy') %>% 
+  kableExtra::row_spec(c(2,4), color = 'salmon')
+```
+(The first case has no case following it within 12 months, so it's counted as having no serial cases. The 2019-04-13 case comes within 12 months of the 2019-01-30 case, so we keep the former and drop the latter. The same applies to the final two cases.)
+
+I wrote a pair of functions (below) for tagging serial cases per our exact definition. These functions are applied to a _stacked_ data frame containing cases from _all years for which we have data_ (`cases`).
+
+`deserializer_inner()` is applied to a data frame that has been grouped by plaintiff, defendant, and defendant ZIP. `deserializer_outer()` does that grouping, passes the grouped data frame to the inner function, and determines how many cases from each year were determined to be serial. The comments in the code below detail exactly how the process of identifying 12-month windows (and therefore serial case "groups") is done.
+
+(Michele, I'd love some code review here if you have a few minutes! Using this new process to tag serial cases, we catch 112,219 in the current 2018:2021 data, whereas we previously caught 93361. As a check on whether this new code is working properly, I calculated the number of unique combinations of plaintiff/defendant/defendant ZIP present in the data frame that results from this process and in the data frame(s) that result from the previous process, and those values are identical. I take this to mean that we're not tossing out any plaintiff/defendant/defendant ZIP combinations even though we're successfully modifying exactly which rows we keep from each combination.)
+
+```{r, echo = T, eval = F}
+library(lubridate)
+library(tidyverse)
+# Identify and remove serial cases
+#   Variables used to group potential serial cases: "pla_1", "def_1", "def_1_zip"
+# deserializer_inner() is applied via a wrapper function, deserializer_outer() (see below) to a
+#   tibble of cases grouped by pla_1, def_1, and def_1_zip (i.e., sets of rows where the same
+#   plaintiff filed against the same defendant in the same ZIP code)
+# A reasonable test of whether the deserialization is working properly is checking that the value obtained from:
+#   nrow(cases %>% group_by(pla_1, def_1, def_1_zip) %>% summarize(n()))
+#   is identical before and after running deserializer_inner()/deserializer_outer()
+deserializer_inner <- function(z, ...) {
+  # If there's only one case filed by the plaintiff against the defendant, simply keep that case
+  if (nrow(z) == 1) {
+    return(z)
+  }
+  # If there's >1 case filed by the plaintiff against the defendant...
+  if (nrow(z) > 1) {
+    # First: Determine whether the time span from the first case to the latest is >1 year
+    cases_span_more_than_1_yr <- (interval(min(z$date_filed), max(z$date_filed)) / years(1)) > 1
+    # If the interval is *not* >1 year, simply keep the latest case (because all cases selected are considered serial with the first)
+    if (cases_span_more_than_1_yr == F) {
+      z <- z %>%filter(date_filed == max(date_filed)) %>% filter(id == max(id))
+      return(z)
+    }
+    # If the interval is >1 year...
+    if (cases_span_more_than_1_yr == T) {
+      for (i in 1:100) {
+        # First determine the latest case filed that is not more than 12 months after the very first case (this is the
+        #   latest in the first "group" of serial cases)
+        if (i == 1) {
+          latest_in_serial_group_1 <- max(z$date_filed[z$date_filed <= (min(z$date_filed) %m+% months(12))])
+        }
+        # Then, find the latest case in the next "group" of serial cases by determining the latest case
+        #   that was filed not more than 12 months after the first case that follows the case identified
+        #   as the latest in the previous serial "group"
+        if (i > 1) {
+          temp_min <- min(z$date_filed[z$date_filed > eval(parse(text = paste0('latest_in_serial_group_', i-1)))])
+          assign(paste0('latest_in_serial_group_', i),
+                 max(z$date_filed[z$date_filed >= temp_min & z$date_filed <= (temp_min %m+% months(12))]))
+        }
+        # Iterate this process until the case identified as the latest in a serial "group" is the most recent case
+        #   filed by a given plaintiff against a given defendant in a given ZIP code
+        if (eval(parse(text = paste0('latest_in_serial_group_', i))) == max(z$date_filed)) {break}
+      }
+      # Subset the cases previously identified, thereby selecting only the latest case in each group of serial cases
+      #   for each plaintiff/defendant/ZIP combination
+      dates_to_select <- sapply(paste0('latest_in_serial_group_', 1:i), function(x) eval(parse(text = x)))
+      z <- z[z$date_filed %in% dates_to_select, ]
+      z <- z %>% group_by(date_filed) %>% filter(id == max(id))
+      z
+    }
+  }
+}
+deserializer_outer <- function(x) {
+  pre_nrow <- x %>% group_by(filing_year) %>% summarize(pre_n = n())
+  x <- x %>% group_by(pla_1, def_1, def_1_zip) %>% group_modify(deserializer_inner) %>% ungroup()
+  post_nrow <- x %>% group_by(filing_year) %>% summarize(post_n = n())
+  merge(pre_nrow, post_nrow, by = 'filing_year') %>%
+    mutate(nrow_change = pre_n - post_n) %>%
+    apply(., 1, function(x) cat(paste0(x[1], ': ', x[length(x)], ' serial cases identified and removed', '\n')))
+  x
+}
+cases <- deserializer_outer(cases)
+```
+
+---
+
+[2.] Previously, our scripts exported _yearly_ CSVs containing cleaned data and, downstream, by-court and by-ZIP summaries of evictions. I revised the code to instead export _stacked_ CSVs containing all cleaned cases (with variables indicating year filed and quarter filed), as well as stacked summary CSVs. This goes a long way toward reducing the number of files that are exported and need to be managed (e.g., we went from exporting a total of 24 files to exporting six---and that number will be stable, even if we add additional years of data).
+
+---
+
+[3.] I wrote up peer-review notes for the NLCD 2016 Tree Canopy explore script; I'm adding those to the #workflow channel in Slack. I'll mention here one quick note that may be relevant to all explore files: For HTMLs that will eventually become publicly accessible, we might consider adopting unifying style conventions; for example: When to use/not use title case; rounding practices; heading depths; use (or not) of `code` formatting for package names; use of parentheses following `function_names()`.
+
+---
+
+[4.] Early last week, I prepped and revised the Rmd for the VCU group in advance of our Wednesday meeting. I won't include many details about that here since we all discussed and polished it Mon/Tues.
+
+---
+
+(Some) Next steps: This week, one of the things I'll be working on is script containing various checks and flags for the eviction data/summaries. In particular, I'll write up code to automatically calculate year-over-year changes in eviction filings, plaintiff judgments, and defaults within court jurisdictions so that we can flag large changes.

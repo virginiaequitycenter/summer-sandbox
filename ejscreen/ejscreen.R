@@ -125,7 +125,7 @@ cville_area %>% select(-c(GEOID, STATE_NAME, B_DSLPM:T_PM25, NPL_CNT, TSDF_CNT))
 
 # Visual Distributions
 # Correlation Matrix
-correlation <- cville_area %>% 
+correlation <- cville_area %>%
   select(PRE1960PCT:PM25)
 num_correlation <- cor(correlation, use = "complete.obs")
 num_correlation <- round(num_correlation, digits = 2)
@@ -181,7 +181,9 @@ cville_area <- cville_area %>%
   mutate(tract = str_sub(GEOID, 1, 11))
 
 # Load data
-airquality <- read_csv("../cville_region_collection/data/airquality_cville_tract.csv")
+airquality <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/airquality_cville_tract.csv")
+# airquality <- read_csv("../cville_region_collection/data/airquality_cville_tract.csv")
+airquality_eastern <- read_csv("/Users/marisalemma/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/airquality_eastern_tract.csv")
 
 # Merge datasets
 airquality <- airquality %>% rename(tract = trtid10)

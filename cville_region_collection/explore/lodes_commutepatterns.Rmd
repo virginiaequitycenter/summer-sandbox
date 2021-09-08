@@ -1,0 +1,190 @@
+---
+title: "LEHD LODES"
+author: "Lee LeBoeuf"
+date: "09/06/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr', 'ggpubr'), function(pkg) library(pkg, character.only = TRUE)))
+```
+
+
+```{r reading in data, include=FALSE}
+cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+cvl_lodes_res <- read.csv("lodes_commutepatterns_county.csv")
+cvl_lodes_work <- read.csv("lodes_cvilleworkerscommutepatterns_county.csv")
+```
+
+```{r, include=FALSE}
+counties <- counties(state = "51")
+counties <- st_transform(counties, crs = 4326) # to WGS84, given error
+counties <- counties %>% dplyr::rename(county = GEOID)
+cvl_lodes_res$county <- cvl_lodes_res$w_county
+cvl_lodes_work$county <- cvl_lodes_work$h_county
+cvl_lodes_all1 <- merge(counties, cvl_lodes_res, by = 'county', all.x = T)
+cvl_lodes_all2 <- merge(cvl_lodes_all1, cvl_lodes_work, by = 'county', all.x = T)
+```
+
+## Data source 
+* Data structure description: https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf
+* Data download: https://lehd.ces.census.gov/data/lodes/LODES7/va/
+* Helpful article about how these data are collected and how they can be used: https://www.researchgate.net/publication/328700665_The_US_Census_Longitudinal_Employer-Household_Dynamics_Datasets
+
+## Data specifics
+* The Longitudinal Employer Household Dynamics (LEHD) program at the US Census Bureau releases the Origin Destination Employment Statistis (LODES) datasets annually based on employer-employee insurance records. 
+* This data file uses data from the Origin-Destination datafile from LEHD. In the origin datafile, census blocks are listed in pairs based on where workers live and work. The original datafile has been aggregated to the county level to allow users to see where Charlottesville area residents are commuting most often. That is, of the Charlottesville area residents who work outside of the Charlottesville region, to which counties do they commute most often? 
+* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002.
+* Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
+
+# Where do Charlottesville region residents/workers commute to/from most often?
+
+```{r}
+outsideworkers <- cvl_lodes_all2 %>% 
+  filter(w_county %in% cvlfips == F)
+
+outsideresidents <- cvl_lodes_all2 %>%
+  filter(h_county %in% cvlfips == F)
+```
+
+## Commuter distributions {.tabset}
+
+### Charlottesville region residents {.tabset}
+
+These are the percentile calculations for Virginia counties based on the number of Charlottesville area residents who are employed in that county. These calculations do not include the number of Charlottesville area residents who are employed within the Charlottesville region. For example, the number of people who live in Albemarle County and commute to Charlottesville City are not reflected in this calculations. The bar graphs show the most common and least common work-destination counties for Charlottesville area residents who work outside of the Charlottesville area.
+
+```{r}
+quantile(na.omit(outsideworkers$commutersfromCville), probs = seq(0, 1, by= 0.05))
+```
+
+Bottom 25th percentile (the least common work-destinations for Charlottesville area residents)
+```{r}
+# Counties that are in the bottom 25th percentile in terms of number of Charlottesville region residents commuters. 
+outsideworkers25 <- outsideworkers[which(outsideworkers$commutersfromCville <= quantile(na.omit(outsideworkers$commutersfromCville), probs = 0.25)),]
+ggplot(outsideworkers25, aes(x = NAME, y = commutersfromCville))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Charlottesville area resident commuters")
+```
+
+Top 75th percentile (the most common work-destinations for Charlottesville area residents who work outside the Charlottesville region)
+```{r}
+# Counties that are in the top 75th percentile in terms of number of Charlottesville region residents commuters. 
+outsideworkers75 <- outsideworkers[which(outsideworkers$commutersfromCville >= quantile(na.omit(outsideworkers$commutersfromCville), probs = 0.75)),]
+ggplot(outsideworkers75, aes(x = NAME, y = commutersfromCville))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Charlottesville area resident commuters")
+```
+
+### Charlottesville region workers 
+
+These are the percentile calculations for Virginia counties based on the number of Charlottesville area residents who are employed in that county. These calculations do not include the number of Charlottesville area residents who are employed within the Charlottesville region. For example, the number of people who live in Albemarle County and commute to Charlottesville City are not reflected in this calculations. The bar graphs show the most common and least common work-destination counties for Charlottesville area residents who work outside of the Charlottesville area.
+
+```{r}
+quantile(na.omit(outsideresidents$commuterstoCville), probs = seq(0, 1, by= 0.05))
+```
+
+Bottom 25th percentile (the least common work-destinations for Charlottesville area residents)
+```{r}
+# Counties that are in the bottom 25th percentile in terms of number of Charlottesville region workers. 
+outsideres25 <- outsideresidents[which(outsideresidents$commuterstoCville <= quantile(na.omit(outsideresidents$commuterstoCville), probs = 0.25)),]
+ggplot(outsideres25, aes(x = NAME, y = commuterstoCville))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Charlottesville area workers")
+```
+
+Top 75th percentile (the most common work-destinations for Charlottesville area residents who work outside the Charlottesville region)
+```{r}
+# Counties that are in the top 75th percentile in terms of number of Charlottesville region workers. 
+outsideres75 <- outsideresidents[which(outsideresidents$commuterstoCville >= quantile(na.omit(outsideresidents$commuterstoCville), probs = 0.75)),]
+ggplot(outsideres75, aes(x = NAME, y = commuterstoCville))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Charlottesville area workers")
+```
+
+## Mapping commuting patterns {.tabset}
+
+### Charlottesville region residents {.tabset}
+The map offers another way to visualize where Charlottesville area __residents__ commute most often. The counts of Charlottesville area residents who commute to work within the Charlottesville region are excluded from the legend so as to limit the range and allow for easier discrimination between the surrounding counties, but the number of commuters to each of the localities in the Charlottesville region is available by clicking on the locality.  
+```{r}
+cvl_lodes_all2$res <- ifelse(cvl_lodes_all2$w_county %in% cvlfips, NA, cvl_lodes_all2$commutersfromCville)
+pal <- colorNumeric("plasma", reverse = TRUE, na.color = "lightgray", domain = cvl_lodes_all2$res)
+leaflet(cvl_lodes_all2) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes_all2,
+              fillColor = ~pal(res),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("County: ", cvl_lodes_all2$NAME, "<br>",
+                             "Number of commuters: ", cvl_lodes_all2$commutersfromCville)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes_all2$res, 
+            title = "Number of Cville <br> region resident <br> commuters", opacity = 0.7)
+```
+
+### Charlottesville region workers
+The map offers another way to visualize where Charlottesville area __workers__ commute from most often. The counts of Charlottesville area workers who commute from within the Charlottesville region are excluded from the legend so as to limit the range and allow for easier discrimination between the surrounding counties, but the number of commuters from each of the localities in the Charlottesville region is available by clicking on the locality.  
+```{r}
+cvl_lodes_all2$work <- ifelse(cvl_lodes_all2$h_county %in% cvlfips, NA, cvl_lodes_all2$commuterstoCville)
+pal <- colorNumeric("plasma", reverse = TRUE, na.color = "lightgray", domain = cvl_lodes_all2$work)
+leaflet(cvl_lodes_all2) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes_all2,
+              fillColor = ~pal(work),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("County: ", cvl_lodes_all2$NAME, "<br>",
+                             "Number of commuters: ", cvl_lodes_all2$commuterstoCville)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes_all2$work, 
+            title = "Number of Cville <br> region workers", opacity = 0.7)
+```
+
+
+## County lists {.tabset}
+
+### Charlottesville region residents {.tabset}
+Below are lists of counties that employ more or less than 25 Charlottesville area residents. 
+
+* Counties that employ 25 or more Charlottesville region residents
+```{r}
+(sort(outsideworkers$NAME[which(outsideworkers$commutersfromCville >= 25)]))
+```
+
+* Counties that employ less than 25 Charlottesville region residents
+```{r}
+(sort(outsideworkers$NAME[which(outsideworkers$commutersfromCville < 25)]))
+```
+
+### Charlottesville region workers {.tabset}
+Below are lists of counties where more or less than 25 Charlottesville area workers live. 
+
+* Counties that where 25 or more Charlottesville region workers live
+```{r}
+(sort(outsideresidents$NAME[which(outsideresidents$commuterstoCville >= 25)]))
+```
+
+* Counties where less than 25 Charlottesville region workers live
+```{r}
+(sort(outsideresidents$NAME[which(outsideresidents$commuterstoCville < 25)]))
+```
+
+
+

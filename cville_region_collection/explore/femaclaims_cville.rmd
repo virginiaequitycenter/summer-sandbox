@@ -2,7 +2,7 @@
 title: "FEMA NFIP Claims"
 subtitle: "Data for Charlottesville Region"
 author: "Khalila Karefa-Kargbo"
-date: "07/06/2021"
+date: "07/26/2021"
 output: 
   html_document: 
     toc: true
@@ -33,19 +33,24 @@ cvilleAmountPaidByTract <- read_csv("../data/fema_nfip_cville_tract.csv")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
+### The Data Used Here
+Congress created the National Flood Insurance Program (NFIP) in 1968 in order to provide insurance protection and reduce future flood losses through flood hazard identification. FEMA offers NFIP insurance coverage for building structures as well as for contents and personal property within the building structures to eligible and insurable properties. The original data set is updated approximately monthly and represents more than 2,000,000 claims transactions. We have filtered these claims to include only those in the Charlottesville region filed from 2010 upwards. This filtered data summarizes the **number of flood claims per tract** as well as the **total coverage amounts and claim amounts in dollars for each tract** in this region. It is meant to provide information in understanding the degree of damage experienced in a place.
+
 ## Exploration
 ```{r}
 glimpse(cvilleAmountPaidByTract)
 ```
-
-**Variables of Interest:** Number of flood claims in spatial unit & total amount paid on flood claims in spatial unit; goal: understanding the degree of damage experienced in a place
-
+##### Number of Claims
 ```{r}
-cvilleAmountPaidByTract %>% count(censusTract)
-# 55 total observations
+# claims per tract
+cvilleAmountPaidByTract[c('censusTract', 'n')] 
+```
+```{r}
+# total observations
+sum(cvilleAmountPaidByTract["n"])
 ```
 
-**Variable Descriptions:**
+##### Variable Descriptions:
 ```{r}
 meta %>%
   select(c(varname, about)) %>% 
@@ -56,16 +61,19 @@ meta %>%
 ```{r}
 # barplot of the total $ amount paid by census tract
 ggplot(cvilleAmountPaidByTract) + 
-  geom_col(aes(x=as.factor(censusTract), y=totalAmountPaid)) +
+  geom_col(aes(x=as.factor(censusTract), y=totalAmountPaid),
+           fill="darkmagenta", color="darkblue") +
   coord_flip() +
   labs(x="Census Tract",
-       y="$ Amount Paid",
+       y="Amount Paid in Dollars ($)",
        title="Total Building & Contents Claim Amount Paid by Census Tract")
 ```
+
 ```{r}
 # barplot of the total insurance coverage amount by census tract
 ggplot(cvilleAmountPaidByTract) + 
-  geom_col(aes(x=as.factor(censusTract), y=totalInsuranceCoverage)) +
+  geom_col(aes(x=as.factor(censusTract), y=totalInsuranceCoverage),
+           fill="darkmagenta", color="darkblue") +
   coord_flip() +
   labs(x="Census Tract",
        y="Insurance Coverage (in $)",
@@ -87,6 +95,7 @@ cville_amount <- st_transform(cville_amount, crs = 4326) # to WGS84, given error
 ```
 
 ### Number of Claims per Census Tract
+Displays the number of claims in each tract between the years 2010 to the present day. Tracts with more claims are darker on the map.
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$n) # viridis
 
@@ -107,10 +116,11 @@ leaflet() %>%
                              "Number: ", round(cville_amount$n, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_amount$n, 
-            title = "# FEMA Claims", opacity = 0.7)
+            title = "Number of Insurance Claims", opacity = 0.7)
 ```
 
 ### Total Insurance Amount Map
+Displays the total insurance coverage amount for each tract between the years 2010 to the present day. Tracts with higher coverage amounts are darker on the map.
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalInsuranceCoverage) # viridis
 
@@ -128,13 +138,14 @@ leaflet() %>%
                 bringToFront = T
               ),
               popup = paste0("Tract Number: ", cville_amount$NAME, "<br>",
-                             "$ Amount: ", round(cville_amount$totalInsuranceCoverage, 2))
+                             "Amount Paid in Dollars ($): ", round(cville_amount$totalInsuranceCoverage, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_amount$totalInsuranceCoverage, 
             title = "Insurace Coverage Amount", opacity = 0.7)
 ```
 
 ### Total Claim Amount Map
+Displays the total amount given in claims for each tract between the years 2010 to the present day. Tracts with higher claim payments are darker on the map.
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_amount$totalAmountPaid) # viridis
 
@@ -152,13 +163,13 @@ leaflet() %>%
                 bringToFront = T
               ),
               popup = paste0("Tract Number: ", cville_amount$NAME, "<br>",
-                             "$ Amount: ", round(cville_amount$totalAmountPaid, 2))
+                             "Amount Paid in Dollars ($): ", round(cville_amount$totalAmountPaid, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = cville_amount$totalAmountPaid, 
             title = "Claim Amount Paid", opacity = 0.7)
 ```
 
-## Miscellaneous
+## Additional Resources
 
 [This](https://www.fema.gov/about/openfema/data-sets#misc) is a list of all of FEMA's open data sets and could be helpful
 

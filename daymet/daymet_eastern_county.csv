@@ -1,0 +1,11 @@
+STATEFP,COUNTYFP,NAME,GEOID,NAMELSAD,Year,June,July,August,JuneF,JulyF,AugustF,NAMES,Totpcp,Totpcpinch
+51,001,Accomack,51001,Accomack County,1980,27.31,30.31,30.38,81.16,86.56,86.69,Accomack,904,35.59
+51,131,Northampton,51131,Northampton County,1980,27.88,31.3,31.19,82.19,88.34,88.13,Northampton,965.99,38.03
+51,001,Accomack,51001,Accomack County,1990,28.03,30.56,29.11,82.45,87,84.4,Accomack,1037.95,40.86
+51,131,Northampton,51131,Northampton County,1990,28.61,31.15,29.29,83.5,88.07,84.73,Northampton,1188.31,46.78
+51,001,Accomack,51001,Accomack County,2000,27.91,27.94,28.36,82.25,82.29,83.06,Accomack,1165.18,45.87
+51,131,Northampton,51131,Northampton County,2000,28.63,28.47,28.79,83.54,83.25,83.82,Northampton,1244.4,48.99
+51,001,Accomack,51001,Accomack County,2010,30.53,32.38,30.16,86.96,90.28,86.28,Accomack,1071.66,42.19
+51,131,Northampton,51131,Northampton County,2010,30.86,32.6,30.05,87.54,90.68,86.09,Northampton,966.22,38.04
+51,001,Accomack,51001,Accomack County,2020,27.66,32.11,29.59,81.79,89.8,85.26,Accomack,1435.72,56.52
+51,131,Northampton,51131,Northampton County,2020,27.82,32.76,30.01,82.07,90.96,86.01,Northampton,1359.66,53.53

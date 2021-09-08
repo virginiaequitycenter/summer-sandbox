@@ -1,0 +1,280 @@
+---
+title: "Broadband Availability"
+author: "Lee LeBoeuf"
+date: "7/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+```
+
+# Broadband availability data
+Below, I describe what I have learned about the different potential broadband availability datasources that Michele included in the notes for me, and what variables I think we might be able to include in an eventual datafile. 
+
+### Potential data sources:
+* The [BroadbandNow](https://broadbandnow.com/) : They have some publically available data on their [GitHub](https://github.com/BroadbandNow) , but I'm not sure how useful it is to us. They aggregate data to Zip codes, but there are a few measures that we may want to include for each county (described below). 
+* A [Virginia Broadband Availability map](https://broadband.cgit.vt.edu/IntegratedToolbox/) : I emailed these folks to ask where they got all the data for this map, and they said they downloaded it from the FCC's website. I question some of the variables they have listed on their map because I haven't come across them in the FCC's data. 
+* The [FCC](https://www.fcc.gov/general/broadband-deployment-data-fcc-form-477) : I think this is our best bet and it's what I've used  for the summaries below. There are some limitations with the FCC data, but it's freely available and I think it will suffice. 
+    + Limitations: (1) I've searched but haven't found a way to automate reading FCC data into R (i.e. there isn't an R package like there is for the LODES data). I believe it will need to be downloaded manually and then unzipped to a .csv. (2) Internet providers report coverage to the FCC through form 477. The data are available at the census block level, but are likely to overstate coverage because if an internet provider provides internet to a single person in a census block, the entire census block is marked as having coverage by that provider---this is a big issue and listed on just about every usage of the FCC data I've seen so far. 
+    + Strengths: (1) These are the same data used by the government to make policy decisions regarding broadband access. (2) Weirdly, Trump signed an [act into law](https://www.commerce.senate.gov/2020/3/bill-to-improve-broadband-data-maps-signed-into-law) in March of 2020 that is supposed to improve limitation number 2 listed above. (2) The FCC collects broadband data from internet providers twice a year, and makes those data available on its website on a year and a half delay. (3) There are a lot of interesting variables included in the data that might serve us well. (4) The data are available at the block level---below, I practice working with the data by aggregating to the block group level. 
+* The [Microsoft Broadband Dataset](https://github.com/microsoft/USBroadbandUsagePercentages) : Microsoft estimates broadband usage and availability by analyzing the download speeds of Microsoft updates for its users, and aggregates that data to the ZIP code and county level. At the county level, they have broadband availability (% of people per county with access to internet at 25Mbps/3Mbps) based on the FCC's 2019 data and the broadband usage (% of people per county that use the internet at those same speeds) based on their own data from October 2020. At the ZIP code level, they have broadband usage data and the error ranges associated with their models. 
+    + Strengths: We could pull data at the county level from this source and use it in combination with the FCC data. 
+    + Limitations: It's based purely off Microsoft users (which, I'm sure they account for in their models, but I'm not sure how). I don't think it has any strengths over the FCC data because it's a less granular view. 
+
+#### FCC data
+
+```{r }
+dat <- read.csv("VA-Fixed-Jun2020-v1.csv")
+dat <- dat %>%
+  mutate(countycode = str_sub(BlockCode, 1, 5))
+
+# Charlottesville area 
+cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+
+cvldat <- dat %>%
+  filter(countycode %in% cvlfips)
+
+cvldat <- cvldat %>%
+  mutate(Blkgr = str_sub(BlockCode, 1, 12))
+```
+
+Variables in the FCC data that seem worth including/interesting: 
+
+* The number of consumer internet providers in each su
+
+* The number of business internet providers in each su
+
+* The number of different holding companies providing services in each su (this may not be a big difference from the number of providers, but it may be interesting to see, for example, how often there are providers with ostensibly local-sounding names that are really just part of Verizon or some other large coorporation)
+
+* The average maximum advertised download speed available in each su
+    + Note: this is based on what is advertised to consumers, not what is actually contractually agreed upon or provided. 
+
+* The average maximum advertised upload speed available in each su
+    + Note: this is based on what is advertised to consumers, not what is actually contractually agreed upon or provided.
+
+* Calculated by me: 
+    + A binary variable indicating whether the su has "advanced telecommunications capability" which, based off the FCC's benchmark, this means internet speeds of 25/3 Mbps. At the block group level, this is represented at the number of block within the block group that do not meet the threshhold. 
+
+    + The FCC uses the following benchmarks: 50/5 Mbps, 100/10 Mbps, and 250/25 Mbps (in addition to 25/3 Mbps). I created a categorical variable for blocks meeting each of the download speed threshholds. I'm still thinking through how to represent this at the block group level. 
+
+* Other considerations: The FCC has a goal of 100 Mbps per 1,000 students and staff, and 1 Gbps per 1,000 students and staff in every elementary and secondary school. If we ever plan to overlay these data with school locations, that might be something interesting to consider. 
+
+1. Unformatted glimpse of the FCC data (filtered to the Charlottesville region):
+```{r }
+glimpse(cvldat)
+```
+
+2. Block level summaries
+```{r }
+# Forming a block summary version 
+cvldat2 <- cvldat %>%
+  group_by(BlockCode) %>%
+  summarize(consproviders = sum(Consumer),
+            busproviders = sum(Business),
+            holdingcompany = length(unique(HoldingCompanyName[which(Consumer ==1)])),
+            avgMaxAdDown = mean(MaxAdDown),
+            avgMaxAdUp = mean(MaxAdUp)) %>%
+  mutate(Blkgr = str_sub(BlockCode, 1, 12))
+
+cvldat2$under25.3mbps <- ifelse(cvldat2$avgMaxAdDown <25 & cvldat2$avgMaxAdUp <3, 1, 0)
+sum(cvldat2$under25.3mbps)
+sum(cvldat2$under25.3mbps) / length(unique(cvldat2$BlockCode))
+```
+
+There are 1,254 blocks with average max advertised broadband speeds of <25/3Mbs. That means that 11.68% of the Charlottesville region census blocks do not meet the FCC benchmark for having "advanced telecommunications capability". 
+
+Forming a catergorical variable for the FCC benchmarks for download speed. 
+```{r }
+cvldat2$downspeedcat <- ifelse(cvldat2$avgMaxAdDown <25, 1,
+                                   ifelse(cvldat2$avgMaxAdDown >=25 & cvldat2$avgMaxAdDown <50, 2,
+                                          ifelse(cvldat2$avgMaxAdDown >=50 & cvldat2$avgMaxAdDown <100, 3,
+                                                 ifelse(cvldat2$avgMaxAdDown >= 100 & cvldat2$avgMaxAdDown <250, 4,
+                                                        ifelse(cvldat2$avgMaxAdDown >= 250, 5, 0)))))
+table(cvldat2$downspeedcat)
+```
+
+Provider data
+```{r }
+describe(cvldat2$consproviders)
+mean(cvldat2$consproviders - cvldat2$holdingcompany)
+```
+There are an average of ~5 internet providers in each Charlottesville region block. The average difference in the number of providers and holding companies is less than one. 
+
+3. Block group summaries 
+```{r }
+# Forming block group summary version (need to account for the fact that some providers 
+# are repeated within the block group)
+cvldatblkgr <- cvldat %>%
+  group_by(Blkgr) %>%
+  summarize(consproviders = length(unique(ProviderName[which(Consumer == 1)])),
+            busproviders = length(unique(ProviderName[which(Business == 1)])),
+            holdingcompany = length(unique(HoldingCompanyName[which(Consumer ==1)])),
+            avgMaxAdDown = mean(MaxAdDown),
+            avgMaxAdUp = mean(MaxAdUp))
+
+cvldatblkgr$under25.3mbps <- ifelse(cvldatblkgr$avgMaxAdDown <25 & cvldatblkgr$avgMaxAdUp <3, 1, 0)
+sum(cvldatblkgr$under25.3mbps) 
+```
+
+There are only two block groups with average max advertised broadband speeds of <25/3Mbps
+
+```{r}
+cvldatblkgr2 <- cvldat2 %>%
+  group_by(Blkgr) %>%
+  summarize(numberunderservedblocks = sum(under25.3mbps))
+
+cvldatblkgr <- merge(cvldatblkgr, cvldatblkgr2, by = "Blkgr", all.x = T)
+
+describe(cvldatblkgr$numberunderservedblocks)
+```
+
+Some block groups don't have any under-served blocks, while the max is 148. 
+
+Other summaries 
+```{r }
+cvldatblkgr %>% select(c(Blkgr, consproviders, busproviders, avgMaxAdDown, avgMaxAdUp, numberunderservedblocks)) %>% 
+  pivot_longer(-Blkgr, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+Mapping the block group summaries 
+
+```{r }
+shape <- readRDS("cville_blkgps.RDS")
+shape$Blkgr <- shape$GEOID
+mapdat <- merge(shape, cvldatblkgr, by = "Blkgr", all.x = T)
+mapdat <- st_transform(mapdat, crs = 4326)
+```
+
+Number of consumer internet providers
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$consproviders) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(consproviders),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Block Group: ", shape$Blkgr, "<br>",
+                             "Number of internet providers: ", mapdat$consproviders)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$consproviders, 
+            title = "Number of internet providers <br> per block group", opacity = 0.7)
+```
+
+Average maximum advertised download speeds 
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avgMaxAdDown) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avgMaxAdDown),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Block Group: ", shape$Blkgr, "<br>",
+                             "Average maximum advertised download speeds: ", round(mapdat$avgMaxAdDown, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avgMaxAdDown, 
+            title = "Average maximum advertised download <br> speeds by block group", opacity = 0.7)
+```
+
+Average maximum advertised upload speeds 
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avgMaxAdUp) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avgMaxAdUp),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Block Group: ", shape$Blkgr, "<br>",
+                             "Average maximum advertised upload speeds: ", round(mapdat$avgMaxAdUp, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avgMaxAdUp, 
+            title = "Average maximum advertised <br> upload speeds by block group", opacity = 0.7)
+```
+
+Number of blocks in each block group that don't meet the FCC threshold for "advanced telecommunications capability" (i.e. lower than 25/3 Mbps bandwidth)
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$numberunderservedblocks) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(numberunderservedblocks),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Block Group: ", shape$Blkgr, "<br>",
+                             "Number of underserved blocks: ", mapdat$numberunderservedblocks)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$numberunderservedblocks, 
+            title = "Number of underserved blocks <br> by block group", opacity = 0.7)
+```
+
+#### BroadbandNow data
+
+```{r}
+dat <- read.csv("broadband_data_opendatachallenge.csv")
+
+glimpse(dat)
+
+vadat <- dat[which(dat$State == "Virginia"),]
+
+cvldat <- vadat[which(vadat$County == c("Albemarle", "Fluvanna", "Greene", "Louisa", "Nelson")),]
+# The column for Cville data has no information. 
+
+(c(cvldat$County, cvldat$Lowest.Priced.Terrestrial.Broadband.Plan))
+```
+
+* I think the lowest price broadband plan is the most interesting from the BroadbandNow data, but it's only available at the ZIP and county level. And, as you can see from the print out above, there isn't much of a range between the different counties ($65 - 79.99), and some ZIP codes have missing data. 
+* From their Github on the pricing data: "The regular monthly price (not temporary promotional pricing) is considered as the price unless the only known or advertised price for a plan is the promotional rate. All plans are internet-only. TV and/or Phone inclusive plans (Double, Triple Play, etc) are not considered. There are cases where a zip has providers indicating coverage but no qualifying plans. In these cases, the Lowest Priced Terrestrial Broadband Plan is NULL."
+
+### Questions:
+
+1. Please let me know which of the variables listed above are worth including in a generative script. Any feedback on how to best represent the binary and categorical variables (like whether or not a block meets the FCC threshold for "advanced telecommunications capability") at the block group and tract level is appreciated! I also struggled to figure out how to best represent the different FCC cut offs because they are technically based on both download and uplaod speeds, but many blocks met the threshold for either the upload or download speed (but not both) so I wasn't sure how to categorize them. For that reason, I went with just the download speeds, but I am open to suggestions! 
+2. Please let me know if you think it's worth pulling county-level data from the BroadbandNow or Microsoft datasources. 
+
+
+
+
+
+
+

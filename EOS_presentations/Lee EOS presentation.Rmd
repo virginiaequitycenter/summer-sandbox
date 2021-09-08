@@ -1,0 +1,113 @@
+---
+title: "EOS presentation"
+author: "Lee LeBoeuf"
+date: "08/10/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r libraries, include=FALSE}
+source('https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_missingness_monster.R')
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 'sp'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+lodes <- read.csv("lodes_employment_cville_blkgr.csv")
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "lehd_lodes", gs4_deauth())
+```
+
+## Employment, broadband, mortgages, oh my! 
+* This summer I have worked on wrangling data for the Charlottesville and Eastern Shore regions on the following:
+    + Employment (number of jobs in a spatial unit, proportion of jobs that are high- or low-wage);
+    + Average commuting distances (calculated based on the latitude and longitude of the central points of home and workplace census blocks);
+    + Broadband availability (based on data from the Federal Communications Commission); 
+    + And more recently, mortgage application data reported through the Home Mortgage Disclosure Act
+
+## Example data source
+* These data come from the Longitudinal Employer-Household Dynamics (LEHD) program at the US Census Bureau and state labor market information offices. 
+* Data are from 2018 (most recent data) and spatial units are based on the 2010 census. 
+* Some limitations: 
+    + jobs counts do not include those working in defense-related industries;
+    + jobs for companies with multiple branches are often all coded in the same location;
+    + student workers are unlikely to be represented because they are typically not covered by unemployment insurance; 
+    + data presented here are aggregates of the census block-level data, and there are some blocks with missing data. 
+
+## Mapping the data 
+```{r, echo = FALSE}
+shape <- readRDS('cville_blkgps.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(w_blkgroup = GEOID)
+is.element(lodes$w_blkgroup, shape$w_blkgroup) %>%
+  all()
+cvl_lodes <- merge(shape, lodes, by = 'w_blkgroup', all.x = T)
+```
+
+### All jobs
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvl_lodes$alljobs)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(alljobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
+                             "Number of jobs: ", cvl_lodes$alljobs, 2)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$alljobs, 
+            title = "Number of jobs", opacity = 0.7)
+```
+
+### Wages
+
+#### Proportion of low-wage jobs (earnings $1250/month or less) in each SU
+
+```{r}
+pal <- colorNumeric("BuPu", domain = cvl_lodes$lowwage_p)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+                ),
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
+               "Prop. low-wage jobs: ", round(cvl_lodes$lowwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$lowwage_p, 
+            title = "Proportion of <br> low-wage jobs", opacity = 0.7)
+```
+
+#### Proportion of high-wage jobs (earnings greater than $3333/month) in each SU
+
+```{r}
+pal <- colorNumeric("BuPu", domain = cvl_lodes$higwage_p)
+leaflet(cvl_lodes) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes,
+              fillColor = ~pal(higwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", cvl_lodes$w_blkgroup, "<br>",
+                             "Prop. high-wage jobs: ", round(cvl_lodes$higwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes$higwage_p, 
+            title = "Proportion of <br> high-wage jobs", opacity = 0.7)
+```
+
+
+
+

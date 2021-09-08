@@ -1,0 +1,332 @@
+---
+title: "Charlottesville Region HMDA"
+author: "Lee LeBoeuf"
+date: "09/06/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr', 'ggrepel', 'gganimate', 'transformr', 'gifski'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "HMDA", gs4_deauth())
+cvldat <- read.csv("hmda_cville_tract.csv")
+```
+
+## Data Source
+* These data come from the Consumer Financial Protection Bureau and Federal Financial Institutions Examinations Council. All data were collected as part of the Home Mortgage Disclosure Act (HMDA). 
+* New data is released biannually on a year and half delay from when it was collected. New data can be downloaded from the Federal Financial Institutions Examinations Council [here](https://ffiec.cfpb.gov/data-browser/data/2018?category=states&items=VA). 
+* Data from 2017 and earlier can be downloaded from the Consumer Financial Protection Bureau [here](https://www.consumerfinance.gov/data-research/hmda/historic-data/?geo=va&records=all-records&field_descriptions=labels)
+* Data presented here are from 2007-2020 (mostly tract averages across those years). 
+
+## Data specifics 
+* The HMDA requires financial institutions to maintain, report, and publicly disclose information about mortgages. 
+* New data is released annually, typically in the summer months, on a year delay (2020 data was released in June of 2021).
+* Areas included in these data: Charlottesville City (51540), Albemarle County (51003), Fluvanna (51065), Greene (51079), Louisa (51109), Nelson (51125)
+    
+## Variable descriptions
+```{r}
+meta %>% 
+  filter(su_tract == 1) %>%
+  select(varname, about) %>% as.list()
+glimpse(cvldat)
+cvldat[which(cvldat$year == 2020),] %>% select(avg_loan_amount, med_loan_amount, median_app_income, median_income_accepted_app, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual distribution 
+```{r}
+longdat <- cvldat[which(cvldat$year == 2020),] %>% select(c(census_tract, avg_loan_amount, med_loan_amount, median_app_income, median_income_accepted_app, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed)) %>% pivot_longer(-census_tract, names_to = "measure", values_to = "value") 
+longdat$measure <- factor(longdat$measure,
+                         levels = c("avg_loan_amount", "med_loan_amount", "median_app_income", "median_income_accepted_app", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed"))
+longdat %>%
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("avg_loan_amount", "med_loan_amount", "median_app_income", "median_income_accepted_app", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+   
+## Mapping the data 
+```{r, echo = FALSE}
+shape <- readRDS('cville_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(census_tract = GEOID)
+mapdat <- merge(shape, cvldat, by = 'census_tract', all.x = T)
+```
+  
+### Average Median Loan Amount from 2007-2020
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_med_loan_amount = mean(na.omit(med_loan_amount))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_med_loan_amount )
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avg_med_loan_amount ),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average median loan amount from 2007-2020: ", round(mapdat$avg_med_loan_amount, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avg_med_loan_amount , 
+            title = "Average median loan <br>amount from 2007-2020", opacity = 0.7)
+```
+
+### Average Median Accepted Applicant Income from 2007-2020
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_median_income_accepted_app = mean(na.omit(median_income_accepted_app))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_median_income_accepted_app)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(avg_median_income_accepted_app),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average median accepted applicant income from 2007-2020: ", round(mapdat$avg_median_income_accepted_app, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapdat$avg_median_income_accepted_app, 
+            title = "Average median accepted <br>applicant income from 2007-2020", opacity = 0.7)
+```
+
+### Average mortage application denial rates from 2007-2020 {.tabset}
+
+#### Overall denial rate {.tabset}
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_overall_denial_rate = mean(na.omit(overall_denial_rate))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_overall_denial_rate)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$avg_overall_denial_rate),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average overall app denial rate from 2007-2020: ", round(mapdat$avg_overall_denial_rate, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat$avg_overall_denial_rate), 
+            title = "Average overall <br>app denial rate <br>from 2007-2020", opacity = 0.7)
+```
+
+#### White denial rate
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_white_denial_rate = mean(na.omit(white_denial_rate))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_white_denial_rate)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$avg_white_denial_rate),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average White app denial rate from 2007-2020: ", round(mapdat$avg_white_denial_rate, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat$avg_white_denial_rate), 
+            title = "Average White <br>app denial rate <br>from 2007-2020", opacity = 0.7)
+```
+
+#### Black denial rate
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_black_denial_rate = mean(na.omit(black_denial_rate))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = (mapdat$avg_black_denial_rate))
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal((mapdat$avg_black_denial_rate)),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average Black app denial rate from 2007-2020: ", round(mapdat$avg_black_denial_rate, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat$avg_black_denial_rate), 
+            title = "Average Black <br>app denial rate <br>from 2007-2020", opacity = 0.7)
+```
+
+#### Hispanic/Latino denial rate
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_hislat_denial_rate = mean(na.omit(hislat_denial_rate))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = (mapdat$avg_hislat_denial_rate))
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal((mapdat$avg_hislat_denial_rate)),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average His/Lat app denial rate from 2007-2020: ", round(mapdat$avg_hislat_denial_rate, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat$avg_hislat_denial_rate), 
+            title = "Average Hispanic/Latino <br>app denial rate <br>from 2007-2020", opacity = 0.7)
+```
+
+### Government backed mortgages {.tabset}
+* Government back mortages are mortgages insured by the USDA, VA, or FHA
+
+#### Percent of government backed loans over time {.tabset}
+```{r }
+shape <- readRDS('cville_tracts.RDS')
+shape <- shape %>% dplyr::rename(census_tract = GEOID)
+animatemapdat <- merge(shape, cvldat, by = 'census_tract', all.x = T)
+animatemapdat <- st_as_sf(animatemapdat)
+
+animatemapdat$year = as.numeric(animatemapdat$year)
+
+animatemapdat <-  animatemapdat %>% filter_at(vars(NAME, geometry, perc_govern_backed),all_vars(!is.na(.)))
+
+cville1 <- 
+  ggplot(animatemapdat) +
+  geom_sf(aes(fill = perc_govern_backed), color = "black", alpha = .9, na.rm = TRUE) +
+  scale_fill_fermenter(palette = "Blues", direction = 1,   type = "seq", n.breaks = 7) +
+  theme_void() +
+  guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5, barwidth = 1))  + 
+  labs(fill = "Percent of mortgages backed by gov.", title = 'Year:{frame_time}',
+       caption = "Percent of approved mortgage apps backed by the USDA, VA, or FHA") + 
+  transition_time(as.integer(year)) +
+  ease_aes('linear') 
+
+animate(cville1, fps = 1, nframes = 13)
+```
+
+#### Average percent of government backed loans from 2007-2020
+```{r }
+mapdat <- mapdat %>%
+  group_by(census_tract) %>%
+  mutate(avg_percgovbacked = mean(na.omit(perc_govern_backed))) %>%
+  ungroup()
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_percgovbacked)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$avg_percgovbacked),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+                             "Average % of gov-backed mortgages <br> from 2006-2020: ", round(mapdat$avg_percgovbacked, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat$avg_percgovbacked), 
+            title = "Average % of <br>gov-backed mortgages <br>from 2007-2020", opacity = 0.7)
+```
+
+#### Percent of government backed loans in 2020 
+```{r }
+mapdat2020 <- mapdat[which(mapdat$year == 2020),]
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$perc_govern_backed)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$perc_govern_backed),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$census_tract, "<br>",
+                             "Percent of gov-backed <br>mortages in 2020: ", round(mapdat2020$perc_govern_backed, 2))
+              ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$perc_govern_backed), 
+            title = "Percent of <br>gov-backed <br>mortages in 2020", opacity = 0.7)
+```
+
+

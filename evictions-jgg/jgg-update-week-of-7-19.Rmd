@@ -1,0 +1,31 @@
+---
+title: "JGG update for the week of July 19, 2021"
+author: "Jacob Goldstein-Greenwood"
+date: "7/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+Below is an overview of what I've been working on this past week.
+
+---
+
+[1.] The housing justice group is interested in calculating yearly changes in eviction filings for different courts, so I wrote some functions for doing that and built them into our existing code. As with all the other code, the focus has been on making all functions generalizable and automatable: If/when we add new eviction data, we want everything to work without requiring adjustments.
+
+---
+
+[2.] I put together a repo for the code we're using in this project. We wanted to have a place that could serve as the enduring reference for data cleaning/analysis decisions. As we use de-anonymized data in this project, we don't currently include the data in the repo (we don't have a particular interest in sharing the names of all Virginia eviction defendants in one aggregated location). That's accessible here for the interested: https://github.com/virginiaequitycenter/va-evictions
+
+---
+
+[3.] We were interested in finding a way to visualize the changes I referenced in [1.]; to that end, I wrote an .Rmd run as part of the cleaning/analysis process that generates searchable HTML tables with percent-changes above a certain threshold highlighted (the threshold is set to 50% in the GIF below). There's still much work to do to improve these tables, but the guts are there.
+
+![](jgg-update-week-of-7-19-gif.gif){width=90%}
+
+---
+
+[4.] Michele recently wrote and received a grant from the local planning district to construct a database of evictions in Charlottesville and Albemarle (congrats!). We met with the granting group on Thursday to discuss that work, and I've begun planning the data cleaning/analysis.
