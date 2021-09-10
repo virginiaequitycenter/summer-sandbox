@@ -29,9 +29,6 @@ drive_download("https://docs.google.com/drawings/d/1H1ALiYYQY7WObLpUeoRZXBufvYam
 # read google sheet
 table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7TdUOHttp4ziSWnOO108CbXn0I/edit?usp=sharing", gs4_deauth())
 
-# load data
-lead <- read_csv("data/lead_cville_tract.csv")
-
 ```
 
 ## Data Collection Process
@@ -39,19 +36,80 @@ lead <- read_csv("data/lead_cville_tract.csv")
 
 
 ## Table
-```{r, echo = FALSE}
+```{r, echo = F}
 datatable(table,
           filter = 'top', options = list(
-            pageLength = 10, autoWidth = TRUE))
+            columnDefs = list(list(targets = c(0), width = '700px'),
+                              list(targets = c(2), width = '700px')),
+                           scrollX = T))
 ```
 
 
-## LEAD graphic
+## Average Energy Burden by Census Tract {.tabset}
 ```{r, echo = F, message = F}
+# load data
+lead <- read_csv("data/lead_cville_tract.csv")
 
+lead$tract <- as.character(lead$tract)
 ```
 
-## LODES Map
+### Charlottesville
+```{r, echo = F}
+lead %>% 
+  filter(county=="Charlottesville city") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Albemarle County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Albemarle") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    theme(axis.text = element_text(size = 7)) +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+
+### Fluvanna County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Fluvanna") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Greene County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Greene") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Louisa County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Louisa") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Nelson County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Nelson") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+## Commute Patterns
 ```{r, echo = F, message = F}
 # load data
 lodesrescommute <- read_csv("data/lodes_commute_cville_tract.csv")
