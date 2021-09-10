@@ -35,7 +35,7 @@ table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7T
 ![Process Map](images/Data Process.png)
 
 
-## Table
+## Current Data Collections
 ```{r, echo = F}
 datatable(table,
           filter = 'top', options = list(
