@@ -29,29 +29,136 @@ drive_download("https://docs.google.com/drawings/d/1H1ALiYYQY7WObLpUeoRZXBufvYam
 # read google sheet
 table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7TdUOHttp4ziSWnOO108CbXn0I/edit?usp=sharing", gs4_deauth())
 
-# load data
-lead <- read_csv("data/lead_cville_tract.csv")
-
 ```
 
 ## Data Collection Process
 ![Process Map](images/Data Process.png)
 
 
-## Table
-```{r, echo = FALSE}
+## Current Data Collections
+```{r, echo = F}
+img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
+
+c <- img_uri("icons/climate.png")
+t <- img_uri("icons/transportation.png")
+r <- img_uri("icons/risk.png")
+i <- img_uri("icons/infrastructure.png")
+e <- img_uri("icons/economic.png")
+
+table <- table %>% 
+  mutate(Icon = case_when(
+    Tags == "Climate measures" ~ c,
+    Tags == "Transportation" ~ t,
+    Tags == "Risk factors" ~ r,
+    Tags == "Community assets & infrastructure" ~ i,
+    Tags == "Social & economic characteristics" ~ e
+    )) %>% 
+  select(Tags, Icon, everything())
+
+# table <- table %>%
+#   separate(Tags, into = c("tag1", "tag2"))
+# table <- table %>% 
+#   mutate(icon1 = case_when(
+#     tag1 == "Climate measures" ~ c,
+#     tag1 == "Transportation" ~ t,
+#     tag1 == "Risk factors" ~ r,
+#     tag1 == "Community assets & infrastructure" ~ i,
+#     tag1 == "Social & economic characteristics" ~ e
+#     ),
+#   icon2 = case_when(
+#     tag2 == "Climate measures" ~ c,
+#     tag2 == "Transportation" ~ t,
+#     tag2 == "Risk factors" ~ r,
+#     tag2 == "Community assets & infrastructure" ~ i,
+#     tag2 == "Social & economic characteristics" ~ e
+#   )) %>% 
+#   select(tag1, tag2, icon1, icon2, everything())
+#   
+# table <- table %>% 
+#   unite("Tags", tag1:tag2, sep = ", ", na.rm = TRUE) %>% 
+#   unite("Icons", icon1:icon2, sep = " ", na.rm = TRUE)
+
 datatable(table,
           filter = 'top', options = list(
-            pageLength = 10, autoWidth = TRUE))
+            columnDefs = list(list(targets = c(0), width = '700px'),
+                              list(targets = c(2), width = '700px')),
+            scrollX = T), 
+          escape = F)
 ```
 
+Icon attribution:
 
-## LEAD graphic
+* Climate measures: https://www.flaticon.com/authors/ultimatearm
+* Risk factors: https://www.freepik.com
+* Community assets and infrastructure: https://www.flaticon.com/authors/eucalyp
+* Social and economic characteristics: https://www.flaticon.com/authors/ultimatearm
+* Transportation: https://www.flaticon.com/authors/geotatah
+
+## Average Energy Burden by Census Tract {.tabset}
 ```{r, echo = F, message = F}
+# load data
+lead <- read_csv("data/lead_cville_tract.csv")
 
+lead$tract <- as.character(lead$tract)
 ```
 
-## LODES Map
+### Charlottesville
+```{r, echo = F}
+lead %>% 
+  filter(county=="Charlottesville city") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Albemarle County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Albemarle") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    theme(axis.text = element_text(size = 7)) +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+
+### Fluvanna County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Fluvanna") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Greene County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Greene") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Louisa County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Louisa") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+### Nelson County
+```{r, echo = F}
+lead %>% 
+  filter(county=="Nelson") %>%
+  ggplot(aes(x = tract, y = averageburden)) +
+    geom_col() +
+    labs(x = "Census Tract", y = "Average Energy Burden (%)")
+```
+
+## Commute Patterns
 ```{r, echo = F, message = F}
 # load data
 lodesrescommute <- read_csv("data/lodes_commute_cville_tract.csv")
