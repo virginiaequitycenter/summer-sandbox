@@ -1,0 +1,294 @@
+---
+title: "Climate Advisory Committee Update"
+author: "Marisa Lemma"
+date: "9/13/2021"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load libraries
+library(tidyverse)
+library(leaflet)
+library(googlesheets4)
+library(googledrive)
+library(DT)
+library(sf)
+library(lubridate)
+library(RColorBrewer)
+library(tigris)
+
+# download process image
+drive_deauth()
+drive_download("https://docs.google.com/drawings/d/1H1ALiYYQY7WObLpUeoRZXBufvYam6E24j81T2fS4Psc/edit?usp=sharing", path = "images/Data Process.png", type = "png", overwrite = TRUE)
+
+# read google sheet
+table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7TdUOHttp4ziSWnOO108CbXn0I/edit?usp=sharing", gs4_deauth())
+
+# load data
+lead <- read_csv("data/lead_cville_tract.csv")
+
+```
+
+## Data Collection Process
+![Process Map](images/Data Process.png)
+
+
+## Table
+```{r, echo = FALSE}
+datatable(table,
+          filter = 'top', options = list(
+            pageLength = 10, autoWidth = TRUE))
+```
+
+
+## LEAD graphic
+```{r, echo = F, message = F}
+
+```
+
+## LODES Map
+```{r, echo = F, message = F}
+# load data
+lodesrescommute <- read_csv("data/lodes_commute_cville_tract.csv")
+lodesworkers <- read_csv("data/lodes_workerscommute_cville_tract.csv")
+lodesworkpatterns <- read_csv("data/lodes_cvilleworkerscommutepatterns_county.csv")
+
+# read shapefile
+shape <- readRDS("data/cville_tracts.RDS")
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(tract = GEOID)
+cvl_lodesrescommute <- merge(shape, lodesrescommute, by = 'tract', all.x = T)
+```
+
+### Average Commuting Distances for People Who Live and Work in the Charlottesville Region
+```{r, echo = F}
+pal <- colorNumeric("plasma", reverse = T, domain = cvl_lodesrescommute$avgc_workinRegiontr)
+leaflet(cvl_lodesrescommute) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvl_lodesrescommute,
+              fillColor = ~pal(avgc_workinRegiontr),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", cvl_lodesrescommute$tract, "<br>",
+                             "Average commute (mi): ", round(cvl_lodesrescommute$avgc_workinRegiontr, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvl_lodesrescommute$avgc_workinRegiontr,
+            title = "Average commute (mi)", opacity = 0.7)
+```
+
+### Counties Where Charlottesville Workers Commute From Most Often
+```{r, include = F}
+cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
+counties <- counties(state = "51")
+counties <- st_transform(counties, crs = 4326) # to WGS84, given error
+counties <- counties %>% dplyr::rename(county = GEOID)
+lodesworkpatterns$county <- lodesworkpatterns$h_county
+cvl_lodes_all <- merge(counties, lodesworkpatterns, by = 'county', all.x = T)
+```
+
+```{r, echo = F}
+cvl_lodes_all$work <- ifelse(cvl_lodes_all$h_county %in% cvlfips, NA, cvl_lodes_all$commuterstoCville)
+pal <- colorNumeric("plasma", reverse = TRUE, na.color = "lightgray", domain = cvl_lodes_all$work)
+leaflet(cvl_lodes_all) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cvl_lodes_all,
+              fillColor = ~pal(work),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("County: ", cvl_lodes_all$NAME, "<br>",
+                             "Number of commuters: ", cvl_lodes_all$commuterstoCville)) %>% 
+  addLegend("bottomright", pal = pal, values = cvl_lodes_all$work, 
+            title = "Number of Cville <br> region workers", opacity = 0.7)
+```
+
+
+## Surface Temperature Map
+```{r, echo = FALSE, message = FALSE}
+
+# load spatial files
+cville_blocks <- readRDS("~/Desktop/Equity Center/summer-sandbox/spatial_units/data/cville_blocks.RDS")
+
+# rename GEOID10 column (for merging)
+cville_blocks <- cville_blocks %>% rename(GEOID = GEOID10)
+
+# load data
+stats <- read_csv("data/landsat8_cville_city.csv")
+stats$GEOID <- as.character(stats$GEOID)
+
+# create map
+scene <- stats %>%
+  filter(scene_entityId == "LC80160332021236LGN00") %>%
+  filter(spatial_unit == "blocks")
+
+scene <- merge(cville_blocks, scene, by = "GEOID")
+
+scene %>%
+  ggplot() +
+  geom_sf(data = scene, aes(fill = median), color="white", size=0.15) +
+  scale_fill_viridis_c(option = "magma") +
+  labs(title = "Surface Temperature Reading from 08/24/2021 at 11:53am EST",
+       fill = "Median Temp (°F)") +
+  theme_minimal()
+
+```
+
+## Average Yearly Maximum Temperature {.tabset}
+```{r, echo = F, warning = F, message = F}
+# load data
+noaa <- read_csv("data/noaa_cville_county.csv")
+cville_sf <- readRDS("data/cville_counties.RDS")
+cville_sf <- cville_sf %>% rename(CNTY_FIPS = COUNTYFP)
+cville_sf1 <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
+
+cville_sf1 <- st_as_sf(cville_sf1)
+cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
+
+cville_sf1 <- cville_sf1 %>%
+                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+                                geometry, everything())
+cville_sf1$Year = as.numeric(cville_sf1$Year)
+cville_sf1 <-  cville_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+
+#select only the annual temperature and year column
+cville_sf1_yr <- select(cville_sf1, NAME, Year, Avg_Tempmax)
+
+#rename the temperature column
+cville_sf1_yr <- rename(cville_sf1_yr, ta = Avg_Tempmax)
+
+#create a date column because stripes only works with format = date
+cville_sf1_yr <- mutate(cville_sf1_yr, date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+#Filter out each County. No need to do theme again it's already set 
+cville_sf1_yrg <- filter(cville_sf1_yr, NAME == "Greene")
+cville_sf1_yra <- filter(cville_sf1_yr, NAME == "Albemarle")
+cville_sf1_yrc <- filter(cville_sf1_yr, NAME == "Charlottesville")
+cville_sf1_yrf <- filter(cville_sf1_yr, NAME == "Fluvanna")
+cville_sf1_yrl <- filter(cville_sf1_yr, NAME == "Louisa")
+cville_sf1_yrn <- filter(cville_sf1_yr, NAME == "Nelson")
+
+#Create the theme for the stripes image
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       legend.text = element_text(size = 10),
+                       axis.text.x = element_text(vjust = 3, size = 10),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 15, face = "bold"),
+                       plot.caption = element_text(size = 10))
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+### Charlottesville
+```{r, echo = F}
+ggplot(cville_sf1_yrc,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Charlottesville Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+### Albemarle County
+```{r, echo = F}
+ggplot(cville_sf1_yra,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Albemarle County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+### Fluvanna County
+```{r, echo = F}
+ggplot(cville_sf1_yrf,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Fluvanna County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+### Greene County
+```{r, echo = F}
+ ggplot(cville_sf1_yrg,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Greene County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+### Louisa County
+```{r, echo = F}
+ggplot(cville_sf1_yrl,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Louisa County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
+### Nelson County
+```{r, echo = F}
+ggplot(cville_sf1_yrn,
+             aes(x = date, y = 1, fill = ta))+
+        geom_tile()+
+           scale_x_date(date_breaks = "6 years",
+                     date_labels = "%Y",
+                     expand = c(0, 0))+
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_gradientn(colors = rev(col_strip))+
+             guides(fill = guide_colorbar(barwidth = 1))+
+            labs(title = "Nelson County Average Yearly Maximum Temperature 1895-2020",
+                caption = "Data: NOAA Surface Temperature Analysis")+
+              theme_strip
+```
+
