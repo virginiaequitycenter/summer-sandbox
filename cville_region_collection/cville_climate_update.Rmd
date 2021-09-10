@@ -37,13 +37,62 @@ table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7T
 
 ## Current Data Collections
 ```{r, echo = F}
+img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
+
+c <- img_uri("icons/climate.png")
+t <- img_uri("icons/transportation.png")
+r <- img_uri("icons/risk.png")
+i <- img_uri("icons/infrastructure.png")
+e <- img_uri("icons/economic.png")
+
+table <- table %>% 
+  mutate(Icon = case_when(
+    Tags == "Climate measures" ~ c,
+    Tags == "Transportation" ~ t,
+    Tags == "Risk factors" ~ r,
+    Tags == "Community assets & infrastructure" ~ i,
+    Tags == "Social & economic characteristics" ~ e
+    )) %>% 
+  select(Tags, Icon, everything())
+
+# table <- table %>%
+#   separate(Tags, into = c("tag1", "tag2"))
+# table <- table %>% 
+#   mutate(icon1 = case_when(
+#     tag1 == "Climate measures" ~ c,
+#     tag1 == "Transportation" ~ t,
+#     tag1 == "Risk factors" ~ r,
+#     tag1 == "Community assets & infrastructure" ~ i,
+#     tag1 == "Social & economic characteristics" ~ e
+#     ),
+#   icon2 = case_when(
+#     tag2 == "Climate measures" ~ c,
+#     tag2 == "Transportation" ~ t,
+#     tag2 == "Risk factors" ~ r,
+#     tag2 == "Community assets & infrastructure" ~ i,
+#     tag2 == "Social & economic characteristics" ~ e
+#   )) %>% 
+#   select(tag1, tag2, icon1, icon2, everything())
+#   
+# table <- table %>% 
+#   unite("Tags", tag1:tag2, sep = ", ", na.rm = TRUE) %>% 
+#   unite("Icons", icon1:icon2, sep = " ", na.rm = TRUE)
+
 datatable(table,
           filter = 'top', options = list(
             columnDefs = list(list(targets = c(0), width = '700px'),
                               list(targets = c(2), width = '700px')),
-                           scrollX = T))
+            scrollX = T), 
+          escape = F)
 ```
 
+Icon attribution:
+
+* Climate measures: https://www.flaticon.com/authors/ultimatearm
+* Risk factors: https://www.freepik.com
+* Community assets and infrastructure: https://www.flaticon.com/authors/eucalyp
+* Social and economic characteristics: https://www.flaticon.com/authors/ultimatearm
+* Transportation: https://www.flaticon.com/authors/geotatah
 
 ## Average Energy Burden by Census Tract {.tabset}
 ```{r, echo = F, message = F}
