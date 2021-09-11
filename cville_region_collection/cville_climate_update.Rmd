@@ -62,15 +62,32 @@ r <- img_uri("icons/risk.png")
 i <- img_uri("icons/infrastructure.png")
 e <- img_uri("icons/economic.png")
 
-table <- table %>% 
-  mutate(Icon = case_when(
-    Topics == "Climate measures" ~ c,
-    Topics == "Transportation" ~ t,
-    Topics == "Risk factors" ~ r,
-    Topics == "Community assets & infrastructure" ~ i,
-    Topics == "Social & economic characteristics" ~ e
-    )) %>% 
-  select(Topics, Icon, everything())
+########################## Multiple icons ##########################
+library(stringi)
+
+for (z in 1:nrow(table)) {
+  topic_vec <- unlist(stri_split(table[z, 'Topics'], regex = ', ')) # split up topics for data source
+  icon_vec <- sapply(topic_vec, function(x) case_when(x == "Climate measures" ~ c,
+                                                      x == "Transportation" ~ t,
+                                                      x == "Risk factors" ~ r,
+                                                      x == "Community assets & infrastructure" ~ i,
+                                                      x == "Social & economic characteristics" ~ e) # identify corresponding icons
+  )
+  icon_vec <- paste0(icon_vec, collapse = ', ') # paste the icon sources together
+  table[z, 'Icon'] <- icon_vec # add icons to table
+  table <- table %>% select(Topics, Icon, everything()) # reorder `Icon` to be 2nd column
+}
+####################################################################
+
+# table <- table %>% 
+#   mutate(Icon = case_when(
+#     Topics == "Climate measures" ~ c,
+#     Topics == "Transportation" ~ t,
+#     Topics == "Risk factors" ~ r,
+#     Topics == "Community assets & infrastructure" ~ i,
+#     Topics == "Social & economic characteristics" ~ e
+#     )) %>% 
+#   select(Topics, Icon, everything())
 
 # table <- table %>%
 #   separate(Tags, into = c("tag1", "tag2"))
