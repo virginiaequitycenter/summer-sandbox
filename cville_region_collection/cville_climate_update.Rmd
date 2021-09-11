@@ -1,12 +1,25 @@
 ---
-title: "Climate Advisory Committee Update"
-author: "Marisa Lemma"
+title: "Charlottesville Regional Climate Justice Coalition Update"
+author: "Equity Center Data Team"
 date: "9/13/2021"
 output:
   html_document: 
     toc: true
     toc_float: true
 ---
+
+<details><summary>Team members</summary><br/>
+
+- Marisa Lemma (primary document author)
+- Michele Claibourn   
+- Lee LeBouef
+- Chase Dawson
+- Tolu Odukoya
+- Helena Lindsay
+- Khalila Karefa-Kargbo
+- Michael Salgueiro   
+
+</details>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -32,10 +45,14 @@ table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7T
 ```
 
 ## Data Collection Process
-![Process Map](images/Data Process.png)
+ADD TEXT to explain process map
+
+![](images/Data Process.png)
 
 
-## Current Data Collections
+## Newly Available Data Collections
+ADD TEXT to explain table
+
 ```{r, echo = F}
 img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
 
@@ -47,13 +64,13 @@ e <- img_uri("icons/economic.png")
 
 table <- table %>% 
   mutate(Icon = case_when(
-    Tags == "Climate measures" ~ c,
-    Tags == "Transportation" ~ t,
-    Tags == "Risk factors" ~ r,
-    Tags == "Community assets & infrastructure" ~ i,
-    Tags == "Social & economic characteristics" ~ e
+    Topics == "Climate measures" ~ c,
+    Topics == "Transportation" ~ t,
+    Topics == "Risk factors" ~ r,
+    Topics == "Community assets & infrastructure" ~ i,
+    Topics == "Social & economic characteristics" ~ e
     )) %>% 
-  select(Tags, Icon, everything())
+  select(Topics, Icon, everything())
 
 # table <- table %>%
 #   separate(Tags, into = c("tag1", "tag2"))
@@ -81,14 +98,15 @@ table <- table %>%
 datatable(table,
           filter = 'top', rownames = F, options = list(
             columnDefs = list(list(targets = c(0), width = '100px'),
-                              list(targets = c(2), width = '150px'),
-                              list(targets = c(4), width = '200px')),
+                              list(targets = c(2), width = '200px'),
+                              list(targets = c(3), width = '200px'),
+                              list(targets = c(6), width = '150px')),
             scrollX = T,
             autoWidth = T), 
           escape = F)
 ```
 
-Icon attribution:
+<details><summary>Icon attribution</summary><br/>
 
 * Climate measures: https://www.flaticon.com/authors/ultimatearm
 * Risk factors: https://www.freepik.com
@@ -96,7 +114,11 @@ Icon attribution:
 * Social and economic characteristics: https://www.flaticon.com/authors/ultimatearm
 * Transportation: https://www.flaticon.com/authors/geotatah
 
-## Average Energy Burden by Census Tract {.tabset}
+</details>
+
+## Data Examples
+
+### Average Energy Burden by Census Tract {.tabset}
 ```{r, echo = F, message = F}
 # load data
 lead <- read_csv("data/lead_cville_tract.csv")
@@ -104,7 +126,7 @@ lead <- read_csv("data/lead_cville_tract.csv")
 lead$tract <- as.character(lead$tract)
 ```
 
-### Charlottesville
+#### Charlottesville
 ```{r, echo = F}
 lead %>% 
   filter(county=="Charlottesville city") %>%
@@ -113,7 +135,7 @@ lead %>%
     labs(x = "Census Tract", y = "Average Energy Burden (%)")
 ```
 
-### Albemarle County
+#### Albemarle County
 ```{r, echo = F}
 lead %>% 
   filter(county=="Albemarle") %>%
@@ -124,7 +146,7 @@ lead %>%
 ```
 
 
-### Fluvanna County
+#### Fluvanna County
 ```{r, echo = F}
 lead %>% 
   filter(county=="Fluvanna") %>%
@@ -133,7 +155,7 @@ lead %>%
     labs(x = "Census Tract", y = "Average Energy Burden (%)")
 ```
 
-### Greene County
+#### Greene County
 ```{r, echo = F}
 lead %>% 
   filter(county=="Greene") %>%
@@ -142,7 +164,7 @@ lead %>%
     labs(x = "Census Tract", y = "Average Energy Burden (%)")
 ```
 
-### Louisa County
+#### Louisa County
 ```{r, echo = F}
 lead %>% 
   filter(county=="Louisa") %>%
@@ -151,7 +173,7 @@ lead %>%
     labs(x = "Census Tract", y = "Average Energy Burden (%)")
 ```
 
-### Nelson County
+#### Nelson County
 ```{r, echo = F}
 lead %>% 
   filter(county=="Nelson") %>%
@@ -160,7 +182,7 @@ lead %>%
     labs(x = "Census Tract", y = "Average Energy Burden (%)")
 ```
 
-## Commute Patterns
+### Commute Patterns
 ```{r, echo = F, message = F}
 # load data
 lodesrescommute <- read_csv("data/lodes_commute_cville_tract.csv")
@@ -174,7 +196,7 @@ shape <- shape %>% dplyr::rename(tract = GEOID)
 cvl_lodesrescommute <- merge(shape, lodesrescommute, by = 'tract', all.x = T)
 ```
 
-### Average Commuting Distances for People Who Live and Work in the Charlottesville Region
+#### Average Commuting Distances for People Who Live and Work in the Charlottesville Region
 ```{r, echo = F}
 pal <- colorNumeric("plasma", reverse = T, domain = cvl_lodesrescommute$avgc_workinRegiontr)
 leaflet(cvl_lodesrescommute) %>%
@@ -194,7 +216,7 @@ leaflet(cvl_lodesrescommute) %>%
             title = "Average commute (mi)", opacity = 0.7)
 ```
 
-### Counties Where Charlottesville Workers Commute From Most Often
+#### Counties Where Charlottesville Workers Commute From Most Often
 ```{r, include = F}
 cvlfips <- c("51540", "51003", "51065", "51079", "51109", "51125")
 counties <- counties(state = "51")
@@ -225,11 +247,11 @@ leaflet(cvl_lodes_all) %>%
 ```
 
 
-## Surface Temperature Map
+### Surface Temperature Map
 ```{r, echo = FALSE, message = FALSE}
 
 # load spatial files
-cville_blocks <- readRDS("~/Desktop/Equity Center/summer-sandbox/spatial_units/data/cville_blocks.RDS")
+cville_blocks <- readRDS("data/cville_blocks.RDS")
 
 # rename GEOID10 column (for merging)
 cville_blocks <- cville_blocks %>% rename(GEOID = GEOID10)
@@ -255,7 +277,7 @@ scene %>%
 
 ```
 
-## Average Yearly Maximum Temperature {.tabset}
+### Average Yearly Maximum Temperature {.tabset}
 ```{r, echo = F, warning = F, message = F}
 # load data
 noaa <- read_csv("data/noaa_cville_county.csv")
@@ -305,7 +327,7 @@ theme_strip <- theme_minimal()+
 col_strip <- brewer.pal(11, "RdBu")
 ```
 
-### Charlottesville
+#### Charlottesville
 ```{r, echo = F}
 ggplot(cville_sf1_yrc,
              aes(x = date, y = 1, fill = ta))+
@@ -321,7 +343,7 @@ ggplot(cville_sf1_yrc,
               theme_strip
 ```
 
-### Albemarle County
+#### Albemarle County
 ```{r, echo = F}
 ggplot(cville_sf1_yra,
              aes(x = date, y = 1, fill = ta))+
@@ -337,7 +359,7 @@ ggplot(cville_sf1_yra,
               theme_strip
 ```
 
-### Fluvanna County
+#### Fluvanna County
 ```{r, echo = F}
 ggplot(cville_sf1_yrf,
              aes(x = date, y = 1, fill = ta))+
@@ -353,7 +375,7 @@ ggplot(cville_sf1_yrf,
               theme_strip
 ```
 
-### Greene County
+#### Greene County
 ```{r, echo = F}
  ggplot(cville_sf1_yrg,
              aes(x = date, y = 1, fill = ta))+
@@ -369,7 +391,7 @@ ggplot(cville_sf1_yrf,
               theme_strip
 ```
 
-### Louisa County
+#### Louisa County
 ```{r, echo = F}
 ggplot(cville_sf1_yrl,
              aes(x = date, y = 1, fill = ta))+
@@ -385,7 +407,7 @@ ggplot(cville_sf1_yrl,
               theme_strip
 ```
 
-### Nelson County
+#### Nelson County
 ```{r, echo = F}
 ggplot(cville_sf1_yrn,
              aes(x = date, y = 1, fill = ta))+
