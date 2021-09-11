@@ -62,38 +62,19 @@ r <- img_uri("icons/risk.png")
 i <- img_uri("icons/infrastructure.png")
 e <- img_uri("icons/economic.png")
 
-table <- table %>% 
-  mutate(Icon = case_when(
-    Topics == "Climate measures" ~ c,
-    Topics == "Transportation" ~ t,
-    Topics == "Risk factors" ~ r,
-    Topics == "Community assets & infrastructure" ~ i,
-    Topics == "Social & economic characteristics" ~ e
-    )) %>% 
-  select(Topics, Icon, everything())
-
-# table <- table %>%
-#   separate(Tags, into = c("tag1", "tag2"))
-# table <- table %>% 
-#   mutate(icon1 = case_when(
-#     tag1 == "Climate measures" ~ c,
-#     tag1 == "Transportation" ~ t,
-#     tag1 == "Risk factors" ~ r,
-#     tag1 == "Community assets & infrastructure" ~ i,
-#     tag1 == "Social & economic characteristics" ~ e
-#     ),
-#   icon2 = case_when(
-#     tag2 == "Climate measures" ~ c,
-#     tag2 == "Transportation" ~ t,
-#     tag2 == "Risk factors" ~ r,
-#     tag2 == "Community assets & infrastructure" ~ i,
-#     tag2 == "Social & economic characteristics" ~ e
-#   )) %>% 
-#   select(tag1, tag2, icon1, icon2, everything())
-#   
-# table <- table %>% 
-#   unite("Tags", tag1:tag2, sep = ", ", na.rm = TRUE) %>% 
-#   unite("Icons", icon1:icon2, sep = " ", na.rm = TRUE)
+library(stringi)
+for (z in 1:nrow(table)) {
+  topic_vec <- unlist(stri_split(table[z, 'Topics'], regex = ', ')) # split up topics for data source
+  icon_vec <- sapply(topic_vec, function(x) case_when(x == "Climate measures" ~ c,
+                                                      x == "Transportation" ~ t,
+                                                      x == "Risk factors" ~ r,
+                                                      x == "Community assets & infrastructure" ~ i,
+                                                      x == "Social & economic characteristics" ~ e) # identify corresponding icons
+  )
+  icon_vec <- paste0(icon_vec, collapse = ', ') # paste the icon sources together
+  table[z, 'Icon'] <- icon_vec # add icons to table
+  table <- table %>% select(Topics, Icon, everything()) # reorder `Icon` to be 2nd column
+}
 
 datatable(table,
           filter = 'top', rownames = F, options = list(
