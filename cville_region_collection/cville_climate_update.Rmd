@@ -140,6 +140,7 @@ lead %>%
     theme(axis.text.x = element_text(angle = 45))  +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
+
 Census tract 109.03 containing primarily student housing has been omitted
 
 #### Fluvanna County
