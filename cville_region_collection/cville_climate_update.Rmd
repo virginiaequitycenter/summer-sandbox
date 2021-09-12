@@ -102,10 +102,8 @@ for (z in 1:nrow(table)) {
 ```{r}
 datatable(table,
           filter = 'top', rownames = F, options = list(
-            columnDefs = list(list(targets = c(1), width = '150px'),
-                              list(targets = c(2), width = '200px'),
-                              list(targets = c(3), width = '200px'),
-                              list(targets = c(6), width = '150px')),
+            columnDefs = list(list(targets = c(1,2,3,6), width = '200px'),
+                              list(targets = c(0,4,5,7), width = '150px')),
             pageLength = 5,
             scrollX = T,
             autoWidth = T), 
