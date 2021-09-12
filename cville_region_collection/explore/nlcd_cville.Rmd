@@ -217,43 +217,9 @@ m
 
 
 ### Blocks
-```{r, cache = TRUE}
-pal <- colorNumeric("viridis", reverse = TRUE, domain = nlcd_cville_blocks$percent_dev)
 
-m <- leaflet()%>%
-  addTiles()%>%
-  addPolygons(data = cville_blocks,
-              fillColor = ~pal(percent_dev),
-              weight = .5,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cville_blocks$GEOID, "<br>",
-                             "Percent Developed: ", cville_blocks$percent_dev)) %>%
-  addLegend("bottomright", pal = pal, values = cville_blocks$percent_dev,
-            title = "Percent Developed Land", opacity = 0.7)
-m
-```
+Block level maps are slow to render and may be added later.
 
-```{r, cache = TRUE}
-pal <- colorNumeric("viridis", reverse = TRUE, domain = nlcd_cville_blocks$percent_for)
-
-m <- leaflet()%>%
-  addTiles()%>%
-  addPolygons(data = cville_blocks,
-              fillColor = ~pal(percent_for),
-              weight = 0.5,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cville_blocks$GEOID, "<br>",
-                             "Percent Forest: ", cville_blocks$percent_for)) %>%
-  addLegend("bottomright", pal = pal, values = cville_blocks$percent_for,
-            title = "Percent Forested Land", opacity = 0.7)
-m
-```
 
 ## Impervious Surfaces{.tabset}
 
@@ -300,24 +266,9 @@ m
 ```
 
 ### Blocks
-```{r, cache = TRUE}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = nlcd_cville_blocks$imp_surf)
 
-m <- leaflet()%>%
-  addTiles()%>%
-  addPolygons(data = cville_blocks,
-              fillColor = ~pal(imp_surf),
-              weight = 0.5,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cville_blocks$GEOID, "<br>",
-                             "Percent Impervious Surface: ", cville_blocks$imp_surf)) %>%
-  addLegend("bottomright", pal = pal, values = cville_blocks$imp_surf,
-            title = "Average Percent Imperviuos Surface", opacity = 0.7)
-m
-```
+Block level maps are slow to render and may be added later.
+
 
 ## Tree Canopy{.tabset}
 
@@ -364,21 +315,5 @@ m
 ```
 
 ### Blocks
-```{r, cache = TRUE}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = nlcd_cville_blocks$tree_can)
 
-m <- leaflet()%>%
-  addTiles()%>%
-  addPolygons(data = cville_blocks,
-              fillColor = ~pal(tree_can),
-              weight = 0.5,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cville_blocks$GEOID, "<br>",
-                             "Percent Tree Canopy: ", cville_blocks$tree_can)) %>%
-  addLegend("bottomright", pal = pal, values = cville_blocks$tree_can,
-            title = "Average Percent Tree Canopy", opacity = 0.7)
-m
-```
+Block level maps are slow to render and may be added later.
