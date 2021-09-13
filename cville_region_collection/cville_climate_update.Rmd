@@ -12,7 +12,7 @@ output:
 
 - Marisa Lemma (primary document author)
 - Michele Claibourn   
-- Lee LeBouef
+- Lee LeBoeuf
 - Jacob Goldstein-Greenwood
 - Chase Dawson
 - Tolu Odukoya
