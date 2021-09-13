@@ -60,7 +60,7 @@ Beginning with needs and requests for additional information and data from withi
 This fall, we will continue to add to the current data collections, clean up and refine our work to date, and begin (4) to integrate the data sources for further analysis and visualization
 
 ## Newly Available Data Collections
-To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (demographic, economic, health, and other social data), the table below provides an overview of the new data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation).
+To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (demographic, economic, health, and other social data) and [Shelter in Place](https://virginiaequitycenter.github.io/cvilleequity_covid/SIP/) measures (food, car, broadband access; crowding, density), the table below provides an overview of the new data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation).
 
 ```{r}
 img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
