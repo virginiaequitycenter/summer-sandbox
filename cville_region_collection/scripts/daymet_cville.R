@@ -3,117 +3,124 @@
 # Tolu Odukoya
 
 #Load Libraries 
-library(knitr)
+# library(knitr)
 library(tidyverse)
-library(stargazer)
+# library(stargazer)
 library(sf)
-library(stringi)
-library(leaflet)
+# library(stringi)
+# library(leaflet)
 library(raster)
-library(mapview)
-library(RColorBrewer)
-library(ggplot2)
-library(gganimate)
-library(gapminder)
-library(transformr)
-library(gifski)
-library(ggrepel)
-library(hrbrthemes)
+# library(mapview)
+# library(RColorBrewer)
+# library(gganimate)
+# library(gapminder)
+# library(transformr)
+# library(gifski)
+# library(ggrepel)
+# library(hrbrthemes)
 library(FedData)
-library(magrittr)
-library(daymetr)
-library(lubridate)
-library(maps)
-library(tigris)
-library(ncdf4)
-library(magick)
-library(extrafont)
-library(showtext)
-library('Cairo')
-library(measurements)
-library(googlesheets4)
-library(tools)
-library(geosphere)
+# library(magrittr)
+# library(daymetr)
+# library(lubridate)
+# library(maps)
+# library(tigris)
+# library(ncdf4)
+# library(magick)
+# library(extrafont)
+# library(showtext)
+# library('Cairo')
+# library(measurements)
+# library(googlesheets4)
+# library(tools)
+# library(geosphere)
 
 #TRACTS###########
 
 # Define localities of interest
-cvillefips <- c("540", "003", "065", "079", "109","125")
-eastfips <- c("001", "131")
+# cvillefips <- c("540", "003", "065", "079", "109","125")
+# eastfips <- c("001", "131")
 
-cville_trt <- tracts(state = "51", county = cvillefips)
-east_trt <- tracts(state = "51", county = eastfips)
+cville_trt <- readRDS("data/cville_tracts.RDS")
+# east_trt <- readRDS(state = "51", county = eastfips)
 
 # Download data ----
-cville_daymet_1980 <- get_daymet(
+cville_daymet_1980_2020 <- get_daymet(
   template = cville_trt,
   label = "cvl",
   elements = c("prcp", "tmin", "tmax"),
-  years = 1980, 
+  years = c(1980, 1990, 2000, 2010, 2020),
   tempo = "mon")
+# also works
 
-east_daymet_1980 <- get_daymet(
-  template = east_trt,
-  label = "est",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 1980, 
-  tempo = "mon")
+# cville_daymet_1980 <- get_daymet(
+#   template = cville_trt,
+#   label = "cvl",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = c(1980), 
+#   tempo = "mon")
 
-cville_daymet_1990 <- get_daymet(
-  template = cville_trt,
-  label = "cvl",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 1990, 
-  tempo = "mon")
+# east_daymet_1980 <- get_daymet(
+#   template = east_trt,
+#   label = "est",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 1980, 
+#   tempo = "mon")
 
-east_daymet_1990 <- get_daymet(
-  template = east_trt,
-  label = "est",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 1990, 
-  tempo = "mon")
+# cville_daymet_1990 <- get_daymet(
+#   template = cville_trt,
+#   label = "cvl",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 1990, 
+#   tempo = "mon")
 
-cville_daymet_2000 <- get_daymet(
-  template = cville_trt,
-  label = "cvl",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2000, 
-  tempo = "mon")
+# east_daymet_1990 <- get_daymet(
+#   template = east_trt,
+#   label = "est",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 1990, 
+#   tempo = "mon")
 
-east_daymet_2000 <- get_daymet(
-  template = east_trt,
-  label = "est",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2000, 
-  tempo = "mon")
+# cville_daymet_2000 <- get_daymet(
+#   template = cville_trt,
+#   label = "cvl",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2000, 
+#   tempo = "mon")
 
-cville_daymet_2010 <- get_daymet(
-  template = cville_trt,
-  label = "cvl",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2010, 
-  tempo = "mon")
+# east_daymet_2000 <- get_daymet(
+#   template = east_trt,
+#   label = "est",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2000, 
+#   tempo = "mon")
 
-east_daymet_2010 <- get_daymet(
-  template = east_trt,
-  label = "est",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2010, 
-  tempo = "mon")
+# cville_daymet_2010 <- get_daymet(
+#   template = cville_trt,
+#   label = "cvl",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2010, 
+#   tempo = "mon")
 
-cville_daymet_2020 <- get_daymet(
-  template = cville_trt,
-  label = "cvl",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2020, 
-  tempo = "mon")
+# east_daymet_2010 <- get_daymet(
+#   template = east_trt,
+#   label = "est",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2010, 
+#   tempo = "mon")
 
-east_daymet_2020 <- get_daymet(
-  template = east_trt,
-  label = "est",
-  elements = c("prcp", "tmin", "tmax"),
-  years = 2020, 
-  tempo = "mon")
+# cville_daymet_2020 <- get_daymet(
+#   template = cville_trt,
+#   label = "cvl",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2020, 
+#   tempo = "mon")
+
+# east_daymet_2020 <- get_daymet(
+#   template = east_trt,
+#   label = "est",
+#   elements = c("prcp", "tmin", "tmax"),
+#   years = 2020, 
+#   tempo = "mon")
 
 
 # Check the results ----
