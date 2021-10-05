@@ -1,0 +1,190 @@
+---
+title: "LEHD LODES"
+author: "Lee LeBoeuf"
+date: "09/15/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr', 'ggpubr'), function(pkg) library(pkg, character.only = TRUE)))
+```
+
+
+```{r reading in data, include=FALSE}
+eastfips <- c("51001", "51131")
+east_lodes_res <- read.csv("lodes_rescommutepatterns_eastern_county.csv")
+east_lodes_work <- read.csv("lodes_workerscommutepatterns_eastcounty.csv")
+```
+
+```{r, include=FALSE}
+counties <- counties(state = "51")
+counties <- st_transform(counties, crs = 4326) # to WGS84, given error
+counties <- counties %>% dplyr::rename(county = GEOID)
+east_lodes_res$county <- east_lodes_res$w_county
+east_lodes_work$county <- east_lodes_work$h_county
+east_lodes_all1 <- merge(counties, east_lodes_res, by = 'county', all.x = T)
+east_lodes_all2 <- merge(east_lodes_all1, east_lodes_work, by = 'county', all.x = T)
+```
+
+## Data source 
+* Data structure description: https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf
+* Data download: https://lehd.ces.census.gov/data/lodes/LODES7/va/
+* Helpful article about how these data are collected and how they can be used: https://www.researchgate.net/publication/328700665_The_US_Census_Longitudinal_Employer-Household_Dynamics_Datasets
+
+## Data specifics
+* The Longitudinal Employer Household Dynamics (LEHD) program at the US Census Bureau releases the Origin Destination Employment Statistis (LODES) datasets annually based on employer-employee insurance records. 
+* This data file uses data from the Origin-Destination datafile from LEHD. In the origin datafile, census blocks are listed in pairs based on where workers live and work. The original datafile has been aggregated to the county level to allow users to see where Eastern Shore residents are commuting most often. That is, of the Eastern Shore residents who work outside of the Eastern Shore, to which counties do they commute most often? 
+* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002.
+* Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance. 
+
+# Where do Eastern Shore residents/workers commute to/from most often?
+
+```{r}
+outsideworkers <- east_lodes_all2 %>% 
+  filter(w_county %in% eastfips == F)
+
+outsideresidents <- east_lodes_all2 %>%
+  filter(h_county %in% eastfips == F)
+```
+
+## Commuter distributions {.tabset}
+
+### Eastern Shore residents {.tabset}
+
+These are the percentile calculations for Virginia counties based on the number of Eastern Shore residents who are employed in that county. These calculations do not include the number of Eastern Shore residents who are employed within the Eastern Shore. For example, the number of people who live in Albemarle County and commute to Charlottesville City are not reflected in this calculations. The bar graphs show the most common and least common work-destination counties for Eastern Shore residents who work outside of the Eastern Shore.
+
+```{r}
+quantile(na.omit(outsideworkers$commutersfromRegion), probs = seq(0, 1, by= 0.05))
+```
+
+Bottom 25th percentile (the least common work-destinations for Eastern Shore residents)
+```{r}
+# Counties that are in the bottom 25th percentile in terms of number of Eastern Shore residents commuters. 
+outsideworkers25 <- outsideworkers[which(outsideworkers$commutersfromRegion <= quantile(na.omit(outsideworkers$commutersfromRegion), probs = 0.25)),]
+ggplot(outsideworkers25, aes(x = NAME, y = commutersfromRegion))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Eastern Shore resident commuters")
+```
+
+Top 75th percentile (the most common work-destinations for Eastern Shore residents who work outside the Eastern Shore)
+```{r}
+# Counties that are in the top 75th percentile in terms of number of Eastern Shore residents commuters. 
+outsideworkers75 <- outsideworkers[which(outsideworkers$commutersfromRegion >= quantile(na.omit(outsideworkers$commutersfromRegion), probs = 0.75)),]
+ggplot(outsideworkers75, aes(x = NAME, y = commutersfromRegion))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Eastern Shore resident commuters")
+```
+
+### Eastern Shore workers 
+
+These are the percentile calculations for Virginia counties based on the number of Eastern Shore residents who are employed in that county. These calculations do not include the number of Eastern Shore residents who are employed within the Eastern Shore. For example, the number of people who live in Albemarle County and commute to Charlottesville City are not reflected in this calculations. The bar graphs show the most common and least common work-destination counties for Eastern Shore residents who work outside of the Eastern Shore.
+
+```{r}
+quantile(na.omit(outsideresidents$commuterstoRegion), probs = seq(0, 1, by= 0.05))
+```
+
+Bottom 25th percentile (the least common work-destinations for Eastern Shore residents)
+```{r}
+# Counties that are in the bottom 25th percentile in terms of number of Eastern Shore workers. 
+outsideres25 <- outsideresidents[which(outsideresidents$commuterstoRegion <= quantile(na.omit(outsideresidents$commuterstoRegion), probs = 0.25)),]
+ggplot(outsideres25, aes(x = NAME, y = commuterstoRegion))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Eastern Shore workers")
+```
+
+Top 75th percentile (the most common work-destinations for Eastern Shore residents who work outside the Eastern Shore)
+```{r}
+# Counties that are in the top 75th percentile in terms of number of Eastern Shore workers. 
+outsideres75 <- outsideresidents[which(outsideresidents$commuterstoRegion >= quantile(na.omit(outsideresidents$commuterstoRegion), probs = 0.75)),]
+ggplot(outsideres75, aes(x = NAME, y = commuterstoRegion))+
+  geom_bar(stat = 'identity', width = 0.5) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "County", y = "Eastern Shore workers")
+```
+
+## Mapping commuting patterns {.tabset}
+
+### Eastern Shore residents {.tabset}
+The map offers another way to visualize where Eastern Shore __residents__ commute most often. The counts of Eastern Shore residents who commute to work within the Eastern Shore are excluded from the legend so as to limit the range and allow for easier discrimination between the surrounding counties, but the number of commuters to each of the localities in the Eastern Shore is available by clicking on the locality.  
+```{r}
+east_lodes_all2$res <- ifelse(east_lodes_all2$w_county %in% eastfips, NA, east_lodes_all2$commutersfromRegion)
+pal <- colorNumeric("plasma", reverse = TRUE, na.color = "lightgray", domain = east_lodes_all2$res)
+leaflet(east_lodes_all2) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = east_lodes_all2,
+              fillColor = ~pal(res),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("County: ", east_lodes_all2$NAME, "<br>",
+                             "Number of commuters: ", east_lodes_all2$commutersfromRegion)) %>% 
+  addLegend("bottomright", pal = pal, values = east_lodes_all2$res, 
+            title = "Number of Eastern Shore <br> region resident <br> commuters", opacity = 0.7)
+```
+
+### Eastern Shore workers
+The map offers another way to visualize where Eastern Shore __workers__ commute from most often. The counts of Eastern Shore workers who commute from within the Eastern Shore are excluded from the legend so as to limit the range and allow for easier discrimination between the surrounding counties, but the number of commuters from each of the localities in the Eastern Shore is available by clicking on the locality.  
+```{r}
+east_lodes_all2$work <- ifelse(east_lodes_all2$h_county %in% eastfips, NA, east_lodes_all2$commuterstoRegion)
+pal <- colorNumeric("plasma", reverse = TRUE, na.color = "lightgray", domain = east_lodes_all2$work)
+leaflet(east_lodes_all2) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = east_lodes_all2,
+              fillColor = ~pal(work),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("County: ", east_lodes_all2$NAME, "<br>",
+                             "Number of commuters: ", east_lodes_all2$commuterstoRegion)) %>% 
+  addLegend("bottomright", pal = pal, values = east_lodes_all2$work, 
+            title = "Number of Eastern Shore <br> region workers", opacity = 0.7)
+```
+
+
+## County lists {.tabset}
+
+### Eastern Shore residents {.tabset}
+Below are lists of counties that employ more or less than 25 Eastern Shore residents. 
+
+* Counties that employ 25 or more Eastern Shore residents
+```{r}
+(sort(outsideworkers$NAME[which(outsideworkers$commutersfromRegion >= 25)]))
+```
+
+* Counties that employ less than 25 Eastern Shore residents
+```{r}
+(sort(outsideworkers$NAME[which(outsideworkers$commutersfromRegion < 25)]))
+```
+
+### Eastern Shore workers {.tabset}
+Below are lists of counties where more or less than 25 Eastern Shore workers live. 
+
+* Counties that where 25 or more Eastern Shore workers live
+```{r}
+(sort(outsideresidents$NAME[which(outsideresidents$commuterstoRegion >= 25)]))
+```
+
+* Counties where less than 25 Eastern Shore workers live
+```{r}
+(sort(outsideresidents$NAME[which(outsideresidents$commuterstoRegion < 25)]))
+```
+
+
+

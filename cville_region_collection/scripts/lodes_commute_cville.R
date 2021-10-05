@@ -215,9 +215,9 @@ cvl_lodes_commutepatterns <- va_lodes_od %>%
          h_county = str_sub(h_geocode, 1,5)) %>% 
   filter(h_county %in% cvlfips) %>%
   group_by(w_county) %>%
-  summarise(commuters = sum(S000))
+  summarise(commutersfromRegion = sum(S000))
 
-write.csv(cvl_lodes_commutepatterns, "lodes_commutepatterns_county.csv", row.names = F)
+write.csv(cvl_lodes_commutepatterns, "lodes_rescommutepatterns_cvlcounty.csv", row.names = F)
 
 
 
