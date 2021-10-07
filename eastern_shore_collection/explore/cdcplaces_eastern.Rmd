@@ -1,0 +1,315 @@
+---
+title: "Eastern Shore CDC Places"
+author: "Lee LeBoeuf"
+date: "10/7/2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'leaflet', 'rcartocolor', 'sf',
+                      'RColorBrewer', 'viridis', 'rgdal', 'googlesheets4','stringr'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "cdc_places", gs4_deauth())
+eastdat <- read.csv("cdcplaces_eastern_tract.csv")
+```
+
+## Data Source
+
+* These data come from the Center for Disease Control and Prevention (CDC) PLACES: Local Data for Better Health.
+* More information about the CDC PLACES data can be found [here](https://www.cdc.gov/places/index.html). 
+* Data shown here were downloaded using the CDC PLACES API in October of 2021. Documentation for the API can be found [here](https://dev.socrata.com/foundry/chronicdata.cdc.gov/cwsq-ngmh) and documentation for the data can be found [here](https://chronicdata.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-Census-Tract-D/cwsq-ngmh). 
+
+## The Data Used Here
+
+* PLACES is a collaboration between the CDC, the Robert Wood Johnson Foundation, and the CDC Foundation. 
+* The data provide model-based estimates for chronic disease risk factors, health outcomes, and clinical prevention services. According the the website, "CDC uses an innovative peer-reviewed multilevel regression and poststratification (MPR) approach that links geocoded health surveys and high spatial resolution population demographic and socioeconomic data."
+* CDC pulls data from the CDC Behavioral Risk Factor Surveillance System, the Census 2010 population, and the American Community Survey estimates.
+* The full data from the CDC include 27 measures: 5 unhealthy behaviors, 13 health outcomes, and 9 prevention practices. The data used here include 9 health outcomes, 3 prevention practices, and 5 unhealthy behaviors. All groupings shown below are consistent with the CDC groupings of each outcome. 
+* All of the data values represent the predicted percent prevalence of a given outcome within a census tract. Data for some outcomes are from 2017, but most are from 2018. 
+* Data are available at the tract levels for Accomack and Northampton counties.
+
+## Variable descriptions
+These summaries are based on data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
+```{r}
+meta %>% 
+  filter(su_tract == 1) %>%
+  select(varname, about) %>% as.list()
+glimpse(eastdat)
+eastdat %>% select(Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
+Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
+Annual_Checkup2018) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual distribution 
+These distributions show data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
+```{r}
+longdat <- eastdat %>% select(c(locationname, Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
+Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
+Annual_Checkup2018)) %>% pivot_longer(-locationname, names_to = "measure", values_to = "value") 
+longdat$measure <- factor(longdat$measure,
+                         levels = c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018", "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018", "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018"))
+longdat %>%
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "Blues", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free", ncol = 4)
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018", "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018", "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+## Health outcomes {.tabset}
+```{r, echo = FALSE}
+shape <- readRDS('eastshore_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+eastdat <- eastdat %>%
+  rename(GEOID = locationname)
+mapdat <- merge(shape, eastdat, by = 'GEOID', all.x = T)
+```
+
+### Asthma {.tabset}
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Current_Asthma2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Current_Asthma2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with asthma: ", mapdat$Current_Asthma2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Current_Asthma2018), 
+            title = "Predicted % of adults <br> with current asthma <br> in 2018", opacity = 0.7)
+
+```
+
+### Coronary Heart Disease
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Coronary_Heart_Disease2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Coronary_Heart_Disease2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with Coronary Heart Disease: ", mapdat$Coronary_Heart_Disease2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Coronary_Heart_Disease2018), 
+            title = "Predicted % of adults <br> with Coronary Heart Disease <br> in 2018", opacity = 0.7)
+
+```
+
+### Cancer (excluding skin cancer)
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Cancer_except_skin2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Cancer_except_skin2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with cancer: ", mapdat$Coronary_Heart_Disease2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Cancer_except_skin2018), 
+            title = "Predicted % of adults <br> with cancer (excluding skin) <br> in 2018", opacity = 0.7)
+
+```
+
+### Diabetes 
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Diabetes2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Diabetes2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with diabetes: ", mapdat$Diabetes2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Diabetes2018), 
+            title = "Predicted % of adults <br> with diabetes <br> in 2018", opacity = 0.7)
+
+```
+
+## Prevention {.tabset}
+
+### Lack of health insurance {.tabset}
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Health_Insurance2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Health_Insurance2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults without health insurance: ", mapdat$Health_Insurance2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Health_Insurance2018), 
+            title = "Predicted % of adults <br> without health insurance <br> in 2018", opacity = 0.7)
+
+```
+
+### Routine check-up in the last year in 2018 
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Annual_Checkup2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Annual_Checkup2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who went <br> to the doctor in last year: ", mapdat$Annual_Checkup2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Annual_Checkup2018), 
+            title = "Predicted % of adults <br> who went to the doctor <br> in the last year <br> in 2018", opacity = 0.7)
+
+```
+
+### Visits to dentist/dental clinic in the last year in 2018
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Dental_Visit2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Dental_Visit2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who went <br> to the dentist in last year: ", mapdat$Dental_Visit2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Dental_Visit2018), 
+            title = "Predicted % of adults <br> who went to the dentist <br> in the last year <br> in 2018", opacity = 0.7)
+
+```
+
+## Unhealthy Behaviors {.tabset}
+
+### Curent smoking in 2018 {.tabset}
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Current_Smoking2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Current_Smoking2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who smoke: ", mapdat$Current_Smoking2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Current_Smoking2018), 
+            title = "Predicted % of adults <br> who currently smoke <br> in 2018", opacity = 0.7)
+
+```
+
+### Obesity
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$Obesity2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Obesity2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who have a BMI >= 30: ", mapdat$Obesity2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Obesity2018), 
+            title = "Predicted % of adults <br> who had a BMI >= 30 <br> in 2018", opacity = 0.7)
+
+```
+
+### Less than 7 hours of sleep
+```{r}
+pal <- colorNumeric("Blues", domain = mapdat$less_than_sevenhr_sleep2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$less_than_sevenhr_sleep2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who average <7 hrs <br> of sleep a night in 2018: ", mapdat$less_than_sevenhr_sleep2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$less_than_sevenhr_sleep2018), 
+            title = "Predicted % of adults <br> who average <7 hrs <br> of sleep a night in 2018", opacity = 0.7)
+
+```
