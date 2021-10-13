@@ -1,0 +1,140 @@
+---
+title: "NFHL Eastern Shore Explore"
+author: "Chase Dawson"
+date: "9/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+# load libraries
+library(tidyverse)
+library(leaflet)
+library(sf)
+# sf library wasn't working but https://github.com/r-spatial/sf/issues/1536 helped
+```
+
+```{r, include=FALSE}
+# set working directory
+setwd('/Users/chasedawson/dev/uva_equity_center/summer-sandbox')
+
+# read in data
+# nfhl
+nfhl_counties <- read.csv('./eastern_shore_collection/data/nfhl_eastshore_counties.csv')
+nfhl_tracts <- read.csv('./eastern_shore_collection/data/nfhl_eastshore_tracts.csv')
+nfhl_blkgps <- read.csv('./eastern_shore_collection/data/nfhl_eastshore_blkgps.csv')
+nfhl_blocks <- read.csv('./eastern_shore_collection/data/nfhl_eastshore_blocks.csv')
+
+# spatial data
+counties_geoms <- st_read('./spatial_units/data/clipped_coast/eastshore_counties_clipped_coast.shp')
+tracts_geoms <- st_read('./spatial_units/data/clipped_coast/eastshore_tracts_clipped_coast.shp')
+blkgps_geoms <- st_read('./spatial_units/data/clipped_coast/eastshore_blkgps_clipped_coast.shp')
+blocks_geoms <- st_read('./spatial_units/data/clipped_coast/eastshore_blocks_clipped_coast.shp')
+```
+
+```{r, include=FALSE}
+# merge nfhl data with spatial data
+counties <- merge(counties_geoms %>% select(c("NAME", "GEOID", "geometry")), nfhl_counties, by.x = "GEOID", by.y = "GEOID")
+tracts <- merge(tracts_geoms %>% select(c("NAME", "GEOID", "geometry")), nfhl_tracts, by.x = "GEOID", by.y = "GEOID")
+blkgps <- merge(blkgps_geoms %>% select(c("BLKGRPCE", "GEOID", "geometry")), nfhl_blkgps, by.x = "GEOID", by.y = "GEOID")
+blocks <- merge(blocks_geoms %>% select(c("BLOCKCE", "GEOID", "geometry")), nfhl_blocks, by.x = "GEOID", by.y = "GEOID")
+
+counties <- st_transform(counties, 4326)
+tracts <- st_transform(tracts, 4326)
+blkgps <- st_transform(blkgps, 4326)
+blocks <- st_transform(blocks, 4326)
+```
+
+## About
+
+The [National Flood Hazard Layer (NFHL)](https://www.fema.gov/flood-maps/national-flood-hazard-layer) data is provided by FEMA and is used to support the National Flood Insurance Program. The charts below visualize the most recent NFHL data for the Accomack and Northampton counties.
+
+### Accomack County
+As of September 29th, 2021, the NFHL data for Accomack County was last updated on May 18th, 2015.
+
+### Northampton County
+As of September 29th, 2021, the NFHL data for Northampton County was last updated on March 2nd, 2015.
+
+### Accessing the Raw Data
+If you'd like to download the data yourself, go to the [FEMA Flood Map Service Center: Search All Products Page](https://msc.fema.gov/portal/advanceSearch). For example, to download data for Accomack county, under Jurisdiction, select Virginia for State, "Accomack County" for County, and "Accomack County All Jurisdictions" for Community, then click search. Once the search finishes, select "NFHL Data-County" under the "Effective Products" folder and then click download! That's it! The process is very similar for Northampton county or any other county in Virginia.
+
+## Flood Zones {.tabset}
+
+### 0.2 PCT ANNUAL CHANCE FLOOD HAZARD
+
+```{r, echo=FALSE}
+library(leaflet)
+pal <- colorNumeric("Reds", NULL)
+fld_zone <- "0.2 PCT ANNUAL CHANCE FLOOD HAZARD"
+opacity <- 0.8
+
+# create groups for all spatial units and filter to flood zone of interest
+g1 <- counties %>% 
+  filter(zone == fld_zone)
+g2 <- tracts %>% 
+  filter(zone == fld_zone)
+g3 <- blkgps %>%
+  filter(zone == fld_zone)
+g4 <- blocks %>%
+  filter(zone == fld_zone)
+
+# plot
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(data = g1, group = "Counties", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g1$perc, opacity = 1, position = "bottomright", group = "Counties", title = "% in Flood Zone") %>%
+  addPolygons(data = g2, group = "Tracts", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g2$perc, opacity = 1, position = "bottomright", group = "Tracts", title = "% in Flood Zone") %>%
+  addPolygons(data = g3, group = "Block Groups", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g3$perc, opacity = 1, position = "bottomright", group = "Block Groups", title = "% in Flood Zone") %>%
+  addPolygons(data = g4, group = "Blocks", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g4$perc, opacity = 1, position = "bottomright", group = "Blocks", title = "% in Flood Zone") %>%
+  addLayersControl(
+    overlayGroups = c("Counties", "Tracts", "Block Groups", "Blocks"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  hideGroup("Counties") %>%
+  hideGroup("Block Groups") %>%
+  hideGroup("Blocks")
+```
+
+### AREA OF MINIMUM FLOOD HAZARD
+
+```{r, echo=FALSE}
+
+pal <- colorNumeric("Blues", NULL)
+fld_zone <- "AREA OF MINIMAL FLOOD HAZARD"
+opacity <- 0.8
+
+# create groups for all spatial units and filter to flood zone of interest
+g1 <- counties %>% 
+  filter(zone == fld_zone)
+g2 <- tracts %>% 
+  filter(zone == fld_zone)
+g3 <- blkgps %>%
+  filter(zone == fld_zone)
+g4 <- blocks %>%
+  filter(zone == fld_zone)
+
+# plot
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(data = g1, group = "Counties", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g1$perc, opacity = 1, position = "bottomright", group = "Counties", title = "% in Flood Zone") %>%
+  addPolygons(data = g2, group = "Tracts", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g2$perc, opacity = 1, position = "bottomright", group = "Tracts", title = "% in Flood Zone") %>%
+  addPolygons(data = g3, group = "Block Groups", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g3$perc, opacity = 1, position = "bottomright", group = "Block Groups", title = "% in Flood Zone") %>%
+  addPolygons(data = g4, group = "Blocks", stroke = FALSE, smoothFactor = 0.3, fillOpacity = opacity, fillColor = ~pal(perc)) %>%
+  addLegend(pal = pal, values = g4$perc, opacity = 1, position = "bottomright", group = "Blocks", title = "% in Flood Zone") %>%
+  addLayersControl(
+    overlayGroups = c("Counties", "Tracts", "Block Groups", "Blocks"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  hideGroup("Counties") %>%
+  hideGroup("Block Groups") %>%
+  hideGroup("Blocks")
+```
