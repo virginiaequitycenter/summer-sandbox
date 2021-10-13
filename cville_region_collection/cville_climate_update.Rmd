@@ -1,0 +1,384 @@
+---
+title: "Charlottesville Regional Climate Justice Coalition Update"
+author: "Equity Center Data Team"
+date: "9/13/2021"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+<details><summary>Team members</summary><br/>
+
+- Marisa Lemma (primary document author)
+- Michele Claibourn   
+- Lee LeBoeuf
+- Jacob Goldstein-Greenwood
+- Chase Dawson
+- Tolu Odukoya
+- Helena Lindsay
+- Khalila Karefa-Kargbo
+- Michael Salgueiro   
+
+</details>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# load libraries
+library(tidyverse)
+library(leaflet)
+library(googlesheets4)
+library(googledrive)
+library(DT)
+library(sf)
+library(lubridate)
+library(RColorBrewer)
+library(viridis)
+library(tigris)
+
+# download process image
+drive_deauth()
+drive_download("https://docs.google.com/drawings/d/1H1ALiYYQY7WObLpUeoRZXBufvYam6E24j81T2fS4Psc/edit?usp=sharing", path = "images/Data Process.png", type = "png", overwrite = TRUE)
+
+# read google sheet
+table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7TdUOHttp4ziSWnOO108CbXn0I/edit?usp=sharing", gs4_deauth())
+
+```
+
+## Data Collection Process
+Throughout summer 2021, we've been creating and refining a replicable data collection process to build a data collection resource for use in our collective work and by anyone in the community. The process is intended to make our work transparent, to provide resources for other to use, and to be highly automated for easier updates.
+
+<img src="images/Data Process.png" width="500">
+
+Beginning with needs and requests for additional information and data from within our coalition, and those articulated by additional community partners, we 
+
+1. Begin researching available sources, seeking to undertand the provenance and genesis of the data (e.g., collected via surveys, captured from satellite imagery, derived from models built around station monitors, etc.), the temporality and spatial granularity (how frequently is it updated, what areas is it available for or could it be aggregated to), and the available variables and measures within the initial sources.
+2. Create code to acquire the data from source, working to remove as many manual steps as possible; to process the data, filtering to our region, checking data quality, deriving additional measures from included variables, aggregating to administrative boundaries for integration with demographic and population data. Output includes replication code and a csv file of the resulting data.
+3. Create code to build a documentation file identifying the source of the data, providing variable definitions, and generating initial visualization of the key metrics. Output includes replication code and a web document providing more details about the data source.
+
+This fall, we will continue to add to the current data collections, clean up and refine our work to date, and begin (4) to integrate the data sources for further analysis and visualization
+
+## Newly Available Data Collections
+To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (e.g., demographic, economic, health, and other social data) and [Shelter in Place](https://virginiaequitycenter.github.io/cvilleequity_covid/SIP/) measures (e.g., food, car, broadband access), the table below provides an overview of the new data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation). In the next stage, we'll begin to merge these measures with previously compiled data to visualize relationships between residents and resources.
+
+```{r}
+img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
+
+c <- img_uri("icons/climate.png")
+t <- img_uri("icons/transportation.png")
+r <- img_uri("icons/risk.png")
+i <- img_uri("icons/infrastructure.png")
+e <- img_uri("icons/economic.png")
+
+library(stringi)
+for (z in 1:nrow(table)) {
+  topic_vec <- unlist(stri_split(table[z, 'Topics'], regex = ', ')) # split up topics for data source
+  icon_vec <- sapply(topic_vec, function(x) case_when(x == "Climate measures" ~ c,
+                                                      x == "Transportation" ~ t,
+                                                      x == "Risk factors" ~ r,
+                                                      x == "Community assets & infrastructure" ~ i,
+                                                      x == "Social & economic characteristics" ~ e) # identify corresponding icons
+  )
+  icon_vec <- paste0(icon_vec, collapse = ', ') # paste the icon sources together
+  table[z, 'Icon'] <- icon_vec # add icons to table
+  table <- table %>% select(Icon, Topics, everything()) # reorder `Icon` to be 1st column
+}
+```
+
+<details><summary>Topic icon attribution</summary><br/>
+
+* Climate measures, `r c`: https://www.flaticon.com/authors/ultimatearm
+* Risk factors, `r r`: https://www.freepik.com
+* Community assets and infrastructure, `r i`: https://www.flaticon.com/authors/eucalyp
+* Social and economic characteristics, `r e`: https://www.flaticon.com/authors/ultimatearm
+* Transportation, `r t`: https://www.flaticon.com/authors/geotatah
+
+</details>
+
+<br>
+
+
+```{r}
+datatable(table,
+          filter = 'top', rownames = F, options = list(
+            columnDefs = list(list(targets = c(1,2,3,6), width = '200px'),
+                              list(targets = c(0,4,5,7), width = '150px')),
+            pageLength = 5,
+            scrollX = T,
+            autoWidth = T), 
+          escape = F)
+```
+
+## Data Examples
+
+### Percent Energy Burdened by Census Tract {.tabset}
+Household energy burden is calculated as the percent of income spent on energy. A household energy burden of 6% or more is defined a energy burdened. Below we show the percent of households within a census tract estimated to be energy burdened based on the Low-Income Energy Affordability Data, 2018 Update. 
+```{r}
+# load data
+lead <- read_csv("data/lead_cville_tract.csv")
+lead <- lead %>% 
+  mutate(tract = as.character(tract))
+```
+
+#### Charlottesville
+```{r}
+lead %>% 
+  filter(county=="Charlottesville city") %>%
+  ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+#### Albemarle County
+
+```{r}
+lead %>% 
+  filter(county=="Albemarle" & tract != "109.03") %>%
+   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    theme(axis.text.x = element_text(angle = 45))  +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+Census tract 109.03 containing primarily student housing has been omitted
+
+#### Fluvanna County
+```{r}
+lead %>% 
+  filter(county=="Fluvanna") %>%
+   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+#### Greene County
+```{r}
+lead %>% 
+  filter(county=="Greene") %>%
+   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+#### Louisa County
+```{r}
+lead %>% 
+  filter(county=="Louisa") %>%
+   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+#### Nelson County
+```{r}
+lead %>% 
+  filter(county=="Nelson") %>%
+   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+    geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
+    labs(x = "Census Tract", y = "Energy Burdened Households (%)")
+```
+
+### Commute Patterns{.tabset}
+The Origin-Destination Employment Statistics (LODES) pairs the census blocks for where employees live and work, allowing us to estimate outcomes like the average commuting distane of residents in the Charlottesville region and the most common places where non-Charlottesville region residents who work here are coming from.
+
+```{r}
+# load data
+lodesrescommute <- read_csv("data/lodes_commute_cville_blkgp.csv")
+lodesworkers <- read_csv("data/lodes_workerscommute_cville_blkgp.csv")
+lodesworkpatterns <- read_csv("data/lodes_cvilleworkerscommutepatterns_county.csv")
+
+# read shapefile
+shape <- readRDS("data/cville_blkgps.RDS")
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+shape <- shape %>% dplyr::rename(tract = GEOID)
+cvl_lodesrescommute <- merge(shape, lodesrescommute, by.x = 'tract', by.y = "blkgroup", all.x = T)
+```
+
+#### Commuting Distances within the Charlottesville Region
+The map below shows the average commuting distance for people who both **live** and **work** in the Charlottesville region by census block group.
+
+```{r}
+pal <- colorNumeric("plasma", reverse = T, domain = cvl_lodesrescommute$avgc_workinRegionblk)
+
+leaflet(cvl_lodesrescommute) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvl_lodesrescommute,
+              fillColor = ~pal(avgc_workinRegionblk),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", cvl_lodesrescommute$tract, "<br>",
+                             "Average commute (mi): ", round(cvl_lodesrescommute$avgc_workinRegionblk, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvl_lodesrescommute$avgc_workinRegionblk,
+            title = "Average commute (mi)", opacity = 0.7)
+```
+
+#### Commuting Sources Outside the Charlottesville Regio
+
+Below we show where individuals who work in the Charlottesville region but live outside of it reside. The figure below shows only the number of commuters from localities with more than 1000 Charlottesville region workers.
+
+```{r}
+cvlfips <- c(51540, 51003, 51065, 51079, 51109, 51125)
+
+lodesworkpatterns %>% 
+  dplyr::filter(!(h_county %in% cvlfips)) %>%
+  dplyr::filter(commuterstoCville > 1000) %>% 
+  dplyr::mutate(name = case_when(
+    h_county == 51015 ~ "Augusta",
+    h_county == 51029 ~ "Buckingham",
+    h_county == 51041 ~ "Chesterfield",
+    h_county == 51059 ~ "Fairfax (Co)",
+    h_county == 51087 ~ "Henrico",
+    h_county == 51113 ~ "Madison",
+    h_county == 51137 ~ "Orange",
+    h_county == 51153 ~ "Prince William",
+    h_county == 51165 ~ "Rockingham",
+    h_county == 51177 ~ "Spotsylvania",
+    h_county == 51760 ~ "Richmond (City)",
+    h_county == 51790 ~ "Staunton",
+    h_county == 51810 ~ "Virginia Beach",
+    h_county == 51820 ~ "Waynesboro"
+  )) %>% 
+  dplyr::mutate(name = as.factor(name)) %>% 
+  dplyr::mutate(name = fct_reorder(name, commuterstoCville)) %>% 
+  ggplot(aes(x = commuterstoCville, y = name, color = commuterstoCville)) + 
+  geom_segment(aes(x = 0, y = name, xend = commuterstoCville, yend = name)) +
+        geom_point(size = 7) + 
+  scale_color_viridis(guide = F) +
+  labs(x = "Number of Non-Resident Employees", y = "Locality of Residence (FIPS)")
+  
+```
+
+The highest number of non-region residents are coming from Augusta County.
+
+### Surface Temperature: Charlottesville 
+
+Using Landsat8 satellite imagery, we extracted the estimated surface temperature for each 100-meter pixel and the aggregated these estimates into census blocks, block groups, and tracts. Below we show the median measured surface temperature with each block on as measured on 08/24/2021 at 11:53am EST.
+
+The Land Surface Temperature (LST) is the radiative skin temperature of ground, not the temperature as experienced by us or as measured by air temperature monitors.
+
+```{r}
+# load spatial files
+cville_blocks <- readRDS("data/cville_blocks.RDS")
+
+# rename GEOID10 column (for merging)
+cville_blocks <- cville_blocks %>% rename(GEOID = GEOID10)
+
+# load data
+stats <- read_csv("data/landsat8_cville_city.csv")
+scene <- stats %>% 
+  mutate(GEOID = as.character(GEOID)) %>% 
+  filter(scene_entityId == "LC80160332021236LGN00") %>%
+  filter(spatial_unit == "blocks")
+
+scene <- merge(cville_blocks, scene, by = "GEOID")
+scene <- st_transform(scene, crs = 4326)
+
+# leaflet version
+pal <- colorNumeric("magma", reverse = T, domain = scene$median)
+
+leaflet(scene) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = scene,
+              fillColor = ~pal(median),
+              weight = 0.5,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", scene$GEOID, "<br>",
+                             "Median Temp: ", round(scene$median, 2))) %>%
+  addLegend("bottomright", pal = pal, values = scene$median,
+            title = "Median Temp (°F)", opacity = 0.7)
+
+#scene %>%
+#  ggplot() +
+#  geom_sf(data = scene, aes(fill = median), color="white", size=0.15) +
+#  scale_fill_viridis_c(option = "magma") +
+#  labs(title = "Surface Temperature Reading from 08/24/2021 at 11:53am EST",
+#       fill = "Median Temp (°F)") +
+#  theme_minimal()
+```
+
+### Temperature over Time{.tabset}
+
+Using NOAA's Climate Divisional Dataset from the National Center For Environmental Information, we visualize changes in temperature in the Charlottesville region localities over time.
+
+#### Average maximum monthly temperatures
+This is the average of the maximum temperature recorded in January, in February, in March, and so on.
+
+```{r}
+# load data
+noaa <- read_csv("data/noaa_cville_county.csv")
+cville_sf <- readRDS("data/cville_counties.RDS")
+cville_sf <- cville_sf %>% rename(CNTY_FIPS = COUNTYFP)
+
+cville_noaa <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
+
+# cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
+
+#cville_sf1 <- cville_sf1 %>%
+#  dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
+#                geometry, everything())
+
+cville_noaa <- cville_noaa %>% 
+  filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.))) %>% 
+  dplyr::select(NAME, Year, Avg_Tempmax, Julmax) %>% 
+  mutate(date = str_c(Year, "01-01", sep = "-") %>% ymd())
+
+#Create the theme for the stripes image
+theme_strip <- theme_minimal()+
+                 theme(axis.text.y = element_blank(),
+                       axis.line.y = element_blank(),
+                       axis.title = element_blank(),
+                       panel.grid.major = element_blank(),
+                       legend.title = element_blank(),
+                       legend.text = element_text(size = 10),
+                       axis.text.x = element_text(vjust = 3, size = 10),
+                       panel.grid.minor = element_blank(),
+                        plot.title = element_text(size = 15, face = "bold"),
+                       plot.caption = element_text(size = 10))
+
+col_strip <- brewer.pal(11, "RdBu")
+```
+
+```{r}
+# Together with facets to keep common fill scale
+ggplot(cville_noaa, aes(x = date, y = 1, fill = Avg_Tempmax)) +
+  geom_tile() +
+  scale_x_date(date_breaks = "12 years",
+               date_labels = "%Y",
+               expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_gradientn(colors = rev(col_strip)) +
+  guides(fill = guide_colorbar(barwidth = 1)) +
+  facet_wrap(~NAME, ncol = 1) +
+  labs(title = "Average of Maximum Monthly Temperature, 1895-2020",
+       caption = "Data: NOAA Surface Temperature Analysis") +
+  theme_strip
+```
+
+#### Maximum July temperatures
+
+```{r}
+# Together with facets to keep common fill scale
+ggplot(cville_noaa, aes(x = date, y = 1, fill = Julmax)) +
+  geom_tile() +
+  scale_x_date(date_breaks = "12 years",
+               date_labels = "%Y",
+               expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_gradientn(colors = rev(col_strip)) +
+  guides(fill = guide_colorbar(barwidth = 1)) +
+  facet_wrap(~NAME, ncol = 1) +
+  labs(title = "Maximum July Temperature, 1895-2020",
+       caption = "Data: NOAA Surface Temperature Analysis") +
+  theme_strip
+```

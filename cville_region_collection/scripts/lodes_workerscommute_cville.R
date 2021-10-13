@@ -1,6 +1,6 @@
 
 # Author: Lee LeBoeuf
-# Last updated: 09/02/2021
+# Last updated: 09/15/2021
 
 # This script uses the LODES function to pull LEHD LODES Origin-destination data for the Charlottesville area, and creates separate 
 # data files with the following variables (1 for census blocks, 1 for census block groups, and 1 for census tracts):
@@ -122,10 +122,10 @@ cvl_lodes_all <- cvl_lodes_full %>%
   summarise(avgc_allworkers = sum(Vince_mile * jobs) / workersinBlock,
             medc_allworkers = median(rep.int(Vince_mile, times = jobs)),
             workersinBlockall = workersinBlock,
-            liveoutsideCville = sum(jobs[which(h_county %in% cvlfips == F)]),
-            liveinsideCville = sum(jobs[which(h_county %in% cvlfips == T)]),
-            perc_workers_liveinCville = (liveinsideCville/workersinBlock *100),
-            perc_workers_liveoutsideCville = (liveoutsideCville/workersinBlock * 100)) %>%
+            liveoutsideRegion = sum(jobs[which(h_county %in% cvlfips == F)]),
+            liveinsideRegion = sum(jobs[which(h_county %in% cvlfips == T)]),
+            perc_workers_liveinRegion = (liveinsideRegion/workersinBlock *100),
+            perc_workers_liveoutsideRegion = (liveoutsideRegion/workersinBlock * 100)) %>%
   distinct()
 
 # Calculating average distances for Charlottesville region workers who live within 40 miles of work
@@ -166,10 +166,10 @@ cvl_lodes_finalblkgr <- cvl_lodes_final2 %>%
             medc_livewithin40blkgr = median(rep(avgc_livewithin40[is.na(workerw40) == F], times = workerw40[is.na(workerw40) == F])),
             medc_25_resblkgr = median(rep(avgc_25_res[is.na(workers25) == F], times = workers25[is.na(workers25) == F])),
             workersInblkgr = sum(workersinBlockall, na.rm = T),
-            liveoutsideCvilleblkgr = sum(liveoutsideCville),
-            liveinsideCvilleblkgr = sum(liveinsideCville),
-            perc_workers_liveinCvilleblkgr = (liveinsideCvilleblkgr/workersInblkgr *100),
-            perc_workers_liveoutsideCvilleblkgr = (liveoutsideCvilleblkgr/workersInblkgr * 100),
+            liveoutsideRegionblkgr = sum(liveoutsideRegion),
+            liveinsideRegionblkgr = sum(liveinsideRegion),
+            perc_workers_liveinRegionblkgr = (liveinsideRegionblkgr/workersInblkgr *100),
+            perc_workers_liveoutsideRegionblkgr = (liveoutsideRegionblkgr/workersInblkgr * 100),
             workersw40blkgr = sum(workerw40, na.rm = T),
             workers25blkgr = sum(workers25, na.rm = T),
             avgc_allworkersblkgr = sum(avgc_allworkers * workersinBlockall, na.rm = T) / workersInblkgr,
@@ -190,10 +190,10 @@ cvl_lodes_finalTr <- cvl_lodes_final2 %>%
             medc_livewithin40tr = median(rep(avgc_livewithin40[is.na(workerw40) == F], times = workerw40[is.na(workerw40) == F])),
             medc_25_restr = median(rep(avgc_25_res[is.na(workers25) == F], times = workers25[is.na(workers25) == F])),
             workersIntr = sum(workersinBlockall, na.rm = T),
-            liveoutsideCvilletr = sum(liveoutsideCville),
-            liveinsideCvilletr = sum(liveinsideCville),
-            perc_workers_liveinCvilletr = (liveinsideCvilletr/workersIntr *100),
-            perc_workers_liveoutsideCvilletr = (liveoutsideCvilletr/workersIntr * 100),
+            liveoutsideRegiontr = sum(liveoutsideRegion),
+            liveinsideRegiontr = sum(liveinsideRegion),
+            perc_workers_liveinRegiontr = (liveinsideRegiontr/workersIntr *100),
+            perc_workers_liveoutsideRegiontr = (liveoutsideRegiontr/workersIntr * 100),
             workersw40tr = sum(workerw40, na.rm = T),
             workers25tr = sum(workers25, na.rm = T),
             avgc_allworkerstr = sum(avgc_allworkers * workersinBlockall, na.rm = T) / workersIntr,
@@ -213,9 +213,9 @@ cvlworkers_lodes_commutepatterns <- va_lodes_od %>%
          h_county = str_sub(h_geocode, 1,5)) %>% 
   filter(w_county %in% cvlfips) %>%
   group_by(h_county) %>%
-  summarise(commuterstoCville = sum(S000))
+  summarise(commuterstoRegion = sum(S000))
 
-write.csv(cvlworkers_lodes_commutepatterns, "lodes_cvilleworkerscommutepatterns_county.csv", row.names = F)
+write.csv(cvlworkers_lodes_commutepatterns, "lodes_workerscommutepatterns_cvlcounty.csv", row.names = F)
 
 
 

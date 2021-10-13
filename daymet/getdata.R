@@ -3,11 +3,10 @@
 library(tidyverse)
 library(FedData)
 library(raster)
-library(tigris)
 library(sf)
 
-cvillefips <- c("540", "003", "065", "079", "109", "125")
-cville_blkgps <- block_groups(state = "51", county = cvillefips)
+# cvillefips <- c("540", "003", "065", "079", "109", "125")
+cville_blkgps <- readRDS("../spatial_units/data/cville_blkgps.RDS")
 
 # 1. Download data ----
 # Try 2010 monthly
@@ -23,7 +22,7 @@ cville_daymet_2010 <- get_daymet(
 plot(cville_daymet_2010$tmax$X2010.07.16)
 
 # Try 2020 monthly (2020 doesn't work, but 2019 does)
-cville_daymet_2020 <- get_daymet(
+cville_daymet_2019 <- get_daymet(
   template = cville_blkgps,
   label = "cvl",
   elements = c("prcp", "tmin", "tmax"),
@@ -32,7 +31,7 @@ cville_daymet_2020 <- get_daymet(
 )
 
 # Plot with raster::plot
-plot(cville_daymet_2020$tmax$X2019.07.16)
+plot(cville_daymet_2019$tmax$X2019.07.16)
 
 
 # 1. Check the results ----
