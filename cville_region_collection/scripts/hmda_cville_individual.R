@@ -88,9 +88,9 @@ denialrecodes <- recodeparse(recodesdenial)
                                                                                                                                                     #
 # Reading in the 2017 and earlier data (This is for the entire state of VA for years 2007-2017, it will be a huge datafile that will                #
 # need to be filtered to just Cville region and re-formatted slightly)                                                                              #                                                            #
-# filedr <- setwd("/Users/Carlson/Desktop/HMDA data/Pre-2017")                                                                                      #
-# file_names2017 <- dir(filedr)                                                                                                                     #
-# pre2018 <- do.call(rbind, lapply(file_names2017, read.csv))                                                                                       #
+filedr <- setwd("/Users/Carlson/Desktop/HMDA data/Pre-2017")                                                                                      #
+file_names2017 <- dir(filedr)                                                                                                                     #
+pre2018 <- do.call(rbind, lapply(file_names2017, read.csv))                                                                                       #
 # # Filtering the pre-2017 data for just the Charlottesville region                                                                                 #
 # # The pre-2018 data is missing leading zeros in the county/FIPs codes                                                                             #
 # # which impacts Albemarle, Fluvanna, and Greene counties                                                                                          #
@@ -99,9 +99,9 @@ denialrecodes <- recodeparse(recodesdenial)
 # pre2018$county_code <- ifelse(pre2018$county_code == 65 | pre2018$county_code == 79, paste0("0", pre2018$county_code), pre2018$county_code)       #
 #                                                                                                                                                   #
 # # Reading in the post 2017 data--also for the entire state, for the years 2018-2020                                                               #
-# filedr <- setwd("/Users/Carlson/Desktop/HMDA data/Post-2017")                                                                                     #
-# file_names_post2017 <- dir(filedr)                                                                                                                #
-# post2017 <- do.call(rbind, lapply(file_names_post2017, read.csv))                                                                                 #
+filedr <- setwd("/Users/Carlson/Desktop/HMDA data/Post-2017")                                                                                     #
+file_names_post2017 <- dir(filedr)                                                                                                                #
+post2017 <- do.call(rbind, lapply(file_names_post2017, read.csv))                                                                                 #
 #####################################################################################################################################################
 
 # Cleaning process for post-2017 data ###############################################################################################################

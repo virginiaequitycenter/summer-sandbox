@@ -1,7 +1,7 @@
 ---
 title: "Charlottesville Region HMDA"
 author: "Lee LeBoeuf"
-date: "09/17/2021"
+date: "10/15/2021"
 output: 
   html_document:
     toc: yes
@@ -28,6 +28,7 @@ eastdat <- read.csv("hmda_east_tract.csv")
 * The HMDA requires financial institutions to maintain, report, and publicly disclose information about mortgages. 
 * New data is released annually, typically in the summer months, on a year delay (2020 data was released in June of 2021).
 * Areas included in these data: Accomack (51001) and Northampton (51131)
+* An important limitation to note is that the loan amounts and applicant income values appear prone to entry error at the individual level--a high proportion of values seemed too high to be realistic. Therefore, the tract level summaries of these variables (average and median loan amounts and applicant income in the tract) should be interpreted with extreme caution, or perhaps, not used at all. 
     
 ## Variable descriptions
 ```{r}
@@ -35,7 +36,7 @@ meta %>%
   filter(su_tract == 1) %>%
   select(varname, about) %>% as.list()
 glimpse(eastdat)
-eastdat[which(eastdat$year == 2020),] %>% select(avg_loan_amount, med_loan_amount, median_app_income, median_income_accepted_app, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed) %>% 
+eastdat[which(eastdat$year == 2020),] %>% select(total_apps, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 2,
@@ -44,9 +45,9 @@ eastdat[which(eastdat$year == 2020),] %>% select(avg_loan_amount, med_loan_amoun
 
 ## Visual distribution 
 ```{r}
-longdat <- eastdat[which(eastdat$year == 2020),] %>% select(c(census_tract, avg_loan_amount, med_loan_amount, median_app_income, median_income_accepted_app, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed)) %>% pivot_longer(-census_tract, names_to = "measure", values_to = "value") 
+longdat <- eastdat[which(eastdat$year == 2020),] %>% select(c(census_tract, total_apps, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed)) %>% pivot_longer(-census_tract, names_to = "measure", values_to = "value") 
 longdat$measure <- factor(longdat$measure,
-                         levels = c("avg_loan_amount", "med_loan_amount", "median_app_income", "median_income_accepted_app", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed"))
+                         levels = c("total_apps", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed"))
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
@@ -56,7 +57,7 @@ longdat %>%
 
 ```{r, results = "asis"}
 meta %>% 
-  filter(varname %in% c("avg_loan_amount", "med_loan_amount", "median_app_income", "median_income_accepted_app", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed")) %>%
+  filter(varname %in% c("total_apps", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed")) %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
@@ -69,20 +70,17 @@ shape <- st_transform(shape, crs = 4326) # to WGS84, given error
 shape <- shape %>% dplyr::rename(census_tract = GEOID)
 mapdat <- merge(shape, eastdat, by = 'census_tract', all.x = T)
 ```
-  
-### Average Median Loan Amount from 2007-2020
-```{r }
-mapdat <- mapdat %>%
-  group_by(census_tract) %>%
-  mutate(avg_med_loan_amount = mean(na.omit(med_loan_amount))) %>%
-  ungroup()
 
-pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_med_loan_amount )
+### Total number of applications in 2020
+```{r }
+mapdat2020 <- mapdat[which(mapdat$year == 2020),]
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$total_apps)
 
 leaflet() %>% 
   addProviderTiles("CartoDB.Positron") %>% 
-  addPolygons(data = mapdat,
-              fillColor = ~pal(avg_med_loan_amount ),
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$total_apps),
               weight = 1,
               opacity = 1,
               color = "white", 
@@ -92,40 +90,11 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
-                             "Average median loan amount from 2007-2020: ", round(mapdat$avg_med_loan_amount, 2))
+              popup = paste0("GEOID: ", mapdat2020$census_tract, "<br>",
+                             "Number of applications: ", mapdat2020$total_apps)
   ) %>% 
-  addLegend("bottomright", pal = pal, values = mapdat$avg_med_loan_amount , 
-            title = "Average median loan <br>amount from 2007-2020", opacity = 0.7)
-```
-
-### Average Median Accepted Applicant Income from 2007-2020
-```{r }
-mapdat <- mapdat %>%
-  group_by(census_tract) %>%
-  mutate(avg_median_income_accepted_app = mean(na.omit(median_income_accepted_app))) %>%
-  ungroup()
-
-pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat$avg_median_income_accepted_app)
-
-leaflet() %>% 
-  addProviderTiles("CartoDB.Positron") %>% 
-  addPolygons(data = mapdat,
-              fillColor = ~pal(avg_median_income_accepted_app),
-              weight = 1,
-              opacity = 1,
-              color = "white", 
-              fillOpacity = 0.6,
-              highlight = highlightOptions(
-                weight = 2,
-                fillOpacity = 0.8,
-                bringToFront = T
-              ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
-                             "Average median accepted applicant income from 2007-2020: ", round(mapdat$avg_median_income_accepted_app, 2))
-  ) %>% 
-  addLegend("bottomright", pal = pal, values = mapdat$avg_median_income_accepted_app, 
-            title = "Average median accepted <br>applicant income from 2007-2020", opacity = 0.7)
+  addLegend("bottomright", pal = pal, values = (mapdat2020$total_apps), 
+            title = "Total number of <br>mortgage applications <br> in 2020", opacity = 0.7)
 ```
 
 ### Average mortage application denial rates from 2007-2020 {.tabset}

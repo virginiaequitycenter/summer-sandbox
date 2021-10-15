@@ -73,7 +73,7 @@ eastdattract <- eastdat %>%
             hislat_denial_rate = (sum(action_taken == "denied" & (applicant_ethnicity_1 == "Hispanic or Latino"))) / (sum(applicant_ethnicity_1 == "Hispanic or Latino")),
             median_income_accepted_app = median(na.omit(annual_income_000s[which(action_taken == "loan originated")])),
             loans_per_units = sum(action_taken == "loan originated") / tract_one_to_four_family_homes,
-            perc_conventional = sum(loan_type == "Home purchase" & action_taken == "loan originated") / sum(action_taken == "loan originated") * 100,
+            perc_conventional = sum(loan_type == "Conventional" & action_taken == "loan originated") / sum(action_taken == "loan originated") * 100,
             perc_govern_backed = sum(action_taken == "loan originated" & (loan_type == "FHA insured" | loan_type == "VA guaranteed" | loan_type == "USDA RHS or FSA guaranteed")) / sum(action_taken == "loan originated") * 100,
             sum_mortgage_dollars_in000s = sum(loan_amount_000s[which(action_taken == "loan originated")]),
             avg_homepurchase_loanamount = mean(na.omit(loan_amount_000s[which(loan_purpose == "Home purchase")])),
@@ -98,5 +98,5 @@ easttractf <- left_join(eastdattract, popdat, by = c("census_tract", "year"), ke
 easttractf <- easttractf[-which(is.na(easttractf$census_tract)),]
 
 # Writing out tract-level data for 2007-2020
-write.csv(eastall, "hmda_cville_tract.csv", row.names = F)
+write.csv(easttractf, "hmda_eastern_tract.csv", row.names = F)
 
