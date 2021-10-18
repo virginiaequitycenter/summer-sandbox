@@ -95,7 +95,7 @@ eastern_noaa3 <- eastern_noaa3 %>%
                                    CNTY_FIPS = str_sub(Fipsyearpcp, 3, -7))
 
 # Remove -99.9 and replace with NA
-eastern_noaa3 <- eastern_noaa3 %>% replace_with_na_all(condition = ~.x == -99.9)
+eastern_noaa3 <- eastern_noaa3 %>% replace_with_na_all(condition = ~.x == -9.99)
 
 # Create Yearly Mean and Sum
 eastern_noaa3$Avg_monthlypcp = round(rowMeans(eastern_noaa3[,c(2:13)], na.rm = TRUE), 2) # These are just the column numbers that have precipitation values

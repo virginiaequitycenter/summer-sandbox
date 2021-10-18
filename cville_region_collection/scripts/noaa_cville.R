@@ -69,6 +69,7 @@ cville_noaa2 <- cville_noaa2 %>%
 
 # Remove -99.9 and replace with NA
 cville_noaa2 <- cville_noaa2 %>% replace_with_na_all(condition = ~.x == -99.9)
+min(cville_noaa2[,c(2:13)])
 
 # Create Yearly Mean
 cville_noaa2$Avg_Tempmax = round(rowMeans(cville_noaa2[,c(2:13)], na.rm = TRUE), 2) # These column numbers are all the columns
@@ -101,7 +102,8 @@ cville_noaa3 <- cville_noaa3 %>%
                                 CNTY_FIPS = str_sub(Fipsyearpcp, 3, -7))
 
 # Remove -99.9 and replace with NA
-cville_noaa3 <- cville_noaa3 %>% replace_with_na_all(condition = ~.x == -99.9)
+min(cville_noaa3[,c(2:13)])
+cville_noaa3 <- cville_noaa3 %>% replace_with_na_all(condition = ~.x == -9.99) # for some reason the NA value is different for the precipitation values (-9.99 instead of -99.9)
 
 # Create Yearly Mean and Sum
 cville_noaa3$Avg_monthlypcp = round(rowMeans(cville_noaa3[,c(2:13)], na.rm = TRUE), 2) # These are just the column numbers that have precipitation values
