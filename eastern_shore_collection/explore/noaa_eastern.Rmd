@@ -1,150 +1,82 @@
 ---
-title: "NOAA Temperature Data"
+title: "NOAA Temperature and Precipitation Data"
 subtitle: "Data for Eastern Shore Region"
-author: "Tolu Odukoya"
-date: "7/13/2021"
+author: "Tolu Odukoya and Lee LeBoeuf"
+date: "10/15/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # 0. Load libraries and data
-library(tidyverse)
-library(stargazer) # for summary table
-library(janitor) # for tabyl
-library(tigris) # for shapefiles
-library(sf) # for spatial joins
-library(leaflet) # for map
-library(viridis)
-library(googlesheets4)
-library(RColorBrewer)
-library(ggplot2)
-library(gganimate)
-library(gapminder)
-library(transformr)
-library(gifski)
-library(ggrepel)
-library(hrbrthemes)
-library(devtools)
-library(climatestripes)
-library(lubridate)
-library(ggExtra)
-library(tidyr)
-library(dygraphs)
-library(xts)
-library(lubridate)
-library(zoo)
-library(kableExtra)
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
+                      'sp', 'geosphere', 'stringr', 'ggrepel', 'transformr', 'gifski', 'dygraphs', 'xts',
+                      'ggplot2', 'gganimate', 'devtools', 'kableExtra', 'ggExtra', 'lubridate'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+
 noaa <- read_csv("noaa_eastern_county.csv")
-easternfips <- c("001", "131")
-meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet = "noaa")
-```
-
-```{r load and clean new data shp, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-eastern_sf <- read_sf("/Users/msbugatti/Documents/Intership 2021/NOAA Temp Work/counties")
-eastern_sf <- eastern_sf %>% filter(FIPS %in% c(51001, 51131))
-eastern_sf <- eastern_sf %>%
-                      dplyr::select(NAME, STATE_FIPS, CNTY_FIPS, FIPS, geometry, AREA)
-eastern_sf1 <- left_join(eastern_sf, noaa, by ="CNTY_FIPS")
-```
-
-
-```{r transpose the data, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-eastern_sf1 <- st_as_sf(eastern_sf1)
-eastern_sf1 <- cbind(eastern_sf1, st_coordinates(st_centroid(eastern_sf1)))
-```
-
-```{r remove na, , include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
-eastern_sf1 <- eastern_sf1 %>%
-                      dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
-                                geometry, everything())
-eastern_sf1$Year = as.numeric(eastern_sf1$Year)
-eastern_sf1 <-  eastern_sf1 %>% filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.)))
+noaa <- noaa %>% rename(COUNTYFP = CNTY_FIPS)
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "noaa", gs4_deauth())
+shape <- readRDS('eastshore_counties.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+eastern_sf1 <- merge(shape, noaa, by = 'COUNTYFP', all.x = T)
 ```
 
 # Data Source
 
-Source: NOAA's Climate Divisional Database (nClimDiv), June 2021 release. The first link is to download the shapefile for the geography of the counties, while the second link is to download the data files containing the temperature data information. The three codes below are the document names for the datasets of interest.
+* The Climate Divisional Dataset from the National Center For Environmental Information began as the only long-term temporally and spatially complete dataset from which to generate historical climate analyses (1895-2013) for the contiguous United States (CONUS). It was originally developed for climate division, statewide, regional, national, and population-weighted monitoring of drought, temperature, precipitation, and heating/cooling degree day values. 
 
-* Shapefile Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/counties.zip)
-* Temperature Data Download URL: [https://www.ncei.noaa.gov/pub/data/cirs/climdiv/](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
+* There are 344 climate divisions in the CONUS. For each climate division, monthly station temperature and precipitation values are computed from the daily observations. The divisional values are weighted by area to compute statewide values and the statewide values are weighted by area to compute regional values. (Karl and Koss, 1984).
 
-    * Maximum Temperature: climdiv-tmaxcy-v1.0.0-20210707
-    * Minimum Temperature: climdiv-tmincy-v1.0.0-20210707
-    * Precipitation: climdiv-pcpncy-v1.0.0-20210707
+* To learn more, see: [ National Center For Environmental Information and Data ](https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-divisions.php#grdd)
+
+* Data are available for download [here](https://www.ncei.noaa.gov/pub/data/cirs/climdiv/)
+    * Maximum Temperature: climdiv-tmaxcy-v1.0.0
+    * Minimum Temperature: climdiv-tmincy-v1.0.0
+    * Precipitation: climdiv-pcpncy-v1.0.0
 
 ## The Data Used Here
 
-The Climate Divisional Dataset from the National Center For Environmental Information began as the only long-term temporally and spatially complete dataset from which to generate historical climate analyses (1895-2013) for the contiguous United States (CONUS). It was originally developed for climate division, statewide, regional, national, and population-weighted monitoring of drought, temperature, precipitation, and heating/cooling degree day values. 
-
-There are 344 climate divisions in the CONUS. For each climate division, monthly station temperature and precipitation values are computed from the daily observations. The divisional values are weighted by area to compute statewide values and the statewide values are weighted by area to compute regional values. (Karl and Koss, 1984).
-
-The data here is the county data from all the states in the contigous United States. While NOAA includes information on a variety of climate measures, we are focusing on the maximum, minimum temperature, and precipitation of the counties of interest. 
-
-To Learn More, See: 
-
-* [ National Center For Environmental Information and Data ](https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-divisions.php#grdd)
-
+* The data used here represent county-level measures for all localities in the Charlottesville region (Charlottesville City, Greene, Albemarle, Nelson, Fluvanna, and Lousia. While NOAA includes information on a variety of climate measures, we focus on the following measures for the year 1895-2020: 
+    * Monthly and annual average maximum temperature (degrees F) for each county
+    * Monthly and annual average minimum temperature (degrees F) for each county
+    * Monthly and annual average precipitation (inches) for each county
 
 ## Variable Descriptions
 
 ```{r}
-eastern_sfe1 <- filter(eastern_sf1, Year == "1895")
-kbl(eastern_sfe1) %>%
-  kable_paper(full_width = F)  %>% 
-   scroll_box(width = "800px", height = "150px")
+east_sfe1 <- filter(eastern_sf1, Year == "1895")
+kbl(east_sfe1) %>%
+  kable_paper(full_width = F) %>% 
+   scroll_box(width = "800px", height = "350px")
 ```
 
-
-
-The data has the name of the county, the federal information processing system (FIPS) codes which are used to identify a geographical location, both the state and county FIPS code are in the data. The geometry is the location data for plotting the maps, and the rest of the data has years of observation (1895-2020) and the temperature data for each county for all months, for all years.
-
-Temperature observations are county level estimates of...
-
-* Monthly maximum temperature for each county for years 1895-2021
-    * Yearly average maximum temperature for each county for those years. 
-    
-
-* Monthly minimum temperature for each county for years 1895-2021
-    * Yearly average minimum temperature for each county for those years. 
-
-
-* Monthly precipitation for each county for years 1895-2021
-    * Total yearly precipitation for each county for those years.
-
-
-## Summaries 
-
-5-number summaries of (non-missing) numeric variables (remove non-numeric observations)
+## Summary Statistics
 
 ```{r}
-noaa %>% select(-c(CNTY_FIPS, Fipsyear, Year)) %>% 
+noaa %>% select(-c(COUNTYFP, Fipsyearmin, Fipsyearmax, Fipsyearpcp, Year)) %>% 
   select(where(~is.numeric(.x) && !is.na(.x))) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 0,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
-
 # Maps, Warming Stripes, and Timeplots
 
-  The goal of the project is to identify the effects of climate change on the hot weather patterns in the counties. We chose July as the month of interest because we believe it is the hottest month of the year which allows us to observe temperature fluctuations in a stable month. 
+* The goal of the project is to identify the effects of climate change on the hot weather patterns in the counties. We chose July as the month of interest because it is often the hottest month of the year. 
   
 ## July Temperatures 
 
 ###  Maximum Temperature in July across Counties for all Years 
 
 ```{r}
+eastern_sf1 <- st_as_sf(eastern_sf1)
+eastern_sf1 <- cbind(eastern_sf1, st_coordinates(st_centroid(eastern_sf1)))
+
 eastern_sf11a <- 
   ggplot(eastern_sf1) +
   geom_sf(aes(fill = Julmax), color = "black", alpha = .9, na.rm = TRUE) +
@@ -159,10 +91,9 @@ eastern_sf11a <-
        caption = "Maximum Temperature in July for Eastern Shore Counties") + 
  transition_time(as.integer(Year)) +
 ease_aes('linear') 
-```
 
-```{r}
 animate(eastern_sf11a, fps = 1, detail = 1, nframes = 127)
+
 ```
 
 ```{r, results = "asis"}
@@ -174,13 +105,11 @@ meta %>%
 
 ### Minimum Temperature in July across Counties for all Years
       
-  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year. 
+* This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year. 
 
-```{r}
-eastern_sf1a <- mutate(eastern_sf1, date = str_c(Year, "07-16", sep = "-") %>% ymd())
-```
+```{r, include=FALSE}
+eastern_sf1a <- mutate(eastern_sf1, date = str_c(Year, "07-16", sep = "-") %>% ymd()) 
 
-```{r}
 eastern_sf1p <- select(eastern_sf1a, NAME, date, Julmin)
 eastern_sf1p <- as.data.frame(eastern_sf1p)
 eastern_sf1p <- select(eastern_sf1p, -starts_with("geometry"))
@@ -190,9 +119,7 @@ eastern_sf1al <- rename(eastern_sf1al, NAME1 = NAME, Julmin1 = Julmin, date1 = d
 eastern_sf1x <- cbind(eastern_sf1g, eastern_sf1al)
 eastern_sf1x <- rename(eastern_sf1x, Accomack = Julmin, Northampton = Julmin1)
 eastern_sf1x <- eastern_sf1x[ , -which(names(eastern_sf1x) %in% c("date1", "NAME", "NAME1"))]
-```
 
-```{r}
 eastern_sf1x <- xts(x = eastern_sf1x, order.by = eastern_sf1x$date)
 ```
 
@@ -235,7 +162,6 @@ eastern_sf1_yr <- mutate(eastern_sf1_yr, date = str_c(Year, "01-01", sep = "-") 
 eastern_sf1_yra <- filter(eastern_sf1_yr, NAME == "Accomack")
 eastern_sf1_yrn <- filter(eastern_sf1_yr, NAME == "Northampton")
 ```
-
 
 ```{r  warming4, echo = TRUE, warning = FALSE, message = FALSE}
 
@@ -293,7 +219,8 @@ col_strip <- brewer.pal(11, "RdBu")
 
 
 ### Average Yearly Minimum Temperature across Counties for all Years 
-  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year.
+
+* This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year.
 
 ```{r, include=FALSE, message=FALSE, warning=FALSE}
 eastern_sf1am <- mutate(eastern_sf1, date = str_c(Year, "12-16", sep = "-") %>% ymd())
@@ -337,21 +264,21 @@ meta %>%
 
 ### Total Yearly Precipitation across Counties for all Years 
 
-  This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year.
+* This is an interactive graph. Click on the graph to zoom, scroll through each year to see numeric temperature readings for all counties for each year.
   
 ```{r, include=FALSE, message=FALSE, warning=FALSE}
 eastern_sf1ap <- mutate(eastern_sf1, date = str_c(Year, "12-16", sep = "-") %>% ymd())
 ```
 
 ```{r, include=FALSE, message=FALSE, warning=FALSE}
-eastern_sf1pp <- select(eastern_sf1ap, NAME, date, Tot_Temppcp)
+eastern_sf1pp <- select(eastern_sf1ap, NAME, date, Tot_yearlypcp)
 eastern_sf1pp <- as.data.frame(eastern_sf1pp)
 eastern_sf1pp <- select(eastern_sf1pp, -starts_with("geometry"))
 eastern_sf1gp <- filter(eastern_sf1pp, NAME == "Accomack")
 eastern_sf1alp <- filter(eastern_sf1pp, NAME == "Northampton")
-eastern_sf1alp <- rename(eastern_sf1alp, NAME1 = NAME, Tot_Temppcp1 = Tot_Temppcp, date1 = date)
+eastern_sf1alp <- rename(eastern_sf1alp, NAME1 = NAME, Tot_yearlypcp1 = Tot_yearlypcp, date1 = date)
 eastern_sf1xp <- cbind(eastern_sf1gp, eastern_sf1alp)
-eastern_sf1xp <- rename(eastern_sf1xp, Accomack = Tot_Temppcp, Northampton = Tot_Temppcp1)
+eastern_sf1xp <- rename(eastern_sf1xp, Accomack = Tot_yearlypcp, Northampton = Tot_yearlypcp1)
 eastern_sf1xp <- eastern_sf1xp[ , -which(names(eastern_sf1xp) %in% c("date1", "NAME", "NAME1"))]
 ```
 
@@ -372,7 +299,7 @@ dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>%
 
 ```{r, results = "asis"}
 meta %>%
-  filter(varname == "Tot_Temppcp") %>% 
+  filter(varname == "Tot_yearlypcp") %>% 
   select(about) %>% 
   as.list()
 ```
