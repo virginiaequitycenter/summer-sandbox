@@ -1,0 +1,157 @@
+---
+title: "Location Affordability Index"
+author: "Marisa Lemma"
+date: "10/23/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(leaflet)
+library(sf)
+
+lai <- read_csv("~/Desktop/Equity_Center/summer-sandbox/cville_region_collection/data/locationaffordability_cville_tract.csv")
+
+cville_tracts <- readRDS("~/Desktop/Equity_Center/summer-sandbox/cville_region_collection/data/cville_tracts.RDS")
+cvlshapes <- merge(cville_tracts, lai, by = 'GEOID', all.x = T)
+cvlshapes <- st_transform(cvlshapes, crs = 4326) # to WGS84, given error
+```
+
+## Data Source
+Source: Location Affordability Index, Version 3.0 (March 2019)
+
+* Download URL: https://hudgis-hud.opendata.arcgis.com/datasets/location-affordability-index-v-3/explore
+* Technical Documentation: https://files.hudexchange.info/resources/documents/Location-Affordability-Index-Version-3-Data-and-Methodology.pdf
+
+Version 3 of the LAI pulls from 2016 5-year ACS data and 2014 LEHD data.
+
+## Household Models
+This data set uses a series of 8 household models to calculate affordability. Each represents a different type of household, with varying numbers of people and commuters and various income levels. The households are as follows:
+
+* Household 1: Median-Income Family (4 people, 2 commuters)
+* Household 2: Very Low-Income Individual, at national poverty line (1 person, 1 commuter)
+* Household 3: Working Individual, at 50% of median household income (1 person, 1 commuter)
+* Household 4: Single Professional, at 135% of median household income (1 person, 1 commuter)
+* Household 5: Retired Couple, at 80% of MHHI (2 people, 0 commuters)
+* Household 6: Single-Parent Family, at 50% of MHHI (3 people, 1 commuter)
+* Household 7: Moderate-Income Family, at 80% of MHHI (3 people, 1 commuter)
+* Household 8: Dual-Professional Family, at 150% of MHHI (4 people, 2 commuters)
+
+We have decided to focus on just Household 1 and Household 3. For each household, we look at housing affordability (represented by housing costs as % of income), transportation affordability (represented by transportation costs as % of income), and location affordability (represented by housing and transportation costs as % of income).
+
+## Household 1: Median-Income Family{.tabset}
+
+### Housing
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh1_h)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh1_h),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Housing Costs as % of Income: ", round(cvlshapes$hh1_h, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh1_h,
+            title = "Housing Costs as % of Income", opacity = 0.7)
+```
+
+### Transportation
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh1_t)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh1_t),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Transportation Costs as % of Income: ", round(cvlshapes$hh1_t, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh1_t,
+            title = "Transportation Costs as % of Income", opacity = 0.7)
+```
+
+### Housing and Transportation
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh1_ht)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh1_ht),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Housing and Transportation Costs as % of Income: ", round(cvlshapes$hh1_ht, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh1_ht,
+            title = "Housing and Transportation Costs as % of Income", opacity = 0.7)
+```
+
+## Household 3: Working Individual{.tabset}
+
+### Housing
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh3_h)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh3_h),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Housing Costs as % of Income: ", round(cvlshapes$hh3_h, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh3_h,
+            title = "Housing Costs as % of Income", opacity = 0.7)
+```
+
+### Transportation
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh3_t)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh3_t),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Transportation Costs as % of Income: ", round(cvlshapes$hh3_t, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh3_t,
+            title = "Transportation Costs as % of Income", opacity = 0.7)
+```
+
+### Housing and Transportation
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvlshapes$hh3_ht)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(hh3_ht),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvlshapes$GEOID, "<br>",
+                             "Housing and Transportation Costs as % of Income: ", round(cvlshapes$hh3_ht, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$hh3_ht,
+            title = "Housing and Transportation Costs as % of Income", opacity = 0.7)
+```
