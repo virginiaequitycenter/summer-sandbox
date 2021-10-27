@@ -15,7 +15,7 @@ invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaf
                       'sp', 'geosphere', 'stringr', 'ggrepel', 'gganimate', 'transformr', 'gifski'),
                  function(pkg) library(pkg, character.only = TRUE)))
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "HMDA", gs4_deauth())
-eastdat <- read.csv("hmda_east_tract.csv")
+eastdat <- read.csv("hmda_eastern_tract.csv")
 ```
 
 ## Data Source
@@ -28,7 +28,8 @@ eastdat <- read.csv("hmda_east_tract.csv")
 * The HMDA requires financial institutions to maintain, report, and publicly disclose information about mortgages. 
 * New data is released annually, typically in the summer months, on a year delay (2020 data was released in June of 2021).
 * Areas included in these data: Accomack (51001) and Northampton (51131)
-* An important limitation to note is that the loan amounts and applicant income values appear prone to entry error at the individual level--a high proportion of values seemed too high to be realistic. Therefore, the tract level summaries of these variables (average and median loan amounts and applicant income in the tract) should be interpreted with extreme caution, or perhaps, not used at all. 
+* The data show below include __only__ home purchase loans, meaning that mortgages for home improvement or refinancing are excluded. 
+* An important limitation to note is that the FFEIC allows banks to submit data with an error threshold as high as 10% for community banks and credit unions. The loan amounts and applicant income values appear prone to entry error at the individual level--a high proportion of values seemed too high to be realistic. Therefore, the tract level summaries of these variables (median loan amounts and median applicant income in the tract) should be interpreted with extreme caution.  
     
 ## Variable descriptions
 ```{r}
@@ -44,6 +45,7 @@ eastdat[which(eastdat$year == 2020),] %>% select(total_apps, overall_denial_rate
 ```
 
 ## Visual distribution 
+* The following distributions include data only from the year 2020. 
 ```{r}
 longdat <- eastdat[which(eastdat$year == 2020),] %>% select(c(census_tract, total_apps, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed)) %>% pivot_longer(-census_tract, names_to = "measure", values_to = "value") 
 longdat$measure <- factor(longdat$measure,
@@ -98,6 +100,7 @@ leaflet() %>%
 ```
 
 ### Average mortage application denial rates from 2007-2020 {.tabset}
+* Each of the following maps show the average denial rates for the years 2007-2020
 
 #### Overall denial rate {.tabset}
 ```{r }
