@@ -30,7 +30,8 @@ eastdat <- read.csv("cdcplaces_eastern_tract.csv")
 * CDC pulls data from the CDC Behavioral Risk Factor Surveillance System, the Census 2010 population, and the American Community Survey estimates.
 * The full data from the CDC include 27 measures: 5 unhealthy behaviors, 13 health outcomes, and 9 prevention practices. 
 * The data used here include a total of 17 variables. Below, we show a number of them grouped into health outcomes, health behaviors and health access.
-* All of the data values represent the predicted percent prevalence of a given outcome within a census tract. Data for some outcomes are from 2017, but most are from 2018. 
+* All of the data values represent the predicted percent prevalence of a given outcome within a census tract. For almost all measures, respondents to health surveys answered whether they had ever been diagnosed with a given outcome by a health care professional. For many indicators, the estimated prevalance is likely to be an underestimate, particularly in areas where residents have limited access to health care and are therefore less likely to receive a medical diagnosis for a particular ailment. 
+* Data for some outcomes are from 2017, but most are from 2018. 
 * Data are available at the tract levels for Accomack and Northampton counties.
 
 ## Variable descriptions
@@ -82,6 +83,7 @@ mapdat <- merge(shape, eastdat, by = 'GEOID', all.x = T)
 ```
 
 ### Asthma {.tabset}
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have asthma __and__ that they still have asthma.
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Asthma2018)
 
@@ -105,6 +107,7 @@ leaflet() %>%
 ```
 
 ### Coronary Heart Disease
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they had angina or coronary hearth disease. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Coronary_Heart_Disease2018)
 
@@ -128,6 +131,7 @@ leaflet() %>%
 ```
 
 ### Cancer (excluding skin cancer)
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have any type of cancer except skin cancer. This variable is not specific to any type of cancer.
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Cancer_except_skin2018)
 
@@ -151,6 +155,7 @@ leaflet() %>%
 ```
 
 ### Diabetes 
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they had diabetes (excluding diabetes during pregnancy). 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Diabetes2018)
 
@@ -174,6 +179,7 @@ leaflet() %>%
 ```
 
 ### Obesity
+* Adjusted percent of survey respondents aged >= 18 who reported that they have a BMI >= 30kg/m^2. This indicator is calculated by the CDC from self-reported weight and height, excluding pregnant women. Self-reported height and weight tend to lead to lower BMI estimates than clinical height and weight measurements. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Obesity2018)
 
@@ -199,6 +205,7 @@ leaflet() %>%
 ## Health access {.tabset}
 
 ### Lack of health insurance {.tabset}
+* Adjusted percent of respondents aged 18-64 who reported have no current health insurance. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Health_Insurance2018)
 
@@ -222,6 +229,7 @@ leaflet() %>%
 ```
 
 ### Routine check-up in the last year in 2018 
+* Adjusted percent of survey respondents aged >= 18 who reported having been to the doctor for a routine checkup (excluding visits for a specific injury or illness) in the previous year. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Annual_Checkup2018)
 
@@ -245,6 +253,7 @@ leaflet() %>%
 ```
 
 ### Visits to dentist/dental clinic in the last year in 2018
+* Adjusted percent of survey respondents aged >= 18 who reported having been to a dentist or dental clinic in the previous year. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Dental_Visit2018)
 
@@ -270,6 +279,7 @@ leaflet() %>%
 ## Health behaviors {.tabset}
 
 ### Curent smoking in 2018 {.tabset}
+* Adjusted percent of survey respondents aged >= 18 who reported having smoked >= 100 cigarettes in their lifetime and currently smoke every day or some days. This indicator is not a measure of intent or attempts to quit smoking or exposure to secondhand smoke among non-smokers. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Smoking2018)
 
@@ -293,6 +303,7 @@ leaflet() %>%
 ```
 
 ### Less than 7 hours of sleep
+* Adjusted percent of survey respondents aged >= 18 who reported usually getting insufficient sleep (<7 hours for those aged >=18 years, during a 24 hour period). This indicator does not measure variation in sleep duration, sleep quality, or specific sleep problems. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$less_than_sevenhr_sleep2018)
 
