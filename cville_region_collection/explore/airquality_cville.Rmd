@@ -1,28 +1,30 @@
 ---
 title: "Air Quality Exploration File"
 subtitle: "Data for Charlottesville Region"
-author: "Marisa Lemma"
-date: "7/21/2021"
+author: "Marisa Lemma, Michele Claibourn"
+date: "11/12/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Load libraries and data
 library(tidyverse)
-library(mosaic)
 library(stargazer)
-library(viridis)
+#library(viridis)
 library(leaflet)
-library(rgdal)
+#library(rgdal)
 library(sf)
 library(googlesheets4)
-
+library(plotly)
 airquality <- read_csv("../data/airquality_cville_tract.csv")
+airquality <- airquality %>% 
+  mutate(gid = as.character(gid))
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="airquality", gs4_deauth())
 
@@ -39,30 +41,35 @@ Source: Replication Data for "Disparities in PM~2.5~ air pollution in the United
 
 ## About the Data
 
-These data show air pollution at each census tract. They specifically focus on concentrations of PM~2.5~, meaning fine particulate matter that is less than 2.5 micrometers in diameter. PM~2.5~ concentrations are measured by the number of micrograms per cubic meter. High concentrations of PM~2.5~ indicate higher levels of air pollution. 
+These data show air pollution, via the concentrations of fine particulate matter that is less than 2.5 micrometers in diameter (PM~2.5~), at each census tract. PM~2.5~ concentrations are measured by the number of micrograms per cubic meter. High concentrations of PM~2.5~ indicate higher levels of air pollution. 
 
-The data show PM~2.5~ concentrations at every year from 1981-2016. However, we focus only on 1981 and 2016 and how the data changed from 1981 to 2016.
+The data provides PM~2.5~ concentrations at every year from 1981-2016. 
 
 
 ## Variable Descriptions
 ```{r}
-glimpse(airquality)
+glimpse(select(airquality, statefp, countyfp, tract, 
+               pm2_5_1981, pm2_5_2016, pm_change_1981_2016,
+               percentile_1981, percentile_2016,
+               pctile_change_1981_2016))
 ```
 
 Observations are census tract estimates of:
 
-* PM~2.5~ levels in 1981 and 2016 (`pm2_5_1981` and `pm2_5_2016`)
+* PM~2.5~ levels in 1981 through 2016 (`pm2_5_1981`-`pm2_5_2016`)
 * Percentile rankings in 1981 and 2016 (`percentile_1981` and `percentile_2016`)
-  + Percentile rankings were calculated for the whole country and were not altered once the data were filtered to just the Charlottesville region.
-* Change in PM~2.5~ level between 1981 and 2016 (`PM_change`)
-* Change in percentile rank between 1981 and 2016 (`pctile_change`)
+  + Percentile rankings were calculated among census tracts within the Commonwealth and were not altered once the data were filtered to just the Charlottesville region.
+* Change in PM~2.5~ level between 1981 and 2016 (`pm_change_1981_2016`)
+* Change in percentile rank between 1981 and 2016 (`pctile_change_1981_2016`)
 
 ## Summaries
 
 Five-number summaries of all variables:
 ```{r}
-airquality %>% select(-c(trtid10, STATEFP00, COUNTYFP00)) %>% 
-  select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+airquality %>% select(statefp, countyfp, tract, 
+               pm2_5_1981, pm2_5_2016, pm_change_1981_2016,
+               percentile_1981, percentile_2016,
+               pctile_change_1981_2016) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 0,
             summary.stat = c("mean", "sd", "min", "median", "max"))
@@ -70,27 +77,39 @@ airquality %>% select(-c(trtid10, STATEFP00, COUNTYFP00)) %>%
 
 ## Visual Distributions
 
-Visual representations of the data:
+### Tract distributions of PM~2.5~ in 1981 and 2016:
 
 ```{r, message=F, warning=F}
-airquality %>% select(trtid10, percentile_1981, percentile_2016) %>% 
-  pivot_longer(-trtid10, names_to = "measure", values_to = "value") %>% 
+airquality %>% select(tract, pm2_5_1981, pm2_5_2016) %>% 
+  pivot_longer(-tract, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   facet_wrap(~measure, scales = "free") +
-  xlim(0,100) +
-  xlab("Percentile score") +
-  scale_fill_discrete(labels = c("Percentile in 1981", "Percentile in 2016"))
+  xlab("PM2.5") +
+  scale_fill_discrete(labels = c("PM2.5 in 1981", "PM2.5 in 2016"))
 ```
 
 ```{r}
 meta %>% 
-  filter(varname %in% c("percentile_1981", "percentile_2016")) %>%
+  filter(varname %in% c("pm2_5_1981", "pm2_5_2016")) %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
 
+### Tract-level change from 1981-2016
+```{r}
+p <- airquality %>% 
+  select(-c(percentile_1981, percentile_2016, 
+            pm_change_1981_2016, pctile_change_1981_2016)) %>% 
+  pivot_longer(cols = starts_with("pm2"), 
+               names_to = "year", values_to = "pm2_5",
+               names_prefix = "pm2_5_") %>% 
+  ggplot(aes(x = year, y = pm2_5, color = countyfp)) +
+  geom_line(aes(group = tract)) +
+  guides(color = "none")
+ggplotly(p) %>% layout(showlegend = FALSE)
+```
 
 ### Percentile in 1981 vs. percentile in 2016
 ```{r}
@@ -114,93 +133,22 @@ meta %>%
 
 This scatterplot shows the relationship between a census tract's percentile rank in 1981 and its percentile rank in 2016. The red line shows where the data would be if their percentiles in 1981 and 2016 were the same.
 
-### Percentiles vs. percentile change
-```{r}
-airquality %>% 
-  ggplot() +
-  geom_point(aes(x=percentile_1981, y=pctile_change)) +
-  xlim(0, 100) +
-  xlab("Percentile in 1981") +
-  ylab("Percentile change, 1981-2016") +
-  ggtitle("1981 Percentile vs. Percentile Change") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-meta %>% 
-  filter(varname %in% c("percentile_1981", "pctile_change")) %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
-This scatterplot shows the relationship between a census tract's percentile in 1981 and its change in percentile from 1981 to 2016.
-
-
-```{r}
-airquality %>% 
-  ggplot() +
-  geom_point(aes(x=percentile_2016, y=pctile_change)) +
-  xlim(0, 100) +
-  xlab("Percentile in 2016") +
-  ylab("Percentile change, 1981-2016") +
-  ggtitle("2016 Percentile vs. Percentile Change") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-meta %>% 
-  filter(varname %in% c("percentile_2016", "pctile_change")) %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
-This scatterplot shows the relationship between a census tract's percentile in 2016 and its change in percentile from 1981 to 2016.
-
 
 ## Spatial Distributions{.tabset}
 
 ```{r, include = F}
-cville_tracts <- readRDS("~/Desktop/Equity Center/summer-sandbox/cville_region_collection/data/cville_tracts.RDS")
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 
-airquality <- airquality %>% rename(GEOID = trtid10)
-
-cvilleshapes <- merge(cville_tracts, airquality, by = 'GEOID', all.x = T)
+cvilleshapes <- left_join(cville_tracts, airquality, by = c('GEOID'= "gid"))
 cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
 ```
 
 ### 1981{.tabset}
 
-#### Percentile
-```{r}
-pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_1981)
-leaflet(cvilleshapes) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
-              fillColor = ~pal(percentile_1981),
-              weight = 1,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
-                             "Percentile: ", round(cvilleshapes$percentile_1981, 2))) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_1981,
-            title = "Percentile, 1981", opacity = 0.7)
-```
-
-```{r}
-meta %>% 
-  filter(varname=="percentile_1981") %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
 #### PM~2.5~ Concentration
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$pm2_5_1981)
+
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -224,37 +172,40 @@ meta %>%
   as.list()
 ```
 
-### 2016{.tabset}
 
 #### Percentile
 ```{r}
-pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_2016)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_1981)
+
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
-              fillColor = ~pal(percentile_2016),
+              fillColor = ~pal(percentile_1981),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
               popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
-                             "Percentile: ", round(cvilleshapes$percentile_2016, 2))) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_2016,
-            title = "Percentile, 2016", opacity = 0.7)
+                             "Percentile: ", round(cvilleshapes$percentile_1981, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_1981,
+            title = "Percentile, 1981", opacity = 0.7)
 ```
 
 ```{r}
 meta %>% 
-  filter(varname=="percentile_2016") %>%
+  filter(varname=="percentile_1981") %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
 
+### 2016{.tabset}
+
 #### PM~2.5~ Concentration
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$pm2_5_2016)
+
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
@@ -278,63 +229,90 @@ meta %>%
   as.list()
 ```
 
-
-## Percentile Change, 1981-2016
+#### Percentile
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pctile_change)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvilleshapes$percentile_2016)
+
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
-              fillColor = ~pal(pctile_change),
+              fillColor = ~pal(percentile_2016),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
               popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
-                             "Percentile Change: ", round(cvilleshapes$pctile_change, 2))) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$pctile_change,
-            title = "Percentile Change, 1981-2016", opacity = 0.7)
+                             "Percentile: ", round(cvilleshapes$percentile_2016, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$percentile_2016,
+            title = "Percentile, 2016", opacity = 0.7)
 ```
 
 ```{r}
 meta %>% 
-  filter(varname=="pctile_change") %>%
+  filter(varname=="percentile_2016") %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
 
+### Change{.tabset}
 
-
-## Change in PM~2.5~, 1981-2016
+#### Change in PM~2.5~, 1981-2016
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PM_change)
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pm_change_1981_2016)
+
 leaflet(cvilleshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = cvilleshapes,
-              fillColor = ~pal(PM_change),
+              fillColor = ~pal(pm_change_1981_2016),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
               popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
-                             "PM2.5 Change: ", round(cvilleshapes$PM_change, 2))) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$PM_change,
+                             "PM2.5 Change: ", round(cvilleshapes$pm_change_1981_2016, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$pm_change_1981_2016,
             title = "Change in PM2.5, 1981-2016", opacity = 0.7)
 ```
 
 ```{r}
 meta %>% 
-  filter(varname=="PM_change") %>%
+  filter(varname=="pm_change_1981_2016") %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
 
+#### Percentile Change, 1981-2016
+```{r}
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$pctile_change_1981_2016)
+
+leaflet(cvilleshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvilleshapes,
+              fillColor = ~pal(pctile_change_1981_2016),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", cvilleshapes$GEOID, "<br>",
+                             "Percentile Change: ", round(cvilleshapes$pctile_change_1981_2016, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapes$pctile_change_1981_2016,
+            title = "Percentile Change, 1981-2016", opacity = 0.7)
+```
+
+```{r}
+meta %>% 
+  filter(varname=="pctile_change_1981_2016") %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+
 ## Important Notes
 
-The original data uses 2000 census tracts, since that is roughly the midpoint of their 1981-2016 time frame. Since we want to be able to look at this in relation to other tract-level data, we needed this in 2010 census tracts. To estimate the data for 2010 census tracts, I used the bridging data found [here](https://s4.ad.brown.edu/Projects/Diversity/Researcher/Bridging.htm).
-
-Since the conversion to 2010 census tracts involved some estimation, the PM~2.5~ levels in the data may not be as accurate as the original 2000 data.
+The original data uses 2000 census tracts, since that is roughly the midpoint of their 1981-2016 time frame. To integrate this with other 2010 tract-level data, we interpolated the 2000 tract measures to 2010 tracts using areal interpoloation. 
