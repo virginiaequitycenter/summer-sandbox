@@ -1,0 +1,50 @@
+---
+title: "Population data table"
+author: "Lee LeBoeuf"
+date: "11/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+invisible(lapply(list('tidyverse', 'stargazer', 'googlesheets4','DT'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+metatract <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "acs_tract", gs4_deauth())
+metablkgr <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "acs_blockgroup", gs4_deauth())
+```
+
+## ACS tract-level data for the Charlottesville region
+
+* The following table contains the tract-level population data available for the Charlottesville region based on the Census Bureau's American Community Survey 5-Year Estimates from 2015-2019. Each variable is an estimate based on data from the ACS survey, and each variable has a corresponding margin of error. Below only the estimate variables are shown, but the margins of error have the same name as each estimate except that they end with an "M" instead of an "E". 
+* The data are categorized into the following groups for search purposes in the data table below: 
+    * People
+    * Jobs, Wages & Income
+    * Youth & Education
+    * Health
+    * Indices
+    * Housing
+
+```{r}
+metatract %>%
+  filter(str_ends(varname, "E")) %>%
+  select(varname, description, about, group) %>%
+  datatable()
+```
+
+## ACS block group-level data for the Charlottesville region
+
+* The following table contains the block group-level population data available for the Charlottesville region based on the Census Bureau's American Community Survey 5-Year Estimates from 2015-2019. Each variable is an estimate based on data from the ACS survey, and each variable has a corresponding margin of error. Below only the estimate variables are shown, but the margins of error have the same name as each estimate except that they end with an "M" instead of an "E". 
+* The data are categorized into the following groups for search purposes in the data table below: 
+    * People
+    * Jobs, Wages & Income
+    * Youth & Education
+    * Health
+    * Indices
+    * Housing
+
+```{r}
+metablkgr %>%
+  filter(str_ends(varname, "E")) %>%
+  select(varname, description, about, group) %>%
+  datatable()
+```
+
