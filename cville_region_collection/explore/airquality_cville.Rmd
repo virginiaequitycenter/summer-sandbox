@@ -16,12 +16,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # Load libraries and data
 library(tidyverse)
 library(stargazer)
-#library(viridis)
 library(leaflet)
-#library(rgdal)
 library(sf)
 library(googlesheets4)
 library(plotly)
+
 airquality <- read_csv("../data/airquality_cville_tract.csv")
 airquality <- airquality %>% 
   mutate(gid = as.character(gid))
@@ -37,6 +36,7 @@ Source: Replication Data for "Disparities in PM~2.5~ air pollution in the United
 * Download URL: https://dataverse.lib.virginia.edu/dataset.xhtml?persistentId=doi:10.18130/V3/QLBNQJ
   + Article and Findings: https://science-sciencemag-org.proxy01.its.virginia.edu/content/369/6503/575
 * Additional Information: https://science-sciencemag-org.proxy01.its.virginia.edu/content/sci/suppl/2020/07/29/369.6503.575.DC1/aaz9353_Colmer_SM.pdf
+* Data include estimates from 1981 through 2016. No updates are planned.
 
 
 ## About the Data
