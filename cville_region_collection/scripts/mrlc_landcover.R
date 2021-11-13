@@ -21,7 +21,6 @@ library(sp)
 library(tigris)
 library(tidyverse)
 options(tigris_use_cache = TRUE)
-# library(tmap)
 
 
 # 1. Download land cover, impervious surfaces, tree canopy ----
@@ -29,40 +28,40 @@ options(tigris_use_cache = TRUE)
 # https://www.mrlc.gov/data?f%5B0%5D=category%3ALand%20Cover
 
 # url <- "https://s3-us-west-2.amazonaws.com/mrlc/nlcd_2019_land_cover_l48_20210604.zip"
-# if (!dir.exists("2019")) {dir.create("2019")}
+# if (!dir.exists("dataraw")) {dir.create("dataraw")}
 # download.file(url = url,
-#               destfile = paste(getwd(), "2019", landcover2019.zip", sep = ""),
+#               destfile = paste(getwd(), "/dataraw/", "landcover2019.zip", sep = ""),
 #               mode = "wb")
 
-# Manually unzip in directory
+# Manually unzip in directory: dataraw/landcover2019/
 
 # b. Impervious Surfaces
 # https://www.mrlc.gov/data?f%5B0%5D=category%3AUrban%20Imperviousness
 
 # url <- "https://s3-us-west-2.amazonaws.com/mrlc/nlcd_2019_impervious_l48_20210604.zip"
-# if (!dir.exists("2019")) {dir.create("2019")}
+# if (!dir.exists("dataraw")) {dir.create("dataraw")}
 # download.file(url = url,
-#               destfile = paste(getwd(), "/2019/", "surface2019.zip", sep = ""),
+#               destfile = paste(getwd(), "/dataraw/", "surface2019.zip", sep = ""),
 #               mode = "wb")
 
-# manually unzip in directory
+# manually unzip in directory: dataraw/surface2019/
 
 # c. Tree Canopy
 # https://www.mrlc.gov/data?f%5B0%5D=category%3ATree%20Canopy
 # NOTE: 2019 not up yet
 
 # url <- "https://s3-us-west-2.amazonaws.com/mrlc/nlcd_2016_treecanopy_2019_08_31.zip"
-# if (!dir.exists("2016")) {dir.create("2016")}
+# if (!dir.exists("dataraw")) {dir.create("dataraw")}
 # download.file(url = url,
-#               destfile = paste(getwd(), "/2016/", "tree2016.zip", sep = ""),
+#               destfile = paste(getwd(), "/dataraw/", "tree2016.zip", sep = ""),
 #               mode = "wb")
 
-# manually unzip in directory
+# manually unzip in directory: dataraw/tree2016/
 
 
 # 2. Load land cover, impervious surfaces, tree canopy ----
 # a. Land Cover
-nlcd_img <- raster("2019/landcover2019/nlcd_2019_land_cover_l48_20210604.img")
+nlcd_img <- raster("dataraw/landcover2019/nlcd_2019_land_cover_l48_20210604.img")
 nlcd_img # WGS84
 nlayers(nlcd_img)
 plot(nlcd_img)
@@ -70,13 +69,13 @@ plot(nlcd_img)
 # see legend: https://www.mrlc.gov/data/legends/national-land-cover-database-2019-nlcd2019-legend
 
 # b. Impervious Surfaces
-imperv_img <- raster("2019/surface2019/nlcd_2019_impervious_l48_20210604.img")
+imperv_img <- raster("dataraw/surface2019/nlcd_2019_impervious_l48_20210604.img")
 imperv_img # WGS84
 plot(imperv_img)
 nlayers(imperv_img)
 
 # c. Tree Canopy
-tree_img <- raster("2016/tree2016/nlcd_2016_treecanopy_2019_08_31.img")
+tree_img <- raster("dataraw/tree2016/nlcd_2016_treecanopy_2019_08_31.img")
 tree_img # NAD83
 plot(tree_img)
 nlayers(tree_img)
@@ -119,8 +118,6 @@ ggplot() +
   scale_fill_viridis_c() +
   geom_sf(data = cville_tracts2, color = "red", fill = NA)
 
-# tm_shape(imperv_img_cvl) + tm_raster(style = "cont") +
-#   tm_shape(cville_tracts2) + tm_borders()
 
 # c. Crop Tree Canopy
 # NOTE: tree says it's in NAD83, but extent is wrong
@@ -394,7 +391,7 @@ write_csv(blkgps, "data/nlcd_cville_blkgps.csv")
 write_csv(blocks, "data/nlcd_cville_blocks.csv")
 
 # save everything for updates
-save.image("data/nlcd_generate.RData")
+save.image("dataraw/nlcd_generate.RData")
 
 
 # useful tutorials
