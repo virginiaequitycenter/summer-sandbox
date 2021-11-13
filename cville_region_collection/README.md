@@ -27,6 +27,6 @@ Building a data collection for Cville Region climate justice work/platform
     - Block level, [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cvl_tract.html)
 
 ### Transportation
-* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/Walkability.html)
+* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/walkability_cville.html)
 * LEHD Origin-Destination Commutes
   - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_block.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_blkgp.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_tract.html)
