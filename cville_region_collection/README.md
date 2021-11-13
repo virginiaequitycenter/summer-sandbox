@@ -4,7 +4,7 @@ Building a data collection for Cville Region climate justice work/platform
 
 ## Data Descriptions
 
-### Cliamte Measures
+### Climate Measures
 * [NOAA County-level Temp/Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/noaa_cville.html)
 * [Air Quality (Replication Data) - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/airquality_cville.html)
 * [LANDSAT8 Surface Temperature - (in progress)](https://virginiaequitycenter.github.io/summer-sandbox/landsat8_explore.html)
