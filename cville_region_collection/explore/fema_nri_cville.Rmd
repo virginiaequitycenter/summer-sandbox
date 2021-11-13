@@ -2,11 +2,12 @@
 title: "FEMA National Risk Index"
 subtitle: "Data for Charlottesville Region"
 author: "Michele Claibourn"
-date: "6/24/2021"
+date: "11/13/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -15,15 +16,15 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # 0. Load libraries and data
 library(tidyverse)
 library(stargazer) # for summary table
-library(janitor) # for tabyl
-library(tigris) # for shapefiles
+# library(janitor) # for tabyl
+# library(tigris) # for shapefiles
 library(sf) # for spatial joins
 library(leaflet) # for map
 library(viridis)
 library(googlesheets4)
 
 nri <- read_csv("../data/fema_nri_cville_tract.csv")
-cvillefips <- c("540", "003", "065", "079", "109", "125")
+# cvillefips <- c("540", "003", "065", "079", "109", "125")
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
 ```
 
@@ -32,8 +33,12 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 Source: FEMA, National Risk Index, October 2020 release.
 
 * Download URL: [https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip](https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip)
+* To learn more: [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
+* To learn more: [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
+* Data is from the July 2021 release. There is not set update schedule. 
 
-### The Data Used here
+
+## About the data
 
 The National Risk Index is intended to provide a view of the natural hazard risk within communities. While FEMA includes information on 18 natural hazards, we focus on six -- coastal flooding, drought, heat wave, hurricane, riverine flooding, and strong wind -- pulling measures on 
 
@@ -42,11 +47,6 @@ The National Risk Index is intended to provide a view of the natural hazard risk
 * historic loss ratio (measuring the proportion of building value, people, or agricultural value that has been historically impacted by the natural hazard).
 
 The NRI uses data on natural hazards from multiple sources and estimates natural hazard frequency, exposure, and historic loss at the census tract level.
-
-To learn more, see: 
-
-* [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
-* [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
 
 
 ## Variable descriptions
@@ -74,14 +74,8 @@ nri %>% select(-c(OID_:STATEFIPS, COUNTYTYPE:TRACTFIPS, NRI_VER)) %>%
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
-Summaries of (non-missing) character variables (remove tract identifiers)
 
-```{r}
-nri %>% select(-c(OID_:STATEFIPS, COUNTYTYPE:TRACTFIPS, NRI_VER)) %>% 
-  select(where (~is.character(.x))) %>% map(tabyl)
-```
-
-##  Visual distribution
+##  Visual distribution{.tabset}
 Frequency distribution across tracts:
 
 ### Tract assets
@@ -203,7 +197,7 @@ meta %>%
 ```
 
 
-## Maps
+## Maps{.tabset}
 Variation across tracts
 
 ```{r, echo = FALSE}
