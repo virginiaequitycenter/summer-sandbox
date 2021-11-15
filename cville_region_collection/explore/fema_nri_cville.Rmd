@@ -33,7 +33,7 @@ Source: FEMA, National Risk Index, October 2020 release.
 * Download URL: [https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip](https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip)
 * To learn more: [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
 * To learn more: [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
-* Data is from the July 2021 release. There is not set update schedule. 
+* Data is from the July 2021 release. There is no set update schedule. 
 
 
 ## About the data

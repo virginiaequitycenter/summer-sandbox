@@ -1,37 +1,52 @@
-# Low-Income Energy Affordability 2018/Energy Burden
-# 6/25/21
-# Marisa Lemma
+# Get Low-Income Energy Affordability 2018/Energy Burden
+# Marisa Lemma, Michele Claibourn
+# Created: 2021-06-25
+# Last updated: 2021-11-15
+
 
 library(tidyverse)
 
-# Calling in data from source
-leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
-download.file(url = leadurl,
-             destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
-unzip("va2018lead.zip", exdir = paste(getwd(), "/data/", sep = ""))
 
-ami_census_tracts <- read_csv("data/VA AMI Census Tracts 2018.csv")
+# Import data from source ----
+if (!dir.exists("dataraw")) {dir.create("dataraw")}
+
+url <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
+download.file(url = url,
+              destfile = paste(getwd(), "/dataraw/", "va2018lead.zip", sep = ""))
+unzip("dataraw/va2018lead.zip", exdir = paste(getwd(), "/dataraw/va2018lead/", sep = ""))
 
 
+# Read in data ----
+ami_census_tracts <- read_csv("dataraw/va2018lead/VA AMI Census Tracts 2018.csv")
+
+
+# Define area of interest ----
+# Cville area
+localfips <- c("540", "003", "065", "079", "109", "125")
+# Eastern shore area
+# localfips <- c("001", "131")
+
+
+# Data preparation ----
 # Filter by area
-cville_area = filter(ami_census_tracts, (FIP%in%51540000201:51540001000 | 
-                                        FIP%in%51003010100:51003011400 | 
-                                        FIP%in%51065020101:51065020300 | 
-                                        FIP%in%51079030101:51079030200 | 
-                                        FIP%in%51109950100:51109950500 | 
-                                        FIP%in%51125950100:51125950300) & HINCP!="NA")
+cville_ami_tracts <- ami_census_tracts %>% 
+  mutate(state = str_sub(FIP, 1, 2),
+         county = str_sub(FIP, 3,5),
+         tract = str_sub(FIP, 6, 11)) %>% 
+  filter(state == "51" & county %in% localfips) %>% 
+  filter(HINCP != "NA")
 
-# Calculate average energy burden for each census tract
-energy_burden <- cville_area %>% 
-  group_by(FIP) %>% 
+# # Calculate average energy burden for each census tract
+energy_burden <- cville_ami_tracts %>%
+  group_by(FIP) %>%
   summarize(totalinc = sum(HINCP*UNITS),
          totalelep = sum(ELEP*UNITS, na.rm = TRUE),
          totalgas = sum(GASP*UNITS, na.rm = TRUE),
-         totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+         totalother = sum(FULP*UNITS, na.rm = TRUE)) %>%
   mutate(averageburden = ((totalelep+totalgas+totalother)/totalinc)*100)
 
 # Calculate number of energy burdened households in each census tract
-hh_energy_burden <- cville_area %>%
+hh_energy_burden <- cville_ami_tracts %>%
   group_by(FIP) %>% 
   mutate(hh_energy_exp = ELEP+GASP+FULP) %>% 
   mutate(hh_burden = (hh_energy_exp/HINCP)*100)
@@ -74,6 +89,7 @@ burden_by_ami <- hh_energy_burden %>%
          burdened_60_80 = ifelse(AMI68=="60-80%", (high+veryhigh+extremelyhigh), no=0),
          burdened_80_100 = ifelse(AMI68=="80-100%", (high+veryhigh+extremelyhigh), no=0),
          burdened_over_100 = ifelse(AMI68=="100%+", (high+veryhigh+extremelyhigh), no=0),) 
+
 burden_by_ami <- burden_by_ami %>%  
    summarize(total_0_30 = sum(total_0_30, na.rm = TRUE),
              total_30_60 = sum(total_30_60, na.rm = TRUE),
@@ -103,6 +119,7 @@ burden_by_ten <- hh_energy_burden %>%
          total_renters = ifelse(TEN=="RENTER", (UNITS), no=0),
          burdened_owners = ifelse(TEN=="OWNER", (high+veryhigh+extremelyhigh), no=0),
          burdened_renters = ifelse(TEN=="RENTER", (high+veryhigh+extremelyhigh), no=0))
+
 burden_by_ten <- burden_by_ten %>% 
   summarize(total_owners = sum(total_owners, na.rm = TRUE),
             total_renters = sum(total_renters, na.rm = TRUE),
@@ -130,74 +147,31 @@ burden <- burden %>%
 burden <- burden %>% 
   mutate(percentburdened = (numberburdened/totalunits)*100)
 
-# Add column for county name
+# Add column for county fips and name
 burden <- burden %>% 
-  mutate(county = ifelse(FIP%in%51540000201:51540001000, "Charlottesville city",
-                  ifelse(FIP%in%51003010100:51003011400, "Albemarle",
-                  ifelse(FIP%in%51065020101:51065020300, "Fluvanna",
-                  ifelse(FIP%in%51079030101:51079030200, "Greene",
-                  ifelse(FIP%in%51109950100:51109950500, "Louisa",
-                  no = "Nelson"))))))
-
-# Generate new variable, `tract`, that is labeled with tract numbers
-burden <- burden %>%
-  mutate(tract = ifelse(FIP==51540000201, 2.01,
-                  ifelse(FIP==51540000202, 2.02,
-                  ifelse(FIP==51540000302, 3.02,
-                  ifelse(FIP==51540000401, 4.01,
-                  ifelse(FIP==51540000402, 4.02,
-                  ifelse(FIP==51540000501, 5.01,
-                  ifelse(FIP==51540000502, 5.02,
-                  ifelse(FIP==51540000600, 6,
-                  ifelse(FIP==51540000700, 7,
-                  ifelse(FIP==51540000800, 8,
-                  ifelse(FIP==51540000900, 9,
-                  ifelse(FIP==51540001000, 10,
-                  ifelse(FIP==51003010100, 101,
-                  ifelse(FIP==51003010201, 102.01,
-                  ifelse(FIP==51003010202, 102.02,
-                  ifelse(FIP==51003010300, 103,
-                  ifelse(FIP==51003010401, 104.01,
-                  ifelse(FIP==51003010402, 104.02,
-                  ifelse(FIP==51003010500, 105,
-                  ifelse(FIP==51003010601, 106.01,
-                  ifelse(FIP==51003010602, 106.02,
-                  ifelse(FIP==51003010700, 107,
-                  ifelse(FIP==51003010800, 108,
-                  ifelse(FIP==51003010901, 109.01,
-                  ifelse(FIP==51003010902, 109.02,
-                  ifelse(FIP==51003010903, 109.03,
-                  ifelse(FIP==51003011000, 110,
-                  ifelse(FIP==51003011100, 111,
-                  ifelse(FIP==51003011201, 112.01,
-                  ifelse(FIP==51003011202, 112.02,
-                  ifelse(FIP==51003011301, 113.01,
-                  ifelse(FIP==51003011302, 113.02,
-                  ifelse(FIP==51003011303, 113.03,
-                  ifelse(FIP==51003011400, 114,
-                  ifelse(FIP==51065020101, 201.01,
-                  ifelse(FIP==51065020102, 201.02,
-                  ifelse(FIP==51065020200, 202,
-                  ifelse(FIP==51065020300, 203,
-                  ifelse(FIP==51079030101, 301.01,
-                  ifelse(FIP==51079030102, 301.02,
-                  ifelse(FIP==51079030200, 302,
-                  ifelse(FIP==51109950100, 9501,
-                  ifelse(FIP==51109950201, 9502.01,
-                  ifelse(FIP==51109950202, 9502.02,
-                  ifelse(FIP==51109950300, 9503,
-                  ifelse(FIP==51109950400, 9504,
-                  ifelse(FIP==51109950500, 9505,
-                  ifelse(FIP==51125950100, 9501,
-                  ifelse(FIP==51125950200, 9502,
-                  no=9503))))))))))))))))))))))))))))))))))))))))))))))))))
+  mutate(state_fip = str_sub(FIP, 1, 2),
+         county_fip = str_sub(FIP, 3,5),
+         tract_fip = str_sub(FIP, 6, 11)) %>% 
+  mutate(county = case_when(
+    county_fip == "540" ~ "Charlottesville city",
+    county_fip == "003" ~ "Albemarle",
+    county_fip == "065" ~ "Fluvanna",
+    county_fip == "079" ~ "Greene",
+    county_fip == "109" ~ "Louisa",
+    county_fip == "125" ~ "Nelson"
+  ))
 
 # Change the order of the columns so that they make more sense
 burden <- burden %>%
-  select(FIP, county, tract, totalinc, totalelep, totalgas, totalother,
+  select(FIP, state_fip, county_fip, tract_fip, county, totalinc, totalelep, totalgas, totalother,
          averageburden, avg_hh_exp, lowburden, highburden, veryhighburden,
          extremelyhighburden, totalunits, numberburdened,
          percentburdened, everything())
 
-# Export to CSV
-write.csv(burden, "/Users/marisalemma/Desktop/Equity Center/summer-sandbox/cville_region_collection/data//lead_cville_tract.csv", row.names = F)
+
+# Save data ----
+# Cville area
+write_csv(burden, "data/lead_cville_tract.csv")
+# Eastern shore area
+# write_csv(burden, "data/lead_eastern_tract.csv")
+
