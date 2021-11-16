@@ -1,0 +1,84 @@
+---
+title: "Charlottesville SNAP Data"
+author: "Khalila Karefa-Kargbo, Michele Claibourn"
+date: "11/16/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(leaflet)
+library(sf)
+library(DT)
+library(kableExtra)
+```
+
+## Data Source
+Source: USDA, SNAP Retailer Locator, November 2021
+
+* Source URL: [https://www.fns.usda.gov/snap/retailer-locator](https://www.fns.usda.gov/snap/retailer-locator)
+* Reference URL: [https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5](https://www.ers.usda.gov/webdocs/publications/82101/eib-165.pdf?v=4818.5)
+* Download URL: [https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about](https://usda-fns.hub.arcgis.com/datasets/USDA-FNS::snap-store-locations/about)
+* Data was most recently pulled in November 2021. The source data is regularly updated.
+
+```{r}
+food_retail_cville <- read_csv("../data/food_retail_cville.csv")
+
+# make it an SF object, assign CRS
+food_4326 <- st_as_sf(food_retail_cville,
+                        coords = c("Longitude", "Latitude"),
+                        crs = 4326)
+```
+
+### About the Data
+The data here consists of regional SNAP-authorized retailers. The USDA has used this source to estimate access to a "wide variety of healthy foods at affordable prices." In particular, supermarkets, supercenters, and large grocery stores are frequently used as proxies for the availability of healthy and affordable food. 
+
+Here we provide the full list of stores retrieved from the SNAP Retailer Locator, but have added a variable to categorize stores by type, following [additional research by the USDA](https://www.ers.usda.gov/webdocs/publications/85442/eib-180.pdf):
+
+* large stores comprised of supermarkets, supercenters, large grocery stores, and club stores (“large_grocery”)
+* small grocery and specialty stores such as seafood markets, bakeries, and ethnic grocery stores (“small_grocery”)
+* convenience stores, gas stations, pharmacies, and dollar stores (“convenience”)
+
+This categorization may contain inaccuracies and we welcome corrections.[^1]
+
+```{r}
+food_retail_cville %>% count(type) %>% 
+  kbl() %>% kable_paper("hover", full_width = F)
+```
+
+Only 30 stores in the Charlottesville region fit the criteria of a "supermarket, supercenter, or grocery store."
+
+## Data table
+
+The full set of food retailers is provided in the table below. 
+
+```{r}
+# knitr::kable(glimpse(head(food_retail_cville)), "simple")
+datatable(food_retail_cville %>% select(-c("Address_Line__2", "Zip4", "ObjectId")))
+```
+
+
+## Map
+```{r}
+pal <- colorFactor(c("orange", "navy", "turquoise"), domain = c("large_grocery", "small_grocery", "convenience"))
+
+leaflet(food_4326) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addCircleMarkers(
+    color = ~pal(type),
+    stroke = FALSE, fillOpacity = 0.5,
+    popup = paste0("Store: ", food_4326$Store_Name, "<br>",
+                             "Retail Type: ", food_4326$type)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = food_4326$type,
+            title = "Retail Type", opacity = 0.7)
+  
+```
+
+
+[^1]: We also looked at ReferenceUSA, an online database of current establishment-level business data from Infogroup, as an alternative source. After comparing to the SNAP data, we concluded it did not add sufficiently to the information retrieve from the SNAP Retailer Locator to justify incorporation of proprietary/non-public data. 

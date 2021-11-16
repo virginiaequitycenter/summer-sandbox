@@ -1,12 +1,17 @@
+# Get Low-Income Energy Affordability 2018/Energy Burden
+# Khalila Karefa-Kargbo, Michele Claibourn
+# Created: 2021-07
+# Last updated: 2021-11-16
+
 library(tidyverse)
 library(jsonlite)
 library(sf)
 
 # get spatial extent for api query
-cville_tracts <- readRDS("../spatial_units/data/cville_tracts.RDS")
+cville_tracts <- readRDS("data/cville_tracts.RDS")
 st_bbox(cville_tracts)
 
-# api query (add the xmin/xmax, ymin/ymax to query)
+# api query (add the xmin/xmax, ymin/ymax from st_bbox to query)
 full_path <- "https://services1.arcgis.com/RLQu0rK7h4kbsBq5/arcgis/rest/services/Store_Locations/FeatureServer/0/query?where=Longitude%20%3E%3D%20-79.17213%20AND%20Longitude%20%3C%3D%20-77.68729%20AND%20Latitude%20%3E%3D%2037.53564%20AND%20Latitude%20%3C%3D%2038.47553&outFields=*&outSR=4326&f=json"
 
 # Retrieve data
@@ -15,56 +20,30 @@ stores_json <- fromJSON(full_path)
 # Extract data frame from list
 stores <- stores_json$features$attributes
 
-# make it an SF object, assign CRS
-stores_4326 <- st_as_sf(stores,
-                        coords = c("Longitude", "Latitude"),
-                        crs = 4326)
-
 # Filter to main counties
 cvilleCounties <- c("CHARLOTTESVILLE", "ALBEMARLE", "LOUISA", "NELSON", "GREENE", "FLUVANNA")
 
-stores_4326 <- stores_4326 %>% 
+stores <- stores %>%
   filter(County %in% cvilleCounties)
+
+# Distinguish between food retailer types
+# E.g., https://www.ers.usda.gov/webdocs/publications/85442/eib-180.pdf
+# (1) large stores comprised of supermarkets, supercenters, large grocery stores, and club stores (“large grocery stores”)
+# (2) small grocery and specialty stores such as seafood markets, bakeries, and ethnic grocery stores (“small grocery stores”);
+# (3) convenience stores, gas stations, pharmacies, and dollar stores (“convenience stores”)
+# USDA has used (1) as a proxy for healthy and affordable food retailers
+
+large_grocery <- c("aldi|costco|valu|lion|giant|teeter|kroger|lidl|target|thumb|trader|walmart|wegmans|whole")
+convenience <- c("quik|exxon|eleven|mini|kwik|circle|cvs|dollar|pit|fas|easy|quick|fuel|sheetz|speedway|walgreens|wawa|mini|stop|pac|lots|the market|the maket")
 
 stores <- stores %>% 
-  filter(County %in% cvilleCounties)
+  mutate(type = case_when(
+    str_detect(Store_Name, regex(large_grocery, ignore_case = T), negate = F) ~ "large_grocery",
+    str_detect(Store_Name, regex(convenience, ignore_case = T), negate = F) ~ "convenience",
+    TRUE ~ "small_grocery"
+  ))
 
-# Manually filtering to only grocery stores, supermarkets 
-# not convenience stories, pharmacies, dollar stores, warehouse clubs, etc.
-included <- stores_4326[c(4, 6, 10:13, 19:20, 33:34, 44:45, 47:49, 52:53, 56:58,
-                          65, 74, 76, 78, 80, 84, 88:89, 92, 94, 101, 105:107, 
-                          111:112, 114:115, 117, 125, 127, 144, 146, 156, 161:163,
-                          165, 167, 169), ] 
-excluded <- stores_4326[c(1:3, 5, 7:9, 14:18, 21:32, 35:43, 46, 50:51, 54:55, 59:64,
-                          66:73, 75, 77, 79, 81:83, 85:87, 90:91, 93, 95:100, 102:104,
-                          108:110, 113, 116, 118:124, 126, 128:143, 145, 147:155,
-                          157:160, 164, 166, 168, 170:171), ]
-#16: scottsville farmers market only open 9am-1pm on saturdays -- not accessible
-#28: bakery
-#38: greene farmers market only open sat 8am-12pm -- not accessible
-#103: market street market-- seems niche: cheeses and beers
-#117: aghan grand market-- int'l food but seems too small to actually be very useful
-      # exclude african market on same premise?
-#118: Mineral Farmer's Market -- inaccessible hours
-#149: big lots-- no fresh produce
-#151: market central-- Saturdays 8:00 am-12:00 pm .. not accessible
-
-# if not mentioned by row specifically, it fell into category of convenience, dollar store, gas station, etc.
-# 'included' comments are the in explore file
-
-# Reproducible method
-keyWords <- c("Lion|Kroger|Whole Foods|Reid|Hilltop|Tio|Depot|African|Trader|Natural|
-              |Millers|Teeter|Yoga|Valu|Asian|Aldi|Medina|Target|Blue|Nx|Thomas INC|
-              |Caul’s|Guadalupana|Mercado|Oriental|Walmart|Indian|Giant|Latino|Lidl|
-              |amores|Wegmans|Express Grocery|Caul")
-# to pull from included vector
-
-storeNames <- dplyr::pull(stores, Store_Name) # creating vector to use in str_detect
-
-snap_cville <- stores %>% 
-  filter(str_detect(storeNames, regex(keyWords, ignore_case = T), negate = F))
-
-snap_cville[!snap_cville$Store_Name%in%included$Store_Name,] # looks good :)
+stores %>% count(type)
 
 # save csv 
-write_csv(snap_cville, path = "snap_cville.csv")
+write_csv(stores, path = "data/food_retail_cville.csv")

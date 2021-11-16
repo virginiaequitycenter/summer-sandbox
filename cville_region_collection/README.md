@@ -19,7 +19,7 @@ Building a data collection for Cville Region climate justice work/platform
 
 ### Community Assets and Infrastructure
 * [NLCD - Land Cover, Tree Canopy, Impervious Surfaces](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_cville.html)
-* [Food Retailers Locations](https://virginiaequitycenter.github.io/summer-sandbox/SNAP_cville.html)
+* [Food Retailer Locations](https://virginiaequitycenter.github.io/summer-sandbox/food_retail_cville.html)
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_cville.html)
 * FCC Broadband Availability
   - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blocks.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville_tracts.html)
