@@ -3,18 +3,26 @@ title: "Charlottesville CDC Places"
 author: "Lee LeBoeuf"
 date: "10/7/2021"
 output: 
-  html_document:
-    toc: yes
+  html_document: 
+    toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'leaflet', 'rcartocolor', 'sf',
                       'RColorBrewer', 'viridis', 'rgdal', 'googlesheets4','stringr'),
                  function(pkg) library(pkg, character.only = TRUE)))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "cdc_places", gs4_deauth())
-cvldat <- read.csv("cdcplaces_cville_tract.csv")
+
+# Main data
+cvldat <- read.csv("../data/cdcplaces_cville_tract.csv")
+
+# Spatial data
+shape <- readRDS('../data/cville_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # for leaflet
 ```
 
 ## Data Source
@@ -22,6 +30,7 @@ cvldat <- read.csv("cdcplaces_cville_tract.csv")
 * These data come from the Center for Disease Control and Prevention (CDC) PLACES: Local Data for Better Health.
 * More information about the CDC PLACES data can be found [here](https://www.cdc.gov/places/index.html). 
 * Data shown here were downloaded using the CDC PLACES API in October of 2021. Documentation for the API can be found [here](https://dev.socrata.com/foundry/chronicdata.cdc.gov/cwsq-ngmh) and documentation for the data can be found [here](https://chronicdata.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-Census-Tract-D/cwsq-ngmh). 
+* The CDC has not released an update schedule for CDC PLACES data.
 
 ## The Data Used Here
 
@@ -36,13 +45,13 @@ cvldat <- read.csv("cdcplaces_cville_tract.csv")
 
 ## Variable descriptions
 ```{r}
-meta %>% 
-  filter(su_tract == 1) %>%
-  select(varname, about) %>% as.list()
+#meta %>% 
+#  filter(su_tract == 1) %>%
+#  select(varname, about) %>% as.list()
+
 glimpse(cvldat)
-cvldat %>% select(Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
-Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
-Annual_Checkup2018) %>% 
+
+cvldat %>% select(-c(locationname, countyname, totalpopulation)) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
   stargazer(., type = "text", title = "Summary Statistics", digits = 2,
@@ -51,11 +60,18 @@ Annual_Checkup2018) %>%
 
 ## Visual distribution 
 ```{r}
-longdat <- cvldat %>% select(c(locationname, Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
-Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
-Annual_Checkup2018)) %>% pivot_longer(-locationname, names_to = "measure", values_to = "value") 
+longdat <- cvldat %>% select(-c(countyname, totalpopulation)) %>% 
+  pivot_longer(-locationname, names_to = "measure", values_to = "value") 
+
+
 longdat$measure <- factor(longdat$measure,
-                         levels = c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018", "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018", "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018"))
+                         levels = c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018",
+                                    "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018",
+                                    "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018",
+                                    "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018",
+                                    "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018",
+                                    "Annual_Checkup2018"))
+
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "Blues", discrete = TRUE, guide = FALSE) +
@@ -65,7 +81,12 @@ longdat %>%
 
 ```{r, results = "asis"}
 meta %>% 
-  filter(varname %in% c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018", "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018", "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018")) %>%
+  filter(varname %in% c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018",
+                        "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018",
+                        "Current_Smoking2018",
+                        "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018",
+                        "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018",
+                        "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018")) %>%
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
@@ -73,14 +94,15 @@ meta %>%
 
 ## Health outcomes {.tabset}
 ```{r, echo = FALSE}
-shape <- readRDS('cville_tracts.RDS')
-shape <- st_transform(shape, crs = 4326) # to WGS84, given error
 cvldat <- cvldat %>%
-  rename(GEOID = locationname)
-mapdat <- merge(shape, cvldat, by = 'GEOID', all.x = T)
+  rename(GEOID = locationname) %>% 
+   mutate(GEOID = as.character(GEOID))
+
+mapdat <- shape %>% 
+  left_join(cvldat, by = "GEOID")
 ```
 
-### Asthma {.tabset}
+### Asthma
 * Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have asthma __and__ that they still have asthma.
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Asthma2018)
@@ -202,7 +224,7 @@ leaflet() %>%
 
 ## Health access {.tabset}
 
-### Lack of health insurance {.tabset}
+### Lack of health insurance 
 * Adjusted percent of respondents aged 18-64 who reported have no current health insurance. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Health_Insurance2018)
@@ -250,7 +272,7 @@ leaflet() %>%
 
 ```
 
-### Visits to dentist/dental clinic in the last year in 2018
+### Visits to dentist in the last year in 2018
 * Adjusted percent of survey respondents aged >= 18 who reported having been to a dentist or dental clinic in the previous year. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Dental_Visit2018)
@@ -276,7 +298,7 @@ leaflet() %>%
 
 ## Health behaviors {.tabset}
 
-### Curent smoking in 2018 {.tabset}
+### Curent smoking in 2018 
 * Adjusted percent of survey respondents aged >= 18 who reported having smoked >= 100 cigarettes in their lifetime and currently smoke every day or some days. This indicator is not a measure of intent or attempts to quit smoking or exposure to secondhand smoke among non-smokers. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Smoking2018)

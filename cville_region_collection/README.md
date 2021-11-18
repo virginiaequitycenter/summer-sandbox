@@ -15,6 +15,7 @@ Building a data collection for Cville Region climate justice work/platform
 * [FEMA National Flood Insurance Program Claims](https://virginiaequitycenter.github.io/summer-sandbox/femaclaims_cville.html)
 * [EJSCREEN Environmental Indicators](https://virginiaequitycenter.github.io/summer-sandbox/ejscreen_cville.html)
 * [Estimated Lead Exposure Risk](https://virginiaequitycenter.github.io/summer-sandbox/lead_exposure_cville.html)
+* [CDC PLACES Health Outcomes](https://virginiaequitycenter.github.io/summer-sandbox/cdcplaces_cville.html)
 
 
 ### Community Assets and Infrastructure

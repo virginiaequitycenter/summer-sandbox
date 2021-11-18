@@ -20,10 +20,13 @@ library(leaflet)
 library(sf)
 library(googlesheets4)
 
+# Primary data
 lead <- read_csv("../data/lead_cville_tract.csv")
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet="lead", gs4_deauth())
 
+# Spatial data
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 ```
 
 ## Data Source
@@ -108,15 +111,14 @@ lead %>% select(FIP, percent_burdened_owners, percent_burdened_renters) %>%
 Maps to show the distribution of variables across spatial units
 
 ```{r, include = F}
-# Open shapefile
-cville_tracts <- readRDS("../data/cville_tracts.RDS")
+# Join to shapefile
+lead <- lead %>% dplyr::rename(GEOID = FIP) %>% 
+  mutate(GEOID = as.character(GEOID))
 
-lead <- lead %>% dplyr::rename(GEOID = FIP)
-
-cvlshapes <- merge(cville_tracts, lead, by = 'GEOID', all.x = T)
+cvlshapes <- cville_tracts %>% 
+  left_join(lead, by = "GEOID")
 
 cvlshapes <- st_transform(cvlshapes, crs = 4326) # to WGS84, given error
-
 ```
 
 

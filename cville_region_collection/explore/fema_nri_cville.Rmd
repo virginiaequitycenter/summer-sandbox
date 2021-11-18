@@ -21,9 +21,15 @@ library(leaflet) # for map
 library(viridis)
 library(googlesheets4)
 
+# Main data
 nri <- read_csv("../data/fema_nri_cville_tract.csv")
 # cvillefips <- c("540", "003", "065", "079", "109", "125")
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
+
+# Spatial data
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
+
 ```
 
 ## Data Source
@@ -199,12 +205,11 @@ meta %>%
 Variation across tracts
 
 ```{r, echo = FALSE}
-cville_tracts <- readRDS("../data/cville_tracts.RDS")
-
+# Join to spatial
 cville_nri <- cville_tracts %>% 
   left_join(nri, by = c("TRACTCE" = "TRACT"))
 
-cville_nri <- st_transform(cville_nri, crs = 4326) # to WGS84, given error
+cville_nri <- st_transform(cville_nri, crs = 4326) # to WGS84, for leaflet
 ```
 
 ### Droughts

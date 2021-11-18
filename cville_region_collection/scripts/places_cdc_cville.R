@@ -1,13 +1,14 @@
-
+# Get CDC Places 2020 Data
 # Author: Lee LeBoeuf
 # Last updated: 10/07/2021
 
 # This script uses the CDC Places APA to download health problem and prevention prevalence data for the greater Charlottesville area
-# Data are available at the tract level for the years 2017 and 2018. There are a number of health-related measures included, 
-# and each measures has a % prevalence estimation associated with it. For example, "Current asthma among adults aged >=18 years". Each measure
-# has 3 values: data_value (the prevalence estimate as a percent), low_confidence_limit and high_confidence_limit (the upper
-# and lower limits of the percent estimate). The percent estimates come from a multilevel statistical modeling framework used 
-# by the CDC (more information can be found here: https://www.cdc.gov/places/about/index.html). In the cleaning process, I just
+# Data are available at the tract level. The 2020 release uses 2018 BRFSS data for most (23) measures and 2017 BRFSS data for 4 measures 
+# (high blood pressure, taking high blood pressure medication, high cholesterol, and cholesterol screening); 
+# each measure has a % prevalence estimation associated with it. For example, "Current asthma among adults aged >=18 years". 
+# Each measure has 3 values: data_value (the prevalence estimate as a percent), low_confidence_limit and high_confidence_limit 
+# (the upper and lower limits of the percent estimate). The percent estimates come from a multilevel statistical modeling framework 
+# used  by the CDC (more information can be found here: https://www.cdc.gov/places/about/index.html). In the cleaning process, I 
 # select the actaul estimate and exclude the lower and higher limits. 
 
 invisible(lapply(list('tidyverse','jsonlite', 'stringr'),
@@ -27,6 +28,10 @@ source(paste0("https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_mi
 # (i.e., if you download the state data to a data frame named "vadat" and combine all the county data to a data frame named "cvldat" and then run the 
 # following: unique(cvldat$countyfips[which(cvldat$countyfips %in% vadat1$countyfips == F)]), you get the county fips listed above). 
 # SO, below I download the data for each county individually and then combine them. 
+
+# The socrata API defaults to a limit of 1000 rows per page; it doesn't look like this can be changed in the call
+# e.g., adding '$limit=10000' to the query returns null
+# https://support.socrata.com/hc/en-us/articles/202949268-How-to-query-more-than-1000-rows-of-a-dataset
 
 cvillecity <- fromJSON("https://chronicdata.cdc.gov/resource/cwsq-ngmh.json?countyfips=51540")
 albemarle <- fromJSON("https://chronicdata.cdc.gov/resource/cwsq-ngmh.json?countyfips=51003")
@@ -83,6 +88,6 @@ cvldatwidef <- cvldatwide %>%
 
 
 ## Writing out tract level summaries 
-write.csv(cvldatwidef, "cdcplaces_cville_tract.csv", row.names = F)
+write.csv(cvldatwidef, "data/cdcplaces_cville_tract.csv", row.names = F)
 
 
