@@ -21,12 +21,15 @@ library(sf)
 library(googlesheets4)
 library(plotly)
 
+# main data
 airquality <- read_csv("../data/airquality_cville_tract.csv")
 airquality <- airquality %>% 
   mutate(gid = as.character(gid))
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="airquality", gs4_deauth())
 
+# spatial data
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
 ```
 
 ## Data Source
@@ -137,8 +140,6 @@ This scatterplot shows the relationship between a census tract's percentile rank
 ## Spatial Distributions{.tabset}
 
 ```{r, include = F}
-cville_tracts <- readRDS("../data/cville_tracts.RDS")
-
 cvilleshapes <- left_join(cville_tracts, airquality, by = c('GEOID'= "gid"))
 cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, given error
 ```
