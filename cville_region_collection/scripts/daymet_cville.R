@@ -1,7 +1,7 @@
 # Get DAYMET temperature and precipitation Data
 # 2021-07-28
-# Tolu Odukoya
-### Last updated 09/22 by Lee LeBoeuf
+# Tolu Odukoya, Lee LeBoeuf
+# Last updated 09/22/2021
 
 ## This script downloads daymet data using the FedData function to pull the following variables at the block,
 # block group, tract, and county levels
@@ -20,7 +20,7 @@
 # Data are pulled from the years 1980-2020. In the future, more data can be added one year at a time 
 
 # Need to download the development version of FedData in order to be able to use the tempo argument. As of 09/20, it works!
-devtools::install_github("ropensci/FedData")
+# devtools::install_github("ropensci/FedData")
 
 #Load Libraries 
 invisible(lapply(list('tidyverse', 'sf', 'raster', 'mapview', 'ggplot2', 'transformr', 'FedData', 'magrittr', 
@@ -41,10 +41,10 @@ convertp <- function(precipmm) {
 }
 
 # Reading in shape files 
-cville_blocks <- readRDS('cville_blocks.RDS')
-cville_blkgrp <- readRDS('cville_blkgps.RDS')
-cville_tracts <- readRDS('cville_tracts.RDS')
-cville_counties <- readRDS('cville_counties.RDS')
+cville_blocks <- readRDS('data/cville_blocks.RDS')
+cville_blkgrp <- readRDS('data/cville_blkgps.RDS')
+cville_tracts <- readRDS('data/cville_tracts.RDS')
+cville_counties <- readRDS('data/cville_counties.RDS')
 
 # Define years of interest
 yearswant <- 1980:2020 # Can change this to whichever year of interest--should not need to download data from before 2020 again,

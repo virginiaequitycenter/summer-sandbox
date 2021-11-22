@@ -5,9 +5,10 @@ Building a data collection for Cville Region climate justice work/platform
 ## Data Descriptions
 
 ### Climate Measures
-* [NOAA County-level Temp/Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/noaa_cville.html)
+* [Daymet Summer/Annual Maximum Temperature and Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/daymet_cville.html)
 * [Air Quality (Replication Data) - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/airquality_cville.html)
 * [LANDSAT8 Surface Temperature - (in progress)](https://virginiaequitycenter.github.io/summer-sandbox/landsat8_explore.html)
+* [NOAA County-level Temp/Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/noaa_cville.html)
 
 
 ### Hazards and Risks
@@ -22,7 +23,7 @@ Building a data collection for Cville Region climate justice work/platform
 * [NLCD - Land Cover, Tree Canopy, Impervious Surfaces](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_cville.html)
 * [Food Retailer Locations](https://virginiaequitycenter.github.io/summer-sandbox/food_retail_cville.html)
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_cville.html)
-* [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville.html) 
+* [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville.html)
 * LEHD Origin-Destination Employment Statistics (LODES)
     - Block level, [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cvl_tract.html)
 

@@ -2,21 +2,34 @@
 title: "DAYMET Temperature and Precipitation Data"
 author: "Tolu Odukoya & Lee LeBoeuf"
 date: "9/27/2021"
-output: 
-  html_document:
-    toc: yes
-    toc_float: true
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
-                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
-                      'sp', 'geosphere', 'stringr', 'ggrepel', 'transformr', 'gifski', 'dygraphs', 'xts'),
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE) 
+
+# invisible(lapply(list('rgdal', 'lodes', 'psych', 'reshape2', 'transformer', 'gifski', 'dygraphs', 'xtx')))
+
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 'RColorBrewer', 'viridis', 'googlesheets4', 'sp', 'geosphere', 'stringr', 'ggrepel', 'dygraphs'),
                  function(pkg) library(pkg, character.only = TRUE)))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "DAYMET", gs4_deauth())
-cvldat <- read.csv("daymet_cville_county.csv")
-cvldatblkgr <- read.csv("daymet_cville_blkgrps.csv")
+
+# main data
+cvldat <- read.csv("../data/daymet_cville_county.csv")
+cvldat <- cvldat %>% 
+  mutate(GEOID = as.character(GEOID))
+cvldatblkgr <- read.csv("../data/daymet_cville_blkgrps.csv")
+cvldatblkgr <- cvldatblkgr %>% 
+  mutate(GEOID = as.character(GEOID))
+
+# spatial data
+shape <- readRDS('../data/cville_blkgps.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
 ```
 
 ## Data Source
@@ -34,13 +47,12 @@ cvldatblkgr <- read.csv("daymet_cville_blkgrps.csv")
 * To Learn More, See: [Daily Surface Weather and Climatological Summaries](https://daymet.ornl.gov/overview)
 * Below we show summaries of the data at the block group level, and then we show variation by county over time. 
 
-## Variable descriptions
+## Variable Descriptions and Summaries
+
 These summaries are based on data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
-meta %>% 
-  filter(su_blkgp == 1) %>%
-  select(varname, about) %>% as.list()
 glimpse(cvldat)
+
 cvldat %>% select(June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, TotpercInch) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
@@ -52,8 +64,10 @@ cvldat %>% select(June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, Totpe
 These distributions show data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
 longdat <- cvldat %>% select(c(GEOID, June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, TotpercInch)) %>% pivot_longer(-GEOID, names_to = "measure", values_to = "value") 
+
 longdat$measure <- factor(longdat$measure,
                          levels = c("June_AvgMaxTF", "July_AvgMaxTF", "Aug_AvgMaxTF", "AvgAnnMaxTF", "TotpercInch"))
+
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
@@ -72,12 +86,10 @@ meta %>%
 ## Block Group Variation in 2020 {.tabset}
 All of the following maps show data from the year 2020, but data are available for years 1980-2020. 
 ```{r, echo = FALSE}
-shape <- readRDS('cville_blkgps.RDS')
-shape <- st_transform(shape, crs = 4326) # to WGS84, given error
-mapdat <- merge(shape, cvldatblkgr, by = 'GEOID', all.x = T)
+mapdat <- left_join(shape, cvldatblkgr, by = 'GEOID')
 ```
 
-### Average maximum annual temperature {.tabset}
+### Average maximum annual temperature
 ```{r}
 mapdat2020 <- mapdat[which(mapdat$year == 2020),]
 
@@ -153,22 +165,29 @@ leaflet() %>%
 
 ## County variation over time {.tabset}
 
-### Annual average temperature {.tabset}
+### Annual average temperature 
 ```{r, echo=FALSE}
 cville_sf1p <- cvldat %>% dplyr::select(NAMELSAD, year, AvgAnnMaxTF)
+
 cville_sf1g <- filter(cville_sf1p, NAMELSAD == "Greene County")
+
 cville_sf1al <- filter(cville_sf1p, NAMELSAD == "Albemarle County") %>%
   rename(NAMELSAD1 = NAMELSAD, AvgAnnMaxTF1 = AvgAnnMaxTF, year1 = year)
+
 cville_sf1c<- filter(cville_sf1p, NAMELSAD == "Charlottesville city") %>%
   rename(NAMELSAD2 = NAMELSAD, AvgAnnMaxTF2 = AvgAnnMaxTF, year2 = year)
+
 cville_sf1f<- filter(cville_sf1p, NAMELSAD == "Fluvanna County") %>%
   rename(NAMELSAD3 = NAMELSAD, AvgAnnMaxTF3 = AvgAnnMaxTF, year3 = year)
+
 cville_sf1l <- filter(cville_sf1p, NAMELSAD == "Louisa County") %>%
   rename(NAMELSAD4 = NAMELSAD, AvgAnnMaxTF4 = AvgAnnMaxTF, year4 = year)
+
 cville_sf1n <- filter(cville_sf1p, NAMELSAD == "Nelson County") %>%
   rename(NAMELSAD5 = NAMELSAD, AvgAnnMaxTF5 = AvgAnnMaxTF, year5 = year)
 
-cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, cville_sf1l, cville_sf1n) %>%
+cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f,
+                     cville_sf1l, cville_sf1n) %>%
   rename(Greene = AvgAnnMaxTF, Albemarle = AvgAnnMaxTF1, Charlottesville = AvgAnnMaxTF2, Fluvanna = AvgAnnMaxTF3, Louisa = AvgAnnMaxTF4, Nelson = AvgAnnMaxTF5)
 
 cville_sf1x <- cville_sf1x[ , -which(names(cville_sf1x) %in% c("year1","year2", "year3", "year4", "year5", "NAMELSAD", "NAMELSAD1", "NAMELSAD2", "NAMELSAD3", "NAMELSAD4","NAMELSAD5"))]
@@ -192,19 +211,26 @@ dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>%
 ### Average maximum August temperatures 
 ```{r, echo=FALSE}
 cville_sf1p <- cvldat %>% dplyr::select(NAMELSAD, year, Aug_AvgMaxTF)
+
 cville_sf1g <- filter(cville_sf1p, NAMELSAD == "Greene County")
+
 cville_sf1al <- filter(cville_sf1p, NAMELSAD == "Albemarle County") %>%
   rename(NAMELSAD1 = NAMELSAD, Aug_AvgMaxTF1 = Aug_AvgMaxTF, year1 = year)
+
 cville_sf1c<- filter(cville_sf1p, NAMELSAD == "Charlottesville city") %>%
   rename(NAMELSAD2 = NAMELSAD, Aug_AvgMaxTF2 = Aug_AvgMaxTF, year2 = year)
+
 cville_sf1f<- filter(cville_sf1p, NAMELSAD == "Fluvanna County") %>%
   rename(NAMELSAD3 = NAMELSAD, Aug_AvgMaxTF3 = Aug_AvgMaxTF, year3 = year)
+
 cville_sf1l <- filter(cville_sf1p, NAMELSAD == "Louisa County") %>%
   rename(NAMELSAD4 = NAMELSAD, Aug_AvgMaxTF4 = Aug_AvgMaxTF, year4 = year)
+
 cville_sf1n <- filter(cville_sf1p, NAMELSAD == "Nelson County") %>%
   rename(NAMELSAD5 = NAMELSAD, Aug_AvgMaxTF5 = Aug_AvgMaxTF, year5 = year)
 
-cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, cville_sf1l, cville_sf1n) %>%
+cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, 
+                     cville_sf1l, cville_sf1n) %>%
   rename(Greene = Aug_AvgMaxTF, Albemarle = Aug_AvgMaxTF1, Charlottesville = Aug_AvgMaxTF2, Fluvanna = Aug_AvgMaxTF3, Louisa = Aug_AvgMaxTF4, Nelson = Aug_AvgMaxTF5)
 
 cville_sf1x <- cville_sf1x[ , -which(names(cville_sf1x) %in% c("year1","year2", "year3", "year4", "year5", "NAMELSAD", "NAMELSAD1", "NAMELSAD2", "NAMELSAD3", "NAMELSAD4","NAMELSAD5"))]
@@ -228,19 +254,26 @@ dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>%
 ### Annual precipitation 
 ```{r, echo=FALSE}
 cville_sf1p <- cvldat %>% dplyr::select(NAMELSAD, year, TotpercInch)
+
 cville_sf1g <- filter(cville_sf1p, NAMELSAD == "Greene County")
+
 cville_sf1al <- filter(cville_sf1p, NAMELSAD == "Albemarle County") %>%
   rename(NAMELSAD1 = NAMELSAD, TotpercInch1 = TotpercInch, year1 = year)
+
 cville_sf1c<- filter(cville_sf1p, NAMELSAD == "Charlottesville city") %>%
   rename(NAMELSAD2 = NAMELSAD, TotpercInch2 = TotpercInch, year2 = year)
+
 cville_sf1f<- filter(cville_sf1p, NAMELSAD == "Fluvanna County") %>%
   rename(NAMELSAD3 = NAMELSAD, TotpercInch3 = TotpercInch, year3 = year)
+
 cville_sf1l <- filter(cville_sf1p, NAMELSAD == "Louisa County") %>%
   rename(NAMELSAD4 = NAMELSAD, TotpercInch4 = TotpercInch, year4 = year)
+
 cville_sf1n <- filter(cville_sf1p, NAMELSAD == "Nelson County") %>%
   rename(NAMELSAD5 = NAMELSAD, TotpercInch5 = TotpercInch, year5 = year)
 
-cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, cville_sf1l, cville_sf1n) %>%
+cville_sf1x <- cbind(cville_sf1g, cville_sf1al, cville_sf1c, cville_sf1f, 
+                     cville_sf1l, cville_sf1n) %>%
   rename(Greene = TotpercInch, Albemarle = TotpercInch1, Charlottesville = TotpercInch2, Fluvanna = TotpercInch3, Louisa = TotpercInch4, Nelson = TotpercInch5)
 
 cville_sf1x <- cville_sf1x[ , -which(names(cville_sf1x) %in% c("year1","year2", "year3", "year4", "year5", "NAMELSAD", "NAMELSAD1", "NAMELSAD2", "NAMELSAD3", "NAMELSAD4","NAMELSAD5"))]
