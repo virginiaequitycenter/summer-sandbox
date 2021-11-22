@@ -19,9 +19,12 @@
 # data file. From there, the code below can be used to re-create tract level summaries for the full data set. 
 # Any variables can also be added or deleted from the summarise function below if they are no longer of interest. 
 
-# Reading in the individual-level data (created by the "hmda_cville_individual.R" script and available on the Equity Center github)
-cvldat <- read.csv("hmda_cville_individual.csv")
+library(tidyverse)
 
+# Reading in the individual-level data (created by the "hmda_cville_individual.R" script and available on the Equity Center github)
+cvldat <- read.csv("data/hmda_cville_individual.csv")
+
+############## HOME MORTGAGE APPS ##############################################################################################################################
 # Filtering to home purchase loans only:
 cvldat <- cvldat %>%
   filter(loan_purpose == "Home purchase")
@@ -99,7 +102,7 @@ write.csv(cvltractf, "hmda_cville_tract.csv", row.names = F)
 
 ############## ALL MORTGAGE APPS ##############################################################################################################################
 # Reading in the individual-level data (created by the "hmda_cville_individual.R" script and available on the Equity Center github)
-cvldatall <- read.csv("hmda_cville_individual.csv")
+cvldatall <- read.csv("data/hmda_cville_individual.csv")
 
 # Applicants' racial identities are listed in multiple columns. In order to indentify an applicant as 
 # multiracial, we would need to identify those who have multiple racial identities listed. 

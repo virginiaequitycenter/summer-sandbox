@@ -3,20 +3,33 @@ title: "Charlottesville Region HMDA"
 author: "Lee LeBoeuf"
 date: "10/15/2021"
 output: 
-  html_document:
-    toc: yes
+  html_document: 
+    toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
-                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
-                      'sp', 'geosphere', 'stringr', 'ggrepel', 'gganimate', 'transformr', 'gifski'),
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# invisible(lapply(list('rgdal', 'lodes', 'psych', 'reshape2', 'transformer', 'gifski', 'dygraphs', 'xts', 'sp', 'geosphere', 'stringr', 'ggrepel', 'gganimate')))
+
+
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 'RColorBrewer', 'viridis', 'googlesheets4', 'gganimate'),
                  function(pkg) library(pkg, character.only = TRUE)))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "HMDA", gs4_deauth())
-cvldat <- read.csv("hmda_cville_tract.csv")
-cvldat$census_tract <- as.character(cvldat$census_tract)
+
+# main data
+cvldat <- read.csv("../data/hmda_cville_tract.csv")
+cvldat <- cvldat %>% 
+  mutate(census_tract = as.character(census_tract),
+         countyfips = str_sub(census_tract, 3,5))
+
+
+# spatial data
+shape <- readRDS('../data/cville_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
 ```
 
 ## Data Source
@@ -32,12 +45,14 @@ cvldat$census_tract <- as.character(cvldat$census_tract)
 * The data show below include __only__ home purchase loans, meaning that mortgages for home improvement or refinancing are excluded. 
 * An important limitation to note is that the FFEIC allows banks to submit data with an error threshold as high as 10% for community banks and credit unions. The loan amounts and applicant income values appear prone to entry error at the individual level--a high proportion of values seemed too high to be realistic. Therefore, the tract level summaries of these variables (median loan amounts and median applicant income in the tract) should be interpreted with extreme caution. 
     
-## Variable descriptions
+## Variable descriptions and Summaries
 ```{r}
-meta %>% 
-  filter(su_tract == 1) %>%
-  select(varname, about) %>% as.list()
+# meta %>% 
+#   filter(su_tract == 1) %>%
+#   select(varname, about) %>% as.list()
+
 glimpse(cvldat)
+
 cvldat[which(cvldat$year == 2020),] %>% select(total_apps, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
@@ -49,8 +64,10 @@ cvldat[which(cvldat$year == 2020),] %>% select(total_apps, overall_denial_rate, 
 * The following distributions include data only from the year 2020. 
 ```{r}
 longdat <- cvldat[which(cvldat$year == 2020),] %>% select(c(census_tract, total_apps, overall_denial_rate, white_denial_rate, black_denial_rate, hislat_denial_rate, perc_conventional, perc_govern_backed)) %>% pivot_longer(-census_tract, names_to = "measure", values_to = "value") 
+
 longdat$measure <- factor(longdat$measure,
                          levels = c("total_apps", "overall_denial_rate", "white_denial_rate", "black_denial_rate", "hislat_denial_rate", "perc_conventional", "perc_govern_backed"))
+
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
@@ -68,13 +85,12 @@ meta %>%
    
 ## Mapping the data 
 ```{r, echo = FALSE}
-shape <- readRDS('cville_tracts.RDS')
-shape <- st_transform(shape, crs = 4326) # to WGS84, given error
-shape <- shape %>% dplyr::rename(census_tract = GEOID)
-mapdat <- merge(shape, cvldat, by = 'census_tract', all.x = T)
+mapdat <- left_join(shape, cvldat, by = c('GEOID'= "census_tract"))
 ```
 
-### Total number of applications in 2020
+### Total number of applications in 2020{.tabset}
+
+#### Total Applications
 ```{r }
 mapdat2020 <- mapdat[which(mapdat$year == 2020),]
 
@@ -93,20 +109,117 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat2020$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
                              "Number of applications: ", mapdat2020$total_apps)
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat2020$total_apps), 
             title = "Total number of <br>mortgage applications <br> in 2020", opacity = 0.7)
 ```
 
+#### Applications by Race: White Applicants
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$appRace_White)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$appRace_White),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
+                             "Number of applications: ", mapdat2020$appRace_White)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$appRace_White), 
+            title = "Total 2020 mortgage<br>applications: White", opacity = 0.7)
+```
+
+#### Applications by Race: Black Applicants
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$appRace_Black)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$appRace_Black),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
+                             "Number of applications: ", mapdat2020$appRace_Black)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$appRace_Black), 
+            title = "Total 2020 mortgage<br>applications: Black", opacity = 0.7)
+```
+
+#### Applications by Race: Asian Applicants
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$appRace_Asian)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$appRace_Asian),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
+                             "Number of applications: ", mapdat2020$appRace_Asian)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$appRace_Asian), 
+            title = "Total 2020 mortgage<br>applications: Asian", opacity = 0.7)
+```
+
+#### Applications by Ethnicity: Hispanic Applicants
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapdat2020$appEth_HispLat)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$appEth_HispLat),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
+                             "Number of applications: ", mapdat2020$appEth_HispLat)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$appEth_HispLat), 
+            title = "Total 2020 mortgage<br>applications: Hispanic", opacity = 0.7)
+```
+
 ### Average mortage application denial rates from 2007-2020 {.tabset}
-* Each of the following maps show the average denial rates for the years 2007-2020
+
+Each of the following maps show the average denial rates for the years 2007-2020
 
 #### Overall denial rate {.tabset}
 ```{r }
 mapdat <- mapdat %>%
-  group_by(census_tract) %>%
+  group_by(GEOID) %>%
   mutate(avg_overall_denial_rate = mean(na.omit(overall_denial_rate))) %>%
   ungroup()
 
@@ -132,10 +245,10 @@ leaflet() %>%
             title = "Average overall <br>app denial rate <br>from 2007-2020", opacity = 0.7)
 ```
 
-#### White denial rate
+#### Denial Rate by Race: White
 ```{r }
 mapdat <- mapdat %>%
-  group_by(census_tract) %>%
+  group_by(GEOID) %>%
   mutate(avg_white_denial_rate = mean(na.omit(white_denial_rate))) %>%
   ungroup()
 
@@ -161,10 +274,10 @@ leaflet() %>%
             title = "Average White <br>app denial rate <br>from 2007-2020", opacity = 0.7)
 ```
 
-#### Black denial rate
+#### Denial Rate by Race: Black
 ```{r }
 mapdat <- mapdat %>%
-  group_by(census_tract) %>%
+  group_by(GEOID) %>%
   mutate(avg_black_denial_rate = mean(na.omit(black_denial_rate))) %>%
   ungroup()
 
@@ -190,10 +303,10 @@ leaflet() %>%
             title = "Average Black <br>app denial rate <br>from 2007-2020", opacity = 0.7)
 ```
 
-#### Hispanic/Latino denial rate
+#### Denial Rate by Ethnicity: Hispanic
 ```{r }
 mapdat <- mapdat %>%
-  group_by(census_tract) %>%
+  group_by(GEOID) %>%
   mutate(avg_hislat_denial_rate = mean(na.omit(hislat_denial_rate))) %>%
   ungroup()
 
@@ -220,37 +333,13 @@ leaflet() %>%
 ```
 
 ### Government backed mortgages {.tabset}
-* Government back mortages are mortgages insured by the USDA, VA, or FHA
 
-#### Percent of government backed loans from 2007-2020 {.tabset}
-```{r }
-shape <- readRDS('cville_tracts.RDS')
-shape <- shape %>% dplyr::rename(census_tract = GEOID)
-animatemapdat <- merge(shape, cvldat, by = 'census_tract', all.x = T)
-animatemapdat <- st_as_sf(animatemapdat)
+Government back mortages are mortgages insured by the USDA, VA, or FHA
 
-animatemapdat$year = as.numeric(animatemapdat$year)
-
-animatemapdat <-  animatemapdat %>% filter_at(vars(NAME, geometry, perc_govern_backed),all_vars(!is.na(.)))
-
-cville1 <- 
-  ggplot(animatemapdat) +
-  geom_sf(aes(fill = perc_govern_backed), color = "black", alpha = .9, na.rm = TRUE) +
-  scale_fill_fermenter(palette = "Blues", direction = 1,   type = "seq", n.breaks = 7) +
-  theme_void() +
-  guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5, barwidth = 1))  + 
-  labs(fill = "Percent of mortgages backed by gov.", title = 'Year:{frame_time}',
-       caption = "Percent of approved mortgage apps backed by the USDA, VA, or FHA") + 
-  transition_time(as.integer(year)) +
-  ease_aes('linear') 
-
-animate(cville1, fps = 1, nframes = 13)
-```
-
-#### Average percent of government backed loans from 2007-2020
+#### Percent of government backed loans from 2007-2020
 ```{r }
 mapdat <- mapdat %>%
-  group_by(census_tract) %>%
+  group_by(GEOID) %>%
   mutate(avg_percgovbacked = mean(na.omit(perc_govern_backed))) %>%
   ungroup()
 
@@ -300,4 +389,25 @@ leaflet() %>%
             title = "Percent of <br>gov-backed <br>mortages in 2020", opacity = 0.7)
 ```
 
+
+```{r}
+# animatemapdat <- st_as_sf(mapdat)
+# 
+# animatemapdat$year = as.numeric(animatemapdat$year)
+# 
+# animatemapdat <-  animatemapdat %>% filter_at(vars(NAME, geometry, perc_govern_backed),all_vars(!is.na(.)))
+
+# cville1 <- 
+#   ggplot(animatemapdat) +
+#   geom_sf(aes(fill = perc_govern_backed), color = "black", alpha = .9, na.rm = TRUE) +
+#   scale_fill_fermenter(palette = "Blues", direction = 1,   type = "seq", n.breaks = 7) +
+#   theme_void() +
+#   guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5, barwidth = 1))  + 
+#   labs(fill = "Percent of mortgages backed by gov.", title = 'Year:{frame_time}',
+#        caption = "Percent of approved mortgage apps backed by the USDA, VA, or FHA") + 
+#   transition_time(as.integer(year)) +
+#   ease_aes('linear') 
+
+# animate(cville1, fps = 1, nframes = 13)
+```
 

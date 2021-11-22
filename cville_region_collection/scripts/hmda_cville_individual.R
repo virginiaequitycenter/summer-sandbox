@@ -2,7 +2,7 @@
 # Author: Lee LeBoeuf
 # Last updated: 10/08/2021 
 
-# This script data that was cleans manually downloaded from the Consumer Financial Protection Bureau and Federal Financial Institutions Examinations Council 
+# This script cleans data that was manually downloaded from the Consumer Financial Protection Bureau and Federal Financial Institutions Examinations Council 
 # All data were collected as part of the Home Mortgage Disclosure Act (HMDA), which requires financial institutions to maintain, report, 
 # and publicly disclose information about mortgages. 
 # New data is released annually (typically in the summer months -- 2020 data was released in June of 2021). 
@@ -10,23 +10,25 @@
 # Some of the variable names and categories changed slightly from pre-2018 to 2018 and after, so 
 # the majority of this script focuses on re-naming/re-coding variables such that they are consistent across time, and merging data sets.  
 # The following variables are available pre-2017 and post-2018
-# state_code, county_code, census_tract, year (activity_year in post-2017 data, as_of_year in pre-2017 data)
-# action_taken, purchaser_type, preapproval, loan_type, loan_purpose, lien_status, rate_spread, hoepa_status
-# applicant annual income and loan amount (however, these variables seem highly prone to error and unreliable--hundreds
-# of the values for these variables seem impossible--I don't recommend using them for analysis)
-# applicant_race_1/2/3/4/5 (Most values are NA's after applicant_race_3) and co_applicant_race_1/2/3/4/5
-# applicant_sex and co_applicant_sex
-# denial_reason_1/2/3
-# Other population data available: % of population in the census tract that is a racial minority, the total population in the tract
-# the median family income for the MSA/MD in which the tract is located, the number of owner-occupied units in the tract, and 
-# the number of 1- to 4- family units in the tract. 
+#   state_code, county_code, census_tract, year (activity_year in post-2017 data, as_of_year in pre-2017 data)
+#   action_taken, purchaser_type, preapproval, loan_type, loan_purpose, lien_status, rate_spread, hoepa_status
+#   applicant annual income and loan amount 
+# (however, these variables seem highly prone to error and unreliable--hundreds of the values 
+# for these variables seem impossible--I don't recommend using them for analysis)
+#   applicant_race_1/2/3/4/5 
+# (Most values are NA's after applicant_race_3)
+#   co_applicant_race_1/2/3/4/5, applicant_sex and co_applicant_sex, denial_reason_1/2/3
+# Other population data available: 
+#   % of population in the census tract that is a racial minority, the total population in the tract
+#   the median family income for the MSA/MD in which the tract is located, the number of owner-occupied units in the tract, and 
+#   the number of 1- to 4- family units in the tract. 
 # With new data, this process can be repeated by re-running code for the post2017 data with the new data. 
 # The process should never need to be repeated for data pre-2018.
 # This script keeps data at the individual mortgage level--use the "hmda_cville_tract.R" script
 # to aggregate the product of this script to tract-level summaries. 
 
 # The first half of the script contains the cleaning process for any new data, the bottom half shows the process for all
-# pre-2018 data. The code for pre-2018 data should need need to be run again.
+# pre-2018 data. The code for pre-2018 data should not need to be run again.
 
 # Data from 2016 and earlier can be downloaded via the Consumer Financial Protection Bureau
 # here: https://www.consumerfinance.gov/data-research/hmda/historic-data/?geo=va&records=all-records&field_descriptions=labels
@@ -179,7 +181,7 @@ cvlpost2017 <- cvlpost2017 %>%
 cvlall <- bind_rows(cvlpost2017, cvlpre2018)
 
 # Writing out the data 
-write.csv(cvlall, "hmda_cville_individual.csv", row.names = F)
+write.csv(cvlall, "data/hmda_cville_individual.csv", row.names = F)
 
 ##############################################################################################################################################################################################################################################################################################
 

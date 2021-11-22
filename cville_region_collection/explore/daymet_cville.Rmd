@@ -12,8 +12,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE) 
 
-# invisible(lapply(list('rgdal', 'lodes', 'psych', 'reshape2', 'transformer', 'gifski', 'dygraphs', 'xtx')))
-
 invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 'RColorBrewer', 'viridis', 'googlesheets4', 'sp', 'geosphere', 'stringr', 'ggrepel', 'dygraphs'),
                  function(pkg) library(pkg, character.only = TRUE)))
 
