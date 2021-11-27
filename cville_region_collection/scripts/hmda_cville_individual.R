@@ -97,8 +97,8 @@ pre2018 <- do.call(rbind, lapply(file_names2017, read.csv))                     
 # # The pre-2018 data is missing leading zeros in the county/FIPs codes                                                                             #
 # # which impacts Albemarle, Fluvanna, and Greene counties                                                                                          #
 # # Below I input the leading zeros so that the data can be properly filtered by the fips codes                                                     #
-# pre2018$county_code <- ifelse(pre2018$county_code == 3, paste0("00", 3), pre2018$county_code)                                                     #
-# pre2018$county_code <- ifelse(pre2018$county_code == 65 | pre2018$county_code == 79, paste0("0", pre2018$county_code), pre2018$county_code)       #
+pre2018$county_code <- ifelse(pre2018$county_code == 3, paste0("00", 3), pre2018$county_code)                                                     #
+pre2018$county_code <- ifelse(pre2018$county_code == 65 | pre2018$county_code == 79, paste0("0", pre2018$county_code), pre2018$county_code)       #
 #                                                                                                                                                   #
 # # Reading in the post 2017 data--also for the entire state, for the years 2018-2020                                                               #
 filedr <- setwd("/Users/Carlson/Desktop/HMDA data/Post-2017")                                                                                     #
