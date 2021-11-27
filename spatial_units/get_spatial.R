@@ -4,6 +4,7 @@
 
 library(tidyverse)
 library(tigris)
+library(sf)
 
 options(tigris_use_cache = TRUE)
 
@@ -24,11 +25,18 @@ cville_blkgps <- block_groups(state = "51", county = cvillefips)
 # block polygons
 cville_blocks <- blocks(state = "51", county = cvillefips)
 
-# save
+# save for R
 saveRDS(cville_counties, file = "data/cville_counties.RDS")
 saveRDS(cville_tracts, file = "data/cville_tracts.RDS")
 saveRDS(cville_blkgps, file = "data/cville_blkgps.RDS")
 saveRDS(cville_blocks, file = "data/cville_blocks.RDS")
+
+# save as .shp
+st_write(cville_counties, "data/shape/cville_counties.shp")
+st_write(cville_tracts, "data/shape/cville_tracts.shp")
+st_write(cville_blkgps, "data/shape/cville_blkgps.shp")
+st_write(cville_blocks, "data/shape/cville_blocks.shp")
+
 
 # eastern shore ----
 easternfips <- c("001", "131")
@@ -52,3 +60,9 @@ saveRDS(eastshore_counties, file = "data/eastshore_counties.RDS")
 saveRDS(eastshore_tracts, file = "data/eastshore_tracts.RDS")
 saveRDS(eastshore_blkgps, file = "data/eastshore_blkgps.RDS")
 saveRDS(eastshore_blocks, file = "data/eastshore_blocks.RDS")
+
+# save as .shp
+st_write(eastshore_counties, "data/shape/eastshore_counties.shp")
+st_write(eastshore_tracts, "data/shape/eastshore_tracts.shp")
+st_write(eastshore_blkgps, "data/shape/eastshore_blkgps.shp")
+st_write(eastshore_blocks, "data/shape/eastshore_blocks.shp")
