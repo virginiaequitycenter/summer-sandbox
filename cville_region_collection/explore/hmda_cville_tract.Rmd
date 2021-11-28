@@ -82,6 +82,27 @@ meta %>%
   select(label) %>% 
   as.list()
 ```
+
+## Distribution over Time{.tabset}
+
+### Total number of applications
+```{r}
+cvldat %>% 
+  group_by(countyfips, year) %>% 
+  summarize(total_apps = sum(total_apps)) %>% 
+  ggplot(aes(x = year, y = total_apps, color = countyfips)) +
+  geom_line()
+```
+
+### Application Denials
+```{r}
+cvldat %>% 
+  group_by(countyfips, year) %>% 
+  mutate(denial_rate = mean(na.omit(overall_denial_rate))) %>%
+  summarize(denial_rate = mean(na.omit(overall_denial_rate))) %>% 
+  ggplot(aes(x = year, y = denial_rate, color = countyfips)) +
+  geom_line()
+```
    
 ## Mapping the data 
 ```{r, echo = FALSE}
@@ -238,7 +259,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
                              "Average overall app denial rate from 2007-2020: ", round(mapdat$avg_overall_denial_rate, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat$avg_overall_denial_rate), 
@@ -267,7 +288,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
                              "Average White app denial rate from 2007-2020: ", round(mapdat$avg_white_denial_rate, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat$avg_white_denial_rate), 
@@ -296,7 +317,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
                              "Average Black app denial rate from 2007-2020: ", round(mapdat$avg_black_denial_rate, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat$avg_black_denial_rate), 
@@ -325,7 +346,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
                              "Average His/Lat app denial rate from 2007-2020: ", round(mapdat$avg_hislat_denial_rate, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat$avg_hislat_denial_rate), 
@@ -358,7 +379,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
                              "Average % of gov-backed mortgages <br> from 2006-2020: ", round(mapdat$avg_percgovbacked, 2))
   ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat$avg_percgovbacked), 
@@ -382,7 +403,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T
               ),
-              popup = paste0("GEOID: ", mapdat2020$census_tract, "<br>",
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
                              "Percent of gov-backed <br>mortages in 2020: ", round(mapdat2020$perc_govern_backed, 2))
               ) %>% 
   addLegend("bottomright", pal = pal, values = (mapdat2020$perc_govern_backed), 
