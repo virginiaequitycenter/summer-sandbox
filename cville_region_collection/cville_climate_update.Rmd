@@ -1,7 +1,7 @@
 ---
 title: "Charlottesville Regional Climate Justice Coalition Update"
 author: "Equity Center Data Team"
-date: "9/13/2021"
+date: "11/28/2021"
 output:
   html_document: 
     toc: true
@@ -98,6 +98,15 @@ for (z in 1:nrow(table)) {
 
 <br>
 
+<style>
+table {
+    table-layout:fixed;
+}
+td{
+    overflow:hidden;
+    text-overflow: ellipsis;
+}
+</style>
 
 ```{r}
 datatable(table,
@@ -117,15 +126,13 @@ Household energy burden is calculated as the percent of income spent on energy. 
 ```{r}
 # load data
 lead <- read_csv("data/lead_cville_tract.csv")
-lead <- lead %>% 
-  mutate(tract = as.character(tract))
 ```
 
 #### Charlottesville
 ```{r}
 lead %>% 
   filter(county=="Charlottesville city") %>%
-  ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+  ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
@@ -134,8 +141,8 @@ lead %>%
 
 ```{r}
 lead %>% 
-  filter(county=="Albemarle" & tract != "109.03") %>%
-   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+  filter(county=="Albemarle" & tract_fip != "010903") %>%
+   ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     theme(axis.text.x = element_text(angle = 45))  +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
@@ -147,7 +154,7 @@ Census tract 109.03 containing primarily student housing has been omitted
 ```{r}
 lead %>% 
   filter(county=="Fluvanna") %>%
-   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+   ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
@@ -156,7 +163,7 @@ lead %>%
 ```{r}
 lead %>% 
   filter(county=="Greene") %>%
-   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+   ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
@@ -165,7 +172,7 @@ lead %>%
 ```{r}
 lead %>% 
   filter(county=="Louisa") %>%
-   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+   ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
@@ -174,7 +181,7 @@ lead %>%
 ```{r}
 lead %>% 
   filter(county=="Nelson") %>%
-   ggplot(aes(x = reorder(tract, percentburdened), y = percentburdened, fill = percentburdened)) +
+   ggplot(aes(x = reorder(tract_fip, percentburdened), y = percentburdened, fill = percentburdened)) +
     geom_col() + scale_fill_viridis(option="plasma", guide=FALSE) +
     labs(x = "Census Tract", y = "Energy Burdened Households (%)")
 ```
@@ -186,7 +193,7 @@ The Origin-Destination Employment Statistics (LODES) pairs the census blocks for
 # load data
 lodesrescommute <- read_csv("data/lodes_commute_cville_blkgp.csv")
 lodesworkers <- read_csv("data/lodes_workerscommute_cville_blkgp.csv")
-lodesworkpatterns <- read_csv("data/lodes_cvilleworkerscommutepatterns_county.csv")
+lodesworkpatterns <- read_csv("data/lodes_workerscommutepatterns_cvlcounty.csv")
 
 # read shapefile
 shape <- readRDS("data/cville_blkgps.RDS")
@@ -227,7 +234,7 @@ cvlfips <- c(51540, 51003, 51065, 51079, 51109, 51125)
 
 lodesworkpatterns %>% 
   dplyr::filter(!(h_county %in% cvlfips)) %>%
-  dplyr::filter(commuterstoCville > 1000) %>% 
+  dplyr::filter(commuterstoRegion > 1000) %>% 
   dplyr::mutate(name = case_when(
     h_county == 51015 ~ "Augusta",
     h_county == 51029 ~ "Buckingham",
@@ -245,9 +252,9 @@ lodesworkpatterns %>%
     h_county == 51820 ~ "Waynesboro"
   )) %>% 
   dplyr::mutate(name = as.factor(name)) %>% 
-  dplyr::mutate(name = fct_reorder(name, commuterstoCville)) %>% 
-  ggplot(aes(x = commuterstoCville, y = name, color = commuterstoCville)) + 
-  geom_segment(aes(x = 0, y = name, xend = commuterstoCville, yend = name)) +
+  dplyr::mutate(name = fct_reorder(name, commuterstoRegion)) %>% 
+  ggplot(aes(x = commuterstoRegion, y = name, color = commuterstoRegion)) + 
+  geom_segment(aes(x = 0, y = name, xend = commuterstoRegion, yend = name)) +
         geom_point(size = 7) + 
   scale_color_viridis(guide = F) +
   labs(x = "Number of Non-Resident Employees", y = "Locality of Residence (FIPS)")
@@ -318,9 +325,9 @@ This is the average of the maximum temperature recorded in January, in February,
 # load data
 noaa <- read_csv("data/noaa_cville_county.csv")
 cville_sf <- readRDS("data/cville_counties.RDS")
-cville_sf <- cville_sf %>% rename(CNTY_FIPS = COUNTYFP)
+cville_sf <- cville_sf %>% rename(county = COUNTYFP)
 
-cville_noaa <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
+cville_noaa <- left_join(cville_sf, noaa, by ="county")
 
 # cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
 
@@ -329,9 +336,9 @@ cville_noaa <- left_join(cville_sf, noaa, by ="CNTY_FIPS")
 #                geometry, everything())
 
 cville_noaa <- cville_noaa %>% 
-  filter_at(vars(Janmin:Avg_Temppcp),all_vars(!is.na(.))) %>% 
-  dplyr::select(NAME, Year, Avg_Tempmax, Julmax) %>% 
-  mutate(date = str_c(Year, "01-01", sep = "-") %>% ymd())
+  filter_at(vars(Avg_Tempmin:Decpcp),all_vars(!is.na(.))) %>% 
+  dplyr::select(NAME, year, Avg_Tempmax, Julmax) %>% 
+  mutate(date = str_c(year, "01-01", sep = "-") %>% ymd())
 
 #Create the theme for the stripes image
 theme_strip <- theme_minimal()+
