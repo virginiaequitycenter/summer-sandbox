@@ -1,0 +1,213 @@
+---
+title: "National Walkability Index Score"
+author: "Helena Lindsay, Michele Claibourn"
+date: "11/29/2021"
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Load libraries and data
+library(tidyverse)
+library(stargazer)
+library(leaflet)
+library(sf)
+library(googlesheets4)
+library(plotly)
+
+walk <- read_csv("../data/eastern_walk.csv")
+walk <- walk %>% 
+  mutate(FIPS_BLKGP = as.character(FIPS_BLKGP))
+
+eastshore_blkgps <- readRDS("../data/eastshore_blkgps.RDS")
+
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="walkability", gs4_deauth())
+
+```
+
+## Data Source
+
+Source: [EPA's National Walkability Index, 2021](https://www.epa.gov/smartgrowth/national-walkability-index-user-guide-and-methodology)
+
+* Download URL: https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv
+* Additional Information: https://www.epa.gov/sites/default/files/2021-06/documents/national_walkability_index_methodology_and_user_guide_june2021.pdf
+* EPA's Smart Location Database version 3.0 was released in 2021. No update is clearly scheduled.
+
+## About the Data
+From the EPA: "The National Walkability Index is a nationwide geographic data resource that ranks block groups according to their relative walkability. The national dataset includes walkability scores for all block groups as well as the underlying attributes that are used to rank the block groups."
+
+### National Walkability Index
+
+The Walkability Index is based on measures of the built environment derived from EPA's Smart Location Database. The Index is calculated as a function of block rankings on a series of indicators:
+
+$$ Walkability \space Index = \left(\frac{w}{3}\right) + \left(\frac{x}{3}\right) + \left(\frac{y}{3}\right) + \left(\frac{z}{6}\right)$$ 
+
+Where 
+
+* $w$ = block group's ranked score for intersection density
+* $x$ = block group's ranked score for proximity to transit stops
+* $y$ = block group's ranked score for employment mix
+* $z$ = block group's ranked score for employment and household mix
+
+For more, see the EPA's "[National Walkability Index Methodology and User Guide](https://www.epa.gov/sites/default/files/2021-06/documents/national_walkability_index_methodology_and_user_guide_june2021.pdf)".
+
+
+## Variable Description 
+
+```{r}
+glimpse(walk)
+```
+
+* walkability_index: National Walkability Index score
+* walkability_bins: National Walkability Index Bins; 1-5.75 = Least Walkable, 5.76-10.5 = Below Average Walkable, 10.51-15.25 = Above Average Walkable, 15.26-20 = Most Walkable
+* intersection_density: Street intersection density (pedestrian-oriented intersections); Higher intersection density is correlated with more walk trips
+* int_density_rank: Resulting rank of block group for intersection_density within all block groups; range from 1-20, higher ranks indicate more walk trip likelihood
+* proximity_transit: Proximity to transit stops, measured in meters from population-weighted centroid of block group to nearest transit stop (areas with no transit stops are missing)
+* prox_transit_rank: Resulting rank of block group for prox_transit_rank within all block groups; range from 1-20,higher ranks indicate more walk trip likelihood (areas with no transit access are ranked the lowest)
+* employment_mix: The mix of employment types in a block group (such as retail, office, or industrial); higher values correlate with more walk trips
+* emp_mix_rank: Resulting rank of block group for employment_mix within all block groups; range from 1-20, higher ranks indicate more walk trip likelihood 
+* emp_housing_mix: The mix of employment types and occupied housing; A block group with a diverse set of employment types (such as office, retail, and service) plus a large quantity of occupied housing units will have a relatively high value. Higher values correlate with more walk trips
+* emp_hou_mix_rank: Resulting rank of block group for emp_housing_mix within all block groups; range from 1-20, higher ranks indicate more walk trip likelihood 
+* FIPS_TRACT: Combined Tract FIPS code (11 characters)
+* FIPS_BLKGP: Combined Block Group FIPS code (11 characters)
+* STATEFP: State FIPS code (2 characters)
+* COUNTYFP: County FIPS code (3 characters)
+* TRACTCE: TractFIPS code (6 characters)
+* BLKGRPCE: Block Group FIPS code (1 character)
+
+## Summaries
+
+Five-number summaries of all variables:
+```{r}
+walk %>% select(intersection_density:walkability_bins) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+
+## Visual Distributions 
+
+```{r}
+walk %>% 
+  select(FIPS_BLKGP, walkability_index, intersection_density, proximity_transit, employment_mix, emp_housing_mix) %>% 
+  pivot_longer(-FIPS_BLKGP, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")  +
+  guides(fill = "none")
+```
+
+```{r}
+meta %>% 
+  filter(varname %in% c("walkability_index", "intersection_density",
+                        "proximity_transit", "employment_mix", 
+                        "emp_housing_mix")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+## Walkability by Locality
+
+```{r}
+walk %>% 
+  ggplot(aes(x = walkability_index, fill = COUNTYFP)) + 
+  geom_histogram() + 
+  facet_wrap(~COUNTYFP, scales = "free")  +
+  guides(fill = "none")
+```
+
+## Spatial Distributions{.tabset}
+
+```{r, include = F}
+eastern_maps <- left_join(eastshore_blkgps, walk, by = c('GEOID'= "FIPS_BLKGP"))
+eastern_maps <- st_transform(eastern_maps, crs = 4326) # to WGS84, given error
+```
+
+### Walkability
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$walkability_index)
+
+leaflet(eastern_maps) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = eastern_maps,
+              fillColor = ~pal(walkability_index),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
+                             "Walkability Index: ", round(eastern_maps$walkability_index, 2))) %>%
+  addLegend("bottomright", pal = pal, values = eastern_maps$walkability_index,
+            title = "Walkability Index", opacity = 0.7)
+```
+
+### Intersection Density
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$intersection_density)
+
+leaflet(eastern_maps) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = eastern_maps,
+              fillColor = ~pal(intersection_density),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
+                             "Intersection Density: ", round(eastern_maps$intersection_density, 2))) %>%
+  addLegend("bottomright", pal = pal, values = eastern_maps$intersection_density,
+            title = "Intersection Density", opacity = 0.7)
+```
+
+### Employment Mix
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$employment_mix)
+
+leaflet(eastern_maps) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = eastern_maps,
+              fillColor = ~pal(employment_mix),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
+                             "Employment Mix: ", round(eastern_maps$employment_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = eastern_maps$employment_mix,
+            title = "Employment Mix", opacity = 0.7)
+```
+
+### Employment-Housing Mix
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$emp_housing_mix)
+
+leaflet(eastern_maps) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = eastern_maps,
+              fillColor = ~pal(emp_housing_mix),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
+                             "Employment-Housing Mix: ", round(eastern_maps$emp_housing_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = eastern_maps$emp_housing_mix,
+            title = "Employment-Housing Mix", opacity = 0.7)
+```
+
+

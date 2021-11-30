@@ -30,7 +30,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 * [Home Mortgage Disclosure Act Data](https://virginiaequitycenter.github.io/summer-sandbox/hmda_cville_tract.html)
 
 ### Transportation
-* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/walkability_cville.html)
+* [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/walkability_eastern.html)
 * LEHD Origin-Destination Commutes
   - [Block level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_block.html), [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_blkgp.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_commute_cville_tract.html)
 
