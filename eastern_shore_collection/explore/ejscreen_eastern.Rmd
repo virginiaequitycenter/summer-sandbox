@@ -1,31 +1,36 @@
 ---
 title: "EJSCREEN Exploration File"
-subtitle: "Data for Eastern Shore Region"
+subtitle: "Data for Charlottesville Region"
 author: "Marisa Lemma"
 date: "7/20/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Load libraries and data
 library(tidyverse)
-library(mosaic)
 library(stargazer)
 library(viridis)
 library(leaflet)
-library(rgdal)
 library(sf)
 library(googlesheets4)
-library(corrplot)
+library(GGally)
 
+# main data
 ejscreen <- read_csv("../data/ejscreen_eastern_blkgps.csv")
+ejscreen <- ejscreen %>% 
+  mutate(ID = as.character(ID))
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=840479384", sheet = "ejscreen", gs4_deauth())
+
+# Spatial data
+eastern_blkgps <- readRDS("../data/eastshore_blkgps.RDS")
 
 ```
 
@@ -36,8 +41,7 @@ Source: US Environmental Protection Agency EJSCREEN Tool, 2020 data (last modifi
 
 * Download URL: https://gaftp.epa.gov/EJSCREEN/
 * Technical Documentation: https://www.epa.gov/sites/production/files/2021-04/documents/ejscreen_technical_document.pdf
-
-## About the Data
+* Data is from the EJSCREEN 2020 data, released in July 2021. The EJSCREEN is generally updated annually. 
 
 EJSCREEN is an "environmental justice (EJ) mapping and screening tool" produced by the EPA.
 
@@ -61,37 +65,45 @@ Observations are block group estimates of key environmental indicators:
 
 `P_` indicates percentile ranks for each variable, and `T_` indicates map popup text.
 
+
+## Summary Statistics
+
+```{r}
+ejscreen %>% select(-c(ID:blkgpfips, T_LDPNT:T_PM25)) %>%
+  select(where(~is.numeric(.x) && !is.na(.x))) %>%
+  as.data.frame() %>%
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+
+## Visual Descriptions{.tabset}
+
+### Distributions
+
+```{r}
+ejscreen %>% select(ID, PRE1960PCT:PM25) %>% 
+  pivot_longer(-ID, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
 ```{r}
 meta %>% 
+  filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
 ```
 
-## Summary Statistics
-
-```{r}
-ejscreen %>% select(-c(ID, T_LDPNT:T_PM25)) %>%
-  select(where(~is.numeric(.x) && !is.na(.x))) %>%
-  as.data.frame() %>%
-  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
-            summary.stat = c("mean", "sd", "min", "median", "max"))
-```
-
-
-## Visual Distributions
-
 ### Correlation Matrices
 
-The following charts show the correlations between all combinations of variables. The darker the color, the more highly correlated a pair of variables are. The first correlation matrix shows correlations among the levels of each environmental indicator, and the second shows correlations among the percentiles of each indicator.
+The following figure shows the correlations among primary measures. The darker the color, the more highly correlated a pair of variables are. 
+
 ```{r}
-correlation <- ejscreen %>% 
-  select(PRE1960PCT:PM25)
-num_correlation <- cor(correlation, use = "complete.obs")
-num_correlation <- round(num_correlation, digits = 2)
-corrplot(num_correlation, type = {"upper"}, method = "shade", 
-         shade.col = NA, tl.col = "black", 
-         diag = F, addCoef.col = "black")
+ejscreen %>% select(PRE1960PCT:PM25) %>% 
+  ggcorr(label = TRUE, label_alpha = TRUE)
 ```
 
 ```{r}
@@ -102,251 +114,182 @@ meta %>%
   as.list()
 ```
 
-```{r}
-correlation2 <- ejscreen %>% 
-  select(P_LDPNT:P_PM25)
-num_correlation2 <- cor(correlation2, use = "complete.obs")
-num_correlation2 <- round(num_correlation2, digits = 2)
-corrplot(num_correlation2, type = {"upper"}, method = "shade", 
-         shade.col = NA, tl.col = "black", 
-         diag = F, addCoef.col = "black")
-```
-
-```{r}
-meta %>% 
-  filter(varname %in% c("P_LDPNT", "P_DSLPM", "P_CANCR", "P_RESP", "P_PTRAF", "P_PWDIS", "P_PNPL", "P_PRMP", "P_PTSDF", "P_OZONE", "P_PM25")) %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
-### Ozone vs. PM~2.5~
-
-These scatterplots show the relationship between ozone and PM~2.5~, broken down by county. The first scatterplot shows the correlation between the levels of ozone and PM~2.5~, and the second scatterplot shows the correlation between the percentiles.
-```{r, warning = F}
-ejscreen <- ejscreen %>% 
-  mutate(county = str_sub(ID, 3, 5))
-
-ejscreen %>%
-  filter(OZONE!=0 & PM25!=0) %>% 
-  ggplot() +
-  geom_point(aes(x=OZONE, y=PM25, color=county)) +
-  labs(x="Ozone level",
-       y="PM2.5 level") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-
-ejscreen %>%
-  filter(OZONE!=0 & PM25!=0) %>% 
-  ggplot() +
-  geom_point(aes(x=P_OZONE, y=P_PM25, color=county)) +
-  labs(x="Ozone percentile",
-       y="PM2.5 percentile") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-```
-  
-### Proximity to traffic vs. air toxics cancer risk
-
-These scatterplots show the relationship between a block group's proximity to traffic and air toxics cancer risk, broken down by county. The first one shows the correlation between the levels, and the second one shows the correlation between the percentiles.
-```{r, warning = F}
-ejscreen %>%
-  filter(PTRAF!=0 & CANCER!=0) %>% 
-  ggplot() +
-  geom_point(aes(x=PTRAF, y=CANCER, color=county)) +
-  labs(x="Proximity to traffic",
-       y="Cancer risk") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-
-ejscreen %>%
-  filter(PTRAF!=0 & CANCER!=0) %>%
-  ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_CANCR, color=county)) +
-  labs(x="Traffic proximity percentile",
-       y="Cancer risk percentile") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-```
-
-### Proximity to traffic vs. diesel particulate matter level
-
-These scatterplots show the relationship between a block group's proximity to traffic and its diesel particulate matter level, broken down by county. The first shows the correlation between the levels, and the second shows the correlation between the percentiles.
-```{r}
-ejscreen %>%
-  filter(PTRAF!=0 & DSLPM!=0) %>% 
-  ggplot() +
-  geom_point(aes(x=PTRAF, y=DSLPM, color=county)) +
-  labs(x="Proximity to traffic",
-       y="Diesel particulate matter level") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-
-ejscreen %>%
-  filter(PTRAF!=0 & DSLPM!=0) %>%
-  ggplot() +
-  geom_point(aes(x=P_PTRAF, y=P_DSLPM, color=county)) +
-  labs(x="Traffic proximity percentile",
-       y="Diesel particulate matter percentile") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-```
-
-### PM~2.5~ vs. diesel particulate matter level
-
-These scatterplots show the relationship between PM~2.5~ and diesel particulate matter, broken down by county. The first shows the correlation between the levels, and the second shows the correlation between the percentiles.
-```{r}
-ejscreen %>%
-  filter(PM25!=0 & DSLPM!=0) %>% 
-  ggplot() +
-  geom_point(aes(x=PM25, y=DSLPM, color=county)) +
-  labs(x="PM2.5 level",
-       y="Diesel particulate matter level") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-
-ejscreen %>%
-  filter(PM25!=0 & DSLPM!=0) %>%
-  ggplot() +
-  geom_point(aes(x=P_PM25, y=P_DSLPM, color=county)) +
-  labs(x="PM2.5 percentile",
-       y="Diesel particulate matter percentile") +
-  scale_color_brewer(type = "qual", labels = c("Accomack", "Northampton"))
-```
-
-
-## Spatial Distributions
+## Spatial Distributions{.tabset}
 
 ```{r, include = F}
-eastshore_blkgps <- readRDS("../data/eastshore_blkgps.RDS")
-ejscreen <- ejscreen %>% rename(GEOID = ID)
+# Join to spatial
+eastshapes <- eastern_blkgps %>% 
+  left_join(ejscreen, by = c("GEOID" = "ID"))
 
-easternshapes <- merge(eastshore_blkgps, ejscreen, by = 'GEOID', all.x = T)
-easternshapes <- st_transform(easternshapes, crs = 4326) # to WGS84, given error
+eastshapes <- st_transform(eastshapes, crs = 4326) # to WGS84, for leaflet
 ```
 
 ### Proximity to treatment storage and disposal facilities (TSDFs)
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$PTSDF)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$PTSDF)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(PTSDF),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "Proximity to TSDF: ", easternshapes$T_PTSDF)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$PTSDF,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "Proximity to TSDF: ", eastshapes$T_PTSDF)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$PTSDF,
             title = "Proximity to TSDF", opacity = 0.7)
 ```
 
 ### Proximity to traffic
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$PTRAF)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$PTRAF)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(PTRAF),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "Proximity to traffic: ", easternshapes$T_PTRAF)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$PTRAF,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "Proximity to traffic: ", eastshapes$T_PTRAF)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$PTRAF,
             title = "Traffic Proximity", opacity = 0.7)
-```
-
-### PM~2.5~ Percentile
-```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$P_PM25)
-leaflet(easternshapes) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
-              fillColor = ~pal(P_PM25),
-              weight = 1,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "PM2.5 Percentile: ", easternshapes$P_PM25)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$P_PM25,
-            title = "PM2.5 Percentiles", opacity = 0.7)
 ```
 
 ### Distribution of PM~2.5~
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$PM25)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$PM25)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(PM25),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "PM2.5 Level: ", easternshapes$T_PM25)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$PM25,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "PM2.5 Level: ", eastshapes$T_PM25)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$PM25,
             title = "PM2.5 Concentrations", opacity = 0.7)
 ```
 
 ### Air toxics cancer risk
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$CANCER)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$CANCER)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(CANCER),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "Cancer Risk: ", easternshapes$T_CANCR)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$CANCER,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "Cancer Risk: ", eastshapes$T_CANCR)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$CANCER,
             title = "Air Toxics Cancer Risk", opacity = 0.7)
 ```
 
 ### Diesel Particulate Matter Level
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$DSLPM)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$DSLPM)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(DSLPM),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "DSLPM: ", easternshapes$T_DSLPM)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$DSLPM,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "DSLPM: ", eastshapes$T_DSLPM)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$DSLPM,
             title = "Diesel Particulate Matter Level", opacity = 0.7)
 ```
 
 ### Ozone Levels
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$OZONE)
-leaflet(easternshapes) %>%
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastshapes$OZONE)
+
+leaflet(eastshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = easternshapes,
+  addPolygons(data = eastshapes,
               fillColor = ~pal(OZONE),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", easternshapes$GEOID, "<br>",
-                             "Ozone Level: ", easternshapes$T_OZONE)) %>%
-  addLegend("bottomright", pal = pal, values = easternshapes$OZONE,
+              popup = paste0("FIPS Code: ", eastshapes$GEOID, "<br>",
+                             "Ozone Level: ", eastshapes$T_OZONE)) %>%
+  addLegend("bottomright", pal = pal, values = eastshapes$OZONE,
             title = "Ozone Levels in the Air", opacity = 0.7)
+```
+
+
+## Scatterplots{.tabset}
+These scatterplots show the relationship between pairs of EJSCREEN measures. 
+
+### Ozone vs. PM~2.5~
+
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=OZONE, y=PM25, color=countyfips)) +
+  labs(x="Ozone level",
+       y="PM2.5 level") +
+  scale_color_brewer(type = "qual", name = "County", labels = c("Accomack", "Northampton"))
+```
+  
+### Proximity to traffic vs. air toxics cancer risk
+
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PTRAF, y=CANCER, color=countyfips)) +
+  labs(x="Proximity to traffic",
+       y="Cancer risk") +
+  scale_color_brewer(type = "qual", name = "County", labels = c("Accomack", "Northampton"))
+
+```
+
+### Proximity to traffic vs. diesel particulate matter level
+
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PTRAF, y=DSLPM, color=countyfips)) +
+  labs(x="Proximity to traffic",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", name = "County", labels = c("Accomack", "Northampton"))
+
+```
+
+### PM~2.5~ vs. diesel particulate matter level
+
+```{r}
+ejscreen %>%
+  ggplot() +
+  geom_point(aes(x=PM25, y=DSLPM, color=countyfips)) +
+  labs(x="PM2.5 level",
+       y="Diesel particulate matter level") +
+  scale_color_brewer(type = "qual", name = "County", labels = c("Accomack", "Northampton"))
+
 ```
 
 
 ## Important Notes
 
-PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract.
-
-Certain variables contain "NA" values for some block groups in this region. It is unclear to me why there are NAs, but my guess would be that it is due to small populations in these areas.
+PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract. All other variables were deriived for the block group level.

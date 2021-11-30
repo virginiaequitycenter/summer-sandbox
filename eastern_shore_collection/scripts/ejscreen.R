@@ -1,19 +1,30 @@
-# EJSCREEN generative file
+# Get EJSCREEN data
+# Marisa Lemma
+# Last updated: 2021-11-19
 
 library(tidyverse)
 
-# Pull EJSCREEN
-url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
-download.file(url = url,
-              destfile = paste(getwd(), "/", "ejscreen.zip", sep = ""),
-              mode = "wb")
+# # Import data from source ----
+# url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
+# download.file(url = url,
+#               destfile = paste(getwd(), "/dataraw/", "ejscreen.zip", sep = ""),
+#               mode = "wb")
+# 
+# # unzip and read
+# unzip("dataraw/ejscreen.zip", exdir = paste(getwd(), "/dataraw/ejscreen/", sep = ""))
 
-# unzip and read
-unzip("ejscreen.zip", exdir = getwd())
 
-# Load data
-ejscreen <- read_csv("EJSCREEN_2020_USPR.csv")
+# Read in data ----
+ejscreen <- read_csv("dataraw/ejscreen/EJSCREEN_2020_USPR.csv")
 
+# Define localities of interest
+# Cville area
+# localfips <- c("540", "003", "065", "079", "109", "125")
+# Eastern shore area
+localfips <- c("001", "131")
+
+
+# Reduce----
 # Get rid of demographic variables (since we don't need those)
 ejscreen_clean <- ejscreen %>%
   select(-c("OBJECTID", "ACSTOTPOP":"PRE1960", "VULEOPCT":"DISPEO", "D_LDPNT_2":"D_PM25_2",
@@ -22,17 +33,16 @@ ejscreen_clean <- ejscreen %>%
             "T_PNPL_D2", "T_PRMP_D2", "T_PTSDF_D2", "T_OZONE_D2", "T_PM25_D2", "Shape_Length", 
             "Shape_Area"))
 
-# Filter to just areas of interest
-virginia <- ejscreen_clean %>%
-  filter(STATE_NAME=="Virginia")
-eastern_shore <- virginia %>%
-  filter(ID%in%510010901001:510019902000 |
-           ID%in%511319301001:511319901000)
+# Filter to areas of interest
+eastern_area <- ejscreen_clean %>%
+  mutate(statefips = str_sub(ID, 1,2),
+         countyfips = str_sub(ID, 3,5),
+         tractfips = str_sub(ID, 6, 11),
+         blkgpfips = str_sub(ID, 12,12)) %>% 
+  filter(statefips == "51" & countyfips %in% localfips) %>% 
+  select(ID, statefips, countyfips, tractfips, blkgpfips, everything(),
+         -c(STATE_NAME, NPL_CNT, TSDF_CNT, AREALAND, AREAWATER))
 
-
-# Get rid of unnecessary state name variable
-eastern_shore <- eastern_shore %>% 
-  select(-STATE_NAME, -NPL_CNT, -TSDF_CNT)
 
 # Export to .csv
-write.csv(eastern_shore, "eastern_shore_collection/data//ejscreen_eastern_blkgps.csv", row.names = F)
+write.csv(eastern_area, "data/ejscreen_eastern_blkgps.csv", row.names = F)
