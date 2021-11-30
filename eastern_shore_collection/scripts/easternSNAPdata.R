@@ -1,9 +1,14 @@
+# Get Low-Income Energy Affordability 2018/Energy Burden
+# Khalila Karefa-Kargbo, Michele Claibourn
+# Created: 2021-07
+# Last updated: 2021-11-30
+
 library(tidyverse)
 library(jsonlite)
 library(sf)
 
 # get spatial extent for api query
-eastshore_tracts <- readRDS("~/DemofData/summer-sandbox/eastern_shore_collection/data/eastshore_tracts.RDS")
+eastshore_tracts <- readRDS("data/eastshore_tracts.RDS")
 st_bbox(eastshore_tracts)
 
 # api query (add the xmin/xmax, ymin/ymax to query)
@@ -23,36 +28,31 @@ easternstores_4326 <- st_as_sf(easternstores,
 # Filter to main counties
 easternCounties <- c("ACCOMACK", "NORTHAMPTON")
 
-easternstores <- easternstores %>% 
+stores <- easternstores %>% 
   filter(County %in% easternCounties)
 
-easternstores_4326 <- easternstores_4326 %>% 
+stores_4326 <- easternstores_4326 %>% 
   filter(County %in% easternCounties)
 
 
-# Manually filtering to only grocery stores, supermarkets 
-# not convenience stories, pharmacies, dollar stores, warehouse clubs, etc.
+# Distinguish between food retailer types
+# E.g., https://www.ers.usda.gov/webdocs/publications/85442/eib-180.pdf
+# (1) large stores comprised of supermarkets, supercenters, large grocery stores, and club stores (“large grocery stores”)
+# (2) small grocery and specialty stores such as seafood markets, bakeries, and ethnic grocery stores (“small grocery stores”);
+# (3) convenience stores, gas stations, pharmacies, and dollar stores (“convenience stores”)
+# USDA has used (1) as a proxy for healthy and affordable food retailers
 
-included <- easternstores[c(1, 14:15, 17, 19:20, 33:34, 39:40, 46, 58:59, 65), ] 
-excluded <- easternstores[c(2:13, 16, 18, 21:32, 35:38, 41:45, 47:57, 60:64), ] 
-#20: seafood only
-#23: el romelino-- general contracters? don't think they sell food of any kind
-#28: seafood only
-#42: ^
+large_grocery <- c("supermarket|valu|lion|walmart|iga")
+convenience <- c("e&c|roses|dollar|walgreens|cvs|stop|royal|convenience|e & c")
 
-# if not mentioned by row specifically, it fell into category of convenience, dollar store, gas station, etc.
-# 'included' comments are the in explore file
+stores <- stores %>% 
+  mutate(type = case_when(
+    str_detect(Store_Name, regex(large_grocery, ignore_case = T), negate = F) ~ "large_grocery",
+    str_detect(Store_Name, regex(convenience, ignore_case = T), negate = F) ~ "convenience",
+    TRUE ~ "small_grocery"
+  ))
 
-# Reproducible Method
-storeNames <- dplyr::pull(easternstores, Store_Name) # creating vector to use in str_detect
-
-keyWords <- c("Enterprises|Markets|Dollar|Deli|Royal|Remolino|Variety|Seafood|
-              |Roses|Casa|Shore|Convenience|CVS|Goose|Walgreens|E & C")
-
-snap_eastern <- easternstores %>% 
-  filter(str_detect(storeNames, regex(keyWords, ignore_case = T), negate = T))
-
-snap_eastern[!snap_eastern$Store_Name%in%included$Store_Name,] # looks good :)
+stores %>% count(type)
 
 # Save csv
-write_csv(snap_eastern, path = "snap_eastern.csv")
+write_csv(stores, path = "data/food_retail_eastern.csv")

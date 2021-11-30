@@ -1,5 +1,5 @@
 ---
-title: "Charlottesville SNAP Data"
+title: "Charlottesville Food Retail Data"
 author: "Khalila Karefa-Kargbo, Michele Claibourn"
 date: "11/16/2021"
 output: 
