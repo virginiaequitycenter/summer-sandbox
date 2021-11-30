@@ -1,12 +1,13 @@
 ---
 title: "FEMA National Risk Index"
-subtitle: "Data for Eastern Shore Region"
+subtitle: "Data for Eastern Shore"
 author: "Michele Claibourn"
-date: "6/24/2021"
+date: "11/29/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -15,16 +16,18 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # 0. Load libraries and data
 library(tidyverse)
 library(stargazer) # for summary table
-library(janitor) # for tabyl
-library(tigris) # for shapefiles
 library(sf) # for spatial joins
 library(leaflet) # for map
 library(viridis)
 library(googlesheets4)
 
+# Main data
 nri <- read_csv("../data/fema_nri_eastern_tract.csv")
-easternfips <- c("001", "131")
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636")
+
+# Spatial data
+eastshore_tracts <- readRDS("../data/eastshore_tracts.RDS")
 
 ```
 
@@ -33,8 +36,12 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 Source: FEMA, National Risk Index, October 2020 release.
 
 * Download URL: [https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip](https://nri-data-downloads.s3.amazonaws.com/NRI_Table_CensusTracts.zip)
+* To learn more: [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
+* To learn more: [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
+* Data is from the July 2021 release. There is no set update schedule. 
 
-### The Data Used here
+
+## About the data
 
 The National Risk Index is intended to provide a view of the natural hazard risk within communities. While FEMA includes information on 18 natural hazards, we focus on six -- coastal flooding, drought, heat wave, hurricane, riverine flooding, and strong wind -- pulling measures on 
 
@@ -43,11 +50,6 @@ The National Risk Index is intended to provide a view of the natural hazard risk
 * historic loss ratio (measuring the proportion of building value, people, or agricultural value that has been historically impacted by the natural hazard).
 
 The NRI uses data on natural hazards from multiple sources and estimates natural hazard frequency, exposure, and historic loss at the census tract level.
-
-To learn more, see: 
-
-* [National Risk Index Platform and Data](https://hazards.geoplatform.gov/portal/apps/MapSeries/index.html?appid=ddf915a24fb24dc8863eed96bc3345f8)
-* [National Risk Index Primer, FEMA, December 2020](https://www.fema.gov/sites/default/files/documents/fema_national-risk-index_primer.pdf)
 
 
 ## Variable descriptions
@@ -71,18 +73,12 @@ Observations are census tract estimates of...
 nri %>% select(-c(OID_:STATEFIPS, COUNTYTYPE:TRACTFIPS, NRI_VER)) %>% 
   select(where(~is.numeric(.x) && !is.na(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
-Summaries of (non-missing) character variables (remove tract identifiers)
 
-```{r}
-nri %>% select(-c(OID_:STATEFIPS, COUNTYTYPE:TRACTFIPS, NRI_VER)) %>% 
-  select(where (~is.character(.x))) %>% map(tabyl)
-```
-
-##  Visual distribution
+##  Visual distribution{.tabset}
 Frequency distribution across tracts:
 
 ### Tract assets
@@ -98,28 +94,6 @@ nri %>% select(TRACTFIPS:AREA) %>%
 ```{r, results = "asis"}
 meta %>% 
   filter(varname %in% c("POPULATION", "BUILDVALUE", "AGRIVALUE")) %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
-
-### Tract hazards: Coastal Flooding
-
-```{r}
-# Tract hazards: CFLD
-vars <- nri %>% select(contains("CFLD"), -contains("HLRR")) %>% names()
-
-nri %>% select(all_of(vars), TRACTFIPS) %>% 
-  pivot_longer(-TRACTFIPS, names_to = "measure", values_to = "value") %>% 
-  ggplot(aes(x = value, fill = measure)) + 
-  geom_histogram() + 
-  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
-  facet_wrap(~measure, scales = "free")
-```
-
-```{r, results = "asis"}
-meta %>%
-  filter(varname %in% vars, !(str_detect(about, "REMOVE"))) %>% 
   mutate(label = paste0(varname, ": ", about)) %>% 
   select(label) %>% 
   as.list()
@@ -225,50 +199,17 @@ meta %>%
   as.list()
 ```
 
-## Maps
+
+## Maps{.tabset}
 Variation across tracts
 
 ```{r, echo = FALSE}
-eastern_tracts <- readRDS("../data/eastshore_tracts.RDS")
-
-eastern_nri <- eastern_tracts %>% 
+# Join to spatial
+eastern_nri <- eastshore_tracts %>% 
   left_join(nri, by = c("TRACTCE" = "TRACT"))
 
-eastern_nri <- st_transform(eastern_nri, crs = 4326) # to WGS84, given error
+eastern_nri <- st_transform(eastern_nri, crs = 4326) # to WGS84, for leaflet
 ```
-
-### Coastal Flooding
-```{r}
-# CFLD
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_nri$CFLD_AFREQ) # viridis
-
-leaflet() %>% 
-  addProviderTiles("CartoDB.Positron") %>% 
-  addPolygons(data = eastern_nri,
-              fillColor = ~pal(CFLD_AFREQ),
-              weight = 1,
-              opacity = 1,
-              color = "white", 
-              fillOpacity = 0.6,
-              highlight = highlightOptions(
-                weight = 2,
-                fillOpacity = 0.8,
-                bringToFront = T
-              ),
-              popup = paste0("Tract Number: ", eastern_nri$NAME, "<br>",
-                             "Ann. Freq.: ", round(eastern_nri$CFLD_AFREQ, 2))
-  ) %>% 
-  addLegend("bottomright", pal = pal, values = eastern_nri$CFLD_AFREQ, 
-            title = "Coastal Flooding-#/year", opacity = 0.7)
-```
-
-```{r, results = "asis"}
-meta %>%
-  filter(varname == "CFLD_AFREQ") %>% 
-  select(about) %>% 
-  as.list()
-```
-
 
 ### Droughts
 ```{r}
@@ -433,5 +374,6 @@ meta %>%
 
 ## Nota Bene
 
-* Several hazard rates are dominated by regional measures, with little variation identified within the region.
-* Consider removing tracts 9901 and 9902 (covering only water) before analysis.
+* Coastal flooding not relevant for this region (included for consistency with Eastern Shore work).
+* Most hazard overall ratings are very low or no ratings, except for drought; relative to larger national variation, these do not represent high risks.
+* Several hazard rates are dominated by regional effects, with little variation within the region.
