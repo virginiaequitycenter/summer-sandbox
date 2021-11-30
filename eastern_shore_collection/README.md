@@ -27,7 +27,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 * [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern.html)
 * LEHD Origin-Destination Employment Statistics (LODES)
     - Block level, [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cvl_tract.html)
-* [Home Mortgage Disclosure Act Data](https://virginiaequitycenter.github.io/summer-sandbox/hmda_cville_tract.html)
+* [Home Mortgage Disclosure Act Data](https://virginiaequitycenter.github.io/summer-sandbox/hmda_eastern_tract.html)
 
 ### Transportation
 * [Walkability Indicators](https://virginiaequitycenter.github.io/summer-sandbox/walkability_eastern.html)

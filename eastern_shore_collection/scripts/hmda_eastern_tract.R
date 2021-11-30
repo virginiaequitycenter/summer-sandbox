@@ -19,8 +19,10 @@
 # data file. From there, the code below can be used to re-create tract level summaries for the full data set. 
 # Any variables can also be added or deleted from the summarise function below if they are no longer of interest. 
 
+library(tidyverse)
+
 # Reading in the individual-level data (created by the "hmda_cville_individual.R" script and available on the Equity Center github)
-eastdat <- read.csv("hmda_eastern_individual.csv")
+eastdat <- read.csv("data/hmda_eastern_individual.csv")
 
 # Filtering to home purchase loans only:
 eastdat <- eastdat %>%
@@ -96,7 +98,7 @@ easttractf <- left_join(eastdattract, popdat, by = c("census_tract", "year"), ke
 easttractf <- easttractf[-which(is.na(easttractf$census_tract)),]
 
 # Writing out tract-level data for 2007-2020
-write.csv(easttractf, "hmda_eastern_tract.csv", row.names = F)
+write.csv(easttractf, "data/hmda_eastern_tract.csv", row.names = F)
 
 
 ############## ALL MORTGAGE APPS #################################################################################################################
