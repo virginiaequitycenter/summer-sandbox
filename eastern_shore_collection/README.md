@@ -16,7 +16,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 * [Natural hazard risk/FEMA's National Risk Index](https://virginiaequitycenter.github.io/summer-sandbox/fema_nri_eastern.html)
 * [FEMA National Flood Insurance Program Claims](https://virginiaequitycenter.github.io/summer-sandbox/femaclaims_cville.html)
 * [EJSCREEN Environmental Indicators](https://virginiaequitycenter.github.io/summer-sandbox/ejscreen_cville.html)
-* [Estimated Lead Exposure Risk](https://virginiaequitycenter.github.io/summer-sandbox/lead_exposure_cville.html)
+* [Estimated Lead Exposure Risk](https://virginiaequitycenter.github.io/summer-sandbox/lead_exposure_eastern.html)
 * [CDC PLACES Health Outcomes](https://virginiaequitycenter.github.io/summer-sandbox/cdcplaces_eastern.html)
 
 

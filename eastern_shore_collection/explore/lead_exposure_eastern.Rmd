@@ -1,74 +1,79 @@
 ---
-title: "Lead Exposure Risk"
-subtitle: "Data for Eastern Shore Region"
+title: "Vox Lead Exposure"
+subtitle: "Data for Charlottesville Region"
 author: "Marisa Lemma"
-date: "8/27/2021"
+date: "11/30/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Load libraries and data
 library(tidyverse)
-library(mosaic)
 library(stargazer)
 library(viridis)
 library(leaflet)
-library(rgdal)
 library(sf)
 library(googlesheets4)
 
-leadrisk <- read_csv("~/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/leadexposure_eastern_tract.csv")
+# main data
+leadrisk <- read_csv("../data/leadexposure_eastern_tract.csv")
+leadrisk <- leadrisk %>% 
+  mutate(GEOID = as.character(GEOID))
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="lead_exposure", gs4_deauth())
 
+# spatial data
+eastern_shapes <- readRDS("../data/eastshore_tracts.RDS")
 ```
 
 ## Data Source
-The data here are a re-creation of the 2016 analysis from [Vox](https://github.com/voxmedia/data-projects/tree/master/vox-lead-exposure-risk), which Vox originally modeled off of the [Washington State Department of Health](https://fortress.wa.gov/doh/wtn/WTNIBL/)'s analysis. They were derived from tract-level Census Bureau data for "poverty status in the last 12 months" (Table S1701) and "year structure built" (Table B25034). The original analysis used 2014 ACS data, but my analysis here uses the most recent ACS data, from 2019.
+The data here recreate the 2016 analysis from [Vox](https://github.com/voxmedia/data-projects/tree/master/vox-lead-exposure-risk),  modeled off of the [Washington State Department of Health](https://fortress.wa.gov/doh/wtn/WTNIBL/)'s analysis, to derive lead exposure risk scores. Scores are derived from tract-level Census Bureau data for "poverty status in the last 12 months" (Table S1701) and "year structure built" (Table B25034). The original analysis used 2014 ACS data, but my analysis here uses the most recent ACS data, from 2019.
 
 ## How the Data Were Constructed
-The final product in this dataset is a lead risk score ranging from 1-10, 1 indicating very little lead exposure risk and 10 indicating very high lead exposure risk. These lead risk scores take into account both the age of housing and poverty status, which have both been shown to influence the risk of [lead poisoning in children](https://s3.documentcloud.org/documents/2644455/Expert-Panel-Childhood-Lead-Screening-Guidelines.pdf). (There are other factors that influence lead exposure, but it is often hard to get good data on those things.)
+The key estimates in this dataset are a lead risk index and percentile score ranging from 1-10, with 1 indicating very little lead exposure risk (tract is in the bottom 10 percent for risk based on nation-wide ranking) and 10 indicating very high lead exposure risk (tract is in the top 10 percent for risk based on nation-wide ranking). These lead risk scores and ranks are based on the age of housing and poverty status, which have been shown to influence the risk of [lead poisoning in children](https://s3.documentcloud.org/documents/2644455/Expert-Panel-Childhood-Lead-Screening-Guidelines.pdf).[^1]
 
-First, I imported the poverty and housing data from the US Census Bureau for all 50 states. Then I removed all census tracts that had missing observations for either number of households or number of individuals for whom poverty status is determined.
+The lead exposure risk is estimated, first, as a function of the age of the housing stock times a nationally-derived estimate of the  proportion of housing from each era with lead risks (see [Jacobs et al (2002)](https://ehp.niehs.nih.gov/doi/pdf/10.1289/ehp.021100599)):
 
-Then I created five categories for housing risk:
+* $Houses_{pre-1940} \times 0.68$
+* $Houses_{1940-1959} \times 0.43$ 
+* $Houses_{1960-1979} \times 0.08$
+* $Houses_{1980-1999} \times 0.03$
+* $Houses_{post-2000} \times 0.00$
 
-* `age_39`, which is the number of households built before 1940, multiplied by 0.68
-* `age40_59`, which is the number of households built between 1940 and 1959, multiplied by 0.43
-* `age60_79`, which is the number of households built between 1960 and 1979, multiplied by 0.08
-* `age80_99`, which is the number of households built between 1980 and 1999, multiplied by 0.03
-* `age00_plus`, which is the number of households built in 2000 or later, multiplied by 0
+The resulting values are summed within census tracts and the sum is divided by the total number of households to generate housing risk. 
 
-The numbers that each category is multiplied by indicate the percentage of households in that age range that contain lead paint, as established by [Jacobs et al (2002)](https://ehp.niehs.nih.gov/doi/pdf/10.1289/ehp.021100599).
+Lead exposure risk is also higher in environments characterized by poverty. Poverty-induced risk is calculated  by the the number of people under 125% of the poverty line divided by the total number of people within a tract.
 
-I then calculated the overall housing risk for each census tract by adding together the five age categories and dividing that by the total number of households.
+The housing-induced risk and poverty-induced risk values are standardized to generate comparable scales and combined with additive weights to create the lead exposure risk score
 
-To calculate poverty risk, I divided the number of people under 125% of the poverty line by the total number of people.
-
-Then I standardized the housing and poverty risks by calculating z-scores for each. After standardizing them, I created a weighted lead risk, with housing weighted at 0.58, and poverty weighted at 0.42. Then I added the weighted lead risks to create a combined lead risk. Those combined risks were then split up into deciles to create the lead risk scores from 1-10.
-
-All of this was done at the national level first and then restricted to the Eastern Shore area, so all lead risk scores are relative to the rest of the country.
+$$lead\; exposure\; risk = housing\; risk \times 0.58 + poverty\; risk \times 0.42 $$
+The lead exposure risk score was ranked across all tracts in the US and each tract was assigned to a decline between 1 and 10. The data provided here is only for the Charlottesville area so that the risk rankings are relative to the nation as a whole.
 
 ## Variable Descriptions
 ```{r}
 glimpse(leadrisk)
 ```
 
-```{r}
-meta %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
-  select(label) %>% 
-  as.list()
-```
+Observations are census tract estimates of:
+
+* GEOID: 11-digit FIPS census tract code
+* NAME: Tract number, county, and state
+* countyfips: 3-digit county FIPS code
+* tractfips: 6-digit census tract FIPS code 
+* leadriskscore_raw: Raw lead risk score (housing_risk\*0.58 + poverty_risk\*0.42)
+* lead_risk_rank: Lead risk rank on a scale of 1-10, with 1=very low lead risk and 10=very high lead risk
+* housing_risk: Estimated percent of houses that contain lead paint
+* poverty_risk: Percentage of people at or below 125% of the poverty line
 
 
 ## Summaries
-```{r, message = F}
+```{r}
 leadrisk %>% select(-c(GEOID:NAME)) %>% 
   select(where(~is.numeric(.x) && !is.na(.x))) %>% 
   as.data.frame() %>% 
@@ -78,32 +83,29 @@ leadrisk %>% select(-c(GEOID:NAME)) %>%
 
 ## Visual Distributions
 
-```{r, message=F}
-leadrisk %>% 
-  ggplot() +
-  geom_histogram(aes(x=lead_risk_rank)) +
-  scale_x_continuous("Lead risk rank", breaks=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), labels=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
-```
-
 ```{r}
-leadrisk %>% 
-  ggplot() +
-  geom_point(aes(x=housing_risk, y=poverty_risk)) +
-  xlim(0, 100) +
-  ylim(0, 100)
+leadrisk %>% select(-c(NAME, countyfips, tractfips)) %>% 
+  pivot_longer(-GEOID, names_to = "measure", values_to = "value") %>% 
+  mutate(measure = factor(measure, levels = c("lead_risk_rank", "leadriskscore_raw", "housing_risk", "poverty_risk"))) %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free") +
+  xlab("Risk Scores") +
+  guides(fill = "none")
 ```
 
 
-## Spatial Distributions
+## Spatial Distributions{.tabset}
 ```{r, include = FALSE}
-eastern_shapes <- readRDS("~/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/eastshore_tracts.RDS")
-leadrisk <- merge(eastern_shapes, leadrisk, by = 'GEOID', all.x = TRUE)
+leadrisk <- left_join(eastern_shapes, leadrisk, by = 'GEOID')
+
 leadrisk <- st_transform(leadrisk, crs = 4326)
 ```
 
-### Lead Risk Rank
+### Lead Exposure Risk Rank
 ```{r}
 pal <- colorFactor("viridis", reverse = TRUE, domain = leadrisk$lead_risk_rank)
+
 leaflet(leadrisk) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = leadrisk,
@@ -119,10 +121,31 @@ leaflet(leadrisk) %>%
             title = "Lead Risk Rank", opacity = 0.7)
 ```
 
-### Housing Risk
+### Lead Exposure Risk Score
+
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$leadriskscore_raw)
+
+leaflet(leadrisk) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = leadrisk,
+              fillColor = ~pal(leadriskscore_raw),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(leadrisk$NAME.y, "<br>",
+                             "Raw Lead Risk Score: ", round(leadrisk$leadriskscore_raw, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = leadrisk$leadriskscore_raw,
+            title = "Raw Lead Risk Score", opacity = 0.7)
+```
+
+### Housing-induced Risk Score
 
 ```{r}
 pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$housing_risk)
+
 leaflet(leadrisk) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = leadrisk,
@@ -138,10 +161,11 @@ leaflet(leadrisk) %>%
             title = "Housing Risk", opacity = 0.7)
 ```
 
-### Poverty Risk
+### Poverty-induced Risk Score
 
 ```{r}
 pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$poverty_risk)
+
 leaflet(leadrisk) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = leadrisk,
@@ -157,21 +181,5 @@ leaflet(leadrisk) %>%
             title = "Poverty Risk", opacity = 0.7)
 ```
 
-### Raw Lead Risk Score
 
-```{r}
-pal <- colorNumeric("viridis", reverse = TRUE, domain = leadrisk$leadriskscore_raw)
-leaflet(leadrisk) %>% 
-  addProviderTiles("CartoDB.Positron") %>% 
-  addPolygons(data = leadrisk,
-              fillColor = ~pal(leadriskscore_raw),
-              weight = 1,
-              opacity = 1,
-              color = "white",
-              fillOpacity = 0.6,
-              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0(leadrisk$NAME.y, "<br>",
-                             "Raw Lead Risk Score: ", round(leadrisk$leadriskscore_raw, 2))) %>% 
-  addLegend("bottomright", pal = pal, values = leadrisk$leadriskscore_raw,
-            title = "Raw Lead Risk Score", opacity = 0.7)
-```
+{^1]: There are other factors that influence lead exposure, but it is often hard to get good data on those factors.

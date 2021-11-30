@@ -1,7 +1,22 @@
-# This recreates the Vox lead exposure data but with updated data from 2019 instead of the 2014 data that Vox used
+# Create Lead Exposure Risk Data using Vox method
+# Marisa Lemma
+# Last updated: 2021-11-18
+
+# Recreate the Vox lead exposure data with data from 2015-2019 ACS
+# based on a method developed by the Washington State Department of Health 
+# (Vox uses 2010-2014 data)
+# https://github.com/voxmedia/data-projects/tree/master/vox-lead-exposure-risk
 
 library(tidyverse)
 library(tidycensus)
+
+
+# Define area of interest
+# Cville area
+# localfips <- c("540", "003", "065", "079", "109", "125")
+# Eastern shore area
+localfips <- c("001", "131")
+
 
 # import data
 poverty <- get_acs(geography = "tract",
@@ -22,7 +37,9 @@ housing <- housing %>%
 poverty <- poverty %>% 
   filter(S1701_C01_001E!=0)
 
-# create age categories (these essentially represent number of houses in tract that are at lead risk)
+# create age categories 
+# these represent number of houses in tract that are at risk of containing lead
+# times a nationally-derived estimate of the  proportion of housing from each era with lead risks
 housing <- housing %>% 
   mutate(age_39 = B25034_011E * 0.68,
          age40_59 = (B25034_010E+B25034_009E)*0.43,
@@ -56,23 +73,22 @@ combined_risk <- combined_risk %>%
   mutate(z_housing_risk = (housing_risk - mean(housing_risk))/sd(housing_risk),
          z_poverty_risk = (poverty_risk - mean(poverty_risk))/sd(poverty_risk))
 
-# calculate weighted lead risk, with poverty weighted 0.42 and housing weighted 0.58
+# calculate weighted lead risk score and deciles
+# poverty weighted 0.42 and housing weighted 0.58, summed
 combined_risk <- combined_risk %>% 
   mutate(weighted_housing_risk = z_housing_risk*0.58,
-         weighted_poverty_risk = z_poverty_risk*0.42)
+         weighted_poverty_risk = z_poverty_risk*0.42,
+         leadriskscore_raw = weighted_housing_risk + weighted_poverty_risk,
+         lead_risk_rank = ntile(leadriskscore_raw, 10))
 
-# add together weighted lead risks
-combined_risk <- combined_risk %>% 
-  mutate(leadriskscore_raw = weighted_housing_risk + weighted_poverty_risk)
-
-# create deciles for lead risk score
-combined_risk <- combined_risk %>% 
-  mutate(lead_risk_rank = ntile(leadriskscore_raw, 10))
-
-# filter to just eastern shore region
-easternshore <- combined_risk %>% 
-  filter(GEOID%in%51001090100:51001990200 |
-           GEOID%in%51131930100:51131990100)
+# filter to Cville region
+eastern_area <- combined_risk %>% 
+  mutate(statefips = str_sub(GEOID, 1,2),
+         countyfips = str_sub(GEOID, 3,5),
+         tractfips = str_sub(GEOID, 6,11)) %>% 
+  filter(statefips == "51" & countyfips %in% localfips)  %>% 
+  select(GEOID, NAME, countyfips, tractfips, leadriskscore_raw, lead_risk_rank,
+         housing_risk, poverty_risk)
 
 # export to csv file
-write_csv(easternshore, "eastern_shore_collection/data//leadexposure_eastern_tract.csv")
+write.csv(eastern_area, "data//leadexposure_eastern_tract.csv", row.names = F)
