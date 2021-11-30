@@ -1,7 +1,7 @@
 ---
 title: "Charlottesville Regional Climate Justice Coalition Update"
 author: "Equity Center Data Team"
-date: "11/28/2021"
+date: "11/30/2021"
 output:
   html_document: 
     toc: true
@@ -47,7 +47,7 @@ table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7T
 ```
 
 ## Data Collection Process
-Throughout summer 2021, we've been creating and refining a replicable data collection process to build a data collection resource for use in our collective work and by anyone in the community. The process is intended to make our work transparent, to provide resources for other to use, and to be highly automated for easier updates.
+Throughout the summer and fall of 2021, we've been creating and refining a replicable data collection process to build a data collection resource for use in our collective work and by anyone in the community. The process is intended to make our work transparent, to provide resources for other to use, and to be highly automated for easier updates.
 
 <img src="images/Data Process.png" width="500">
 
@@ -57,10 +57,10 @@ Beginning with needs and requests for additional information and data from withi
 2. Create code to acquire the data from source, working to remove as many manual steps as possible; to process the data, filtering to our region, checking data quality, deriving additional measures from included variables, aggregating to administrative boundaries for integration with demographic and population data. Output includes replication code and a csv file of the resulting data.
 3. Create code to build a documentation file identifying the source of the data, providing variable definitions, and generating initial visualization of the key metrics. Output includes replication code and a web document providing more details about the data source.
 
-This fall, we will continue to add to the current data collections, clean up and refine our work to date, and begin (4) to integrate the data sources for further analysis and visualization
+This winter and spring, we will continue to add to the current data collections, clean up and refine our work to date, and begin (4) to integrate the data sources for further analysis and visualization
 
 ## Newly Available Data Collections
-To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (e.g., demographic, economic, health, and other social data) and [Shelter in Place](https://virginiaequitycenter.github.io/cvilleequity_covid/SIP/) measures (e.g., food, car, broadband access), the table below provides an overview of the new data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation). In the next stage, we'll begin to merge these measures with previously compiled data to visualize relationships between residents and resources.
+To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (e.g., demographic, economic, health, and other social data) and [Shelter in Place](https://virginiaequitycenter.github.io/cvilleequity_covid/SIP/) measures (e.g., food, car, broadband access), the table below provides an overview of the data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation). In the next stage, we'll begin to merge these measures with previously compiled data to visualize relationships between residents and resources.
 
 ```{r}
 img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
