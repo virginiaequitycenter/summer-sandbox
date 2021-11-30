@@ -1,0 +1,305 @@
+---
+title: "Charlottesville Region Broadband Availability"
+author: "Lee LeBoeuf, Michele Claibourn"
+date: "11/30/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
+                      'RColorBrewer', 'viridis', 'googlesheets4', 'stringr'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "fcc_broadband", gs4_deauth())
+
+# main data
+easttracts <- read.csv("../data/fcc_broadband_eastern_tract.csv")
+easttracts <- easttracts %>% 
+  mutate(tract = as.character(tract))
+
+
+eastblkgps <- read.csv("../data/fcc_broadband_eastern_blkgr.csv")
+eastblkgps <- eastblkgps %>% 
+  mutate(Blkgr = as.character(Blkgr))
+
+eastblocks <- read.csv("../data/fcc_broadband_eastern_block.csv")
+eastblocks <- eastblocks %>% 
+  mutate(BlockCode = as.character(BlockCode))
+
+# spatial data
+shape_tracts <- readRDS('../data/eastshore_tracts.RDS')
+shape_tracts <- st_transform(shape_tracts, crs = 4326) # to WGS84, given error
+
+shape_blkgps <- readRDS('../data/eastshore_blkgps.RDS')
+shape_blkgps <- st_transform(shape_blkgps, crs = 4326) # to WGS84, given error
+
+shape_blocks <- readRDS('../data/eastshore_blocks.RDS')
+shape_blocks <- st_transform(shape_blocks, crs = 4326) # to WGS84, given error
+```
+
+## Data Source
+* These data come from the FCC's Form 477 Fixed Broadband Deployment Data. 
+* FCC data is released biannually on a year and half delay from when it was collected. New data can be downloaded from this [link](https://www.fcc.gov/general/broadband-deployment-data-fcc-form-477). 
+* Data presented here are from June of 2020. 
+
+## Data specifics 
+* All internet providers must submit form 477 to the FCC biannually detailing the Maximum download and upload speeds (Mbps) they advertise to consumers along with other information about the company. 
+* The FCC makes these data publicly available on a year and a half delay from when all 477 forms are submitted. 
+    + Limitations: (1) The data are available at the census block level, but are likely to overstate coverage; if an internet provider provides internet to a single person in a census block, the entire census block is marked as having coverage by that provider. 
+    + Strengths: (1) These are the same data used by the government to make policy decisions regarding broadband access. (2) The [Broadband Deployment Accuracy and Technological Availability (DATA) Act](https://www.commerce.senate.gov/2020/3/bill-to-improve-broadband-data-maps-signed-into-law) of March 2020 is intended to reduce the limitation listed above. 
+* The FCC has established benchmarks for "advanced telecommunications capability", services that enables "users to originate and receive high-quality voice, data, graphics, and video telecommunications." The current benchmarks are set at speeds of 25 (download) and 3 (upload) Mbps ([2020 Broadband Deployment Report](https://docs.fcc.gov/public/attachments/FCC-20-50A1.pdf)).
+    
+## Variable descriptions
+
+Variables include: 
+
+```{r}
+# meta %>% 
+#   filter(su_blkgp == 1) %>%
+#   select(varname, about) %>% as.list()
+
+glimpse(eastblkgps)
+```
+
+* BlockCode: geographic identifer for spatial area (tracts, block groups, and blocks)
+* Blkgr: geographic identifer for spatial area (tracts, block groups, and blocks)
+* tract: geographic identifer for spatial area (tracts, block groups, and blocks)
+
+* resproviders: The number of residential internet providers in the block/block group/tract
+* bb253_num: The number of residential broadband providers providing service that meets the FCC benchmark for "advanced telecommunications capability", 25/3 Mbps 
+* bb253_per: The percent of residential broadband providers providing service that meets the FCC benchmark for "advanced telecommunications capability", 25/3 Mbps 
+* bbmin_dl: The minimum advertised download speed provider in the block/block group/tract
+* bbmax_dl: The maximum advertised download speed provider in the block/block group/tract
+* bbmin_up: The minimum advertised upload speed provider in the block/block group/tract
+* bbmax_up: The maximum advertised upload speed provider in the block/block group/tract
+* avgMaxAdDown:The average maximum advertised download speed by each broadband provider in the block/block group/tract
+* avgMaxAdUp: The average maximum advertised upload speed by each broadband provider in the block/block group/tract
+
+5-number summaries of variables by block groups:
+
+```{r}
+eastblkgps %>% select(-c(Blkgr, tract)) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual distribution {.tabset}
+
+### Tracts
+```{r}
+easttracts %>% 
+  pivot_longer(-tract, names_to = "measure", values_to = "value") %>%
+  mutate(measure = factor(measure, levels = c("resproviders", "bb253_num", "bb253_per",
+                                              "avgMaxAdDown", "avgMaxAdUp",
+                                              "bbmax_dl", "bbmax_up", "bbmin_dl", "bbmin_up"))) %>% 
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = "none") +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+### Block groups
+```{r}
+eastblkgps %>% select(-tract) %>% 
+  pivot_longer(-Blkgr, names_to = "measure", values_to = "value") %>%
+  mutate(measure = factor(measure, levels = c("resproviders", "bb253_num", "bb253_per",
+                                              "avgMaxAdDown", "avgMaxAdUp",
+                                              "bbmax_dl", "bbmax_up", "bbmin_dl", "bbmin_up"))) %>% 
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = "none") +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+### Blocks
+```{r}
+eastblocks %>% select(-tract, Blkgr) %>% 
+  pivot_longer(-BlockCode, names_to = "measure", values_to = "value") %>%
+  mutate(measure = factor(measure, levels = c("resproviders", "bb253_num", "bb253_per",
+                                              "avgMaxAdDown", "avgMaxAdUp",
+                                              "bbmax_dl", "bbmax_up", "bbmin_dl", "bbmin_up"))) %>% 
+  ggplot(aes(x = value, fill = measure)) +
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = "none") +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+
+## Mapping the data
+```{r, echo = FALSE}
+maptracts <- shape_tracts %>% 
+  left_join(easttracts, by = c("GEOID" = "tract"))
+
+mapblkgps <- shape_blkgps %>% 
+  left_join(eastblkgps, by = c("GEOID" = "Blkgr"))
+```
+  
+### Number of residential broadband providers{.tabset} 
+
+#### Tracts
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = maptracts$resproviders)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = maptracts,
+              fillColor = ~pal(resproviders),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", maptracts$GEOID, "<br>",
+                             "Number of residential providers: ", maptracts$resproviders)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = maptracts$resproviders, 
+            title = "Number of residential <br> providers", opacity = 0.7)
+```
+
+#### Block groups
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapblkgps$resproviders)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapblkgps,
+              fillColor = ~pal(resproviders),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapblkgps$GEOID, "<br>",
+                             "Number of residential providers: ", mapblkgps$resproviders)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapblkgps$resproviders, 
+            title = "Number of residential <br> providers", opacity = 0.7)
+```
+
+#### Blocks
+
+Block level maps are slow to render and may be added later.
+
+### Average maximum advertised download speeds {.tabset}
+
+#### Tracts
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = maptracts$avgMaxAdDown) 
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = maptracts,
+              fillColor = ~pal(avgMaxAdDown),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", maptracts$GEOID, "<br>",
+                             "Average max advertised <br> download speeds: ", round(maptracts$avgMaxAdDown, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = maptracts$avgMaxAdDown, 
+            title = "Average maximum <br>advertised  <br>download speeds", opacity = 0.7)
+```
+
+#### Block groups
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapblkgps$avgMaxAdDown) 
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapblkgps,
+              fillColor = ~pal(avgMaxAdDown),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapblkgps$GEOID, "<br>",
+                             "Average max advertised <br> download speeds: ", round(mapblkgps$avgMaxAdDown, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapblkgps$avgMaxAdDown, 
+            title = "Average maximum <br>advertised  <br>download speeds", opacity = 0.7)
+```
+
+#### Blocks
+
+Block level maps are slow to render and may be added later.
+
+### Maximum available advertised download speeds {.tabset}
+
+#### Tracts
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = maptracts$bbmax_dl)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = maptracts,
+              fillColor = ~pal(bbmax_dl),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", maptracts$GEOID, "<br>",
+                             "Max available <br> advertised download speeds: ", round(maptracts$bbmax_dl, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = maptracts$bbmax_dl, 
+            title = "Max available <br>advertised <br> download speeds", opacity = 0.7)
+```
+
+#### Block groups
+```{r }
+pal <- colorNumeric("plasma", reverse = TRUE, domain = mapblkgps$bbmax_dl)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapblkgps,
+              fillColor = ~pal(bbmax_dl),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapblkgps$GEOID, "<br>",
+                             "Max available <br> advertised download speeds: ", round(mapblkgps$bbmax_dl, 2))
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = mapblkgps$bbmax_dl, 
+            title = "Max available <br>advertised <br> download speeds", opacity = 0.7)
+```
+
+#### Blocks
+
+Block level maps are slow to render and may be added later.

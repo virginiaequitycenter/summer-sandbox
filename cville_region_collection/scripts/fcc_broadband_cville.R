@@ -134,7 +134,6 @@ cvldattr_b <- cvldat %>%
             bb253_num = sum(bb253)) %>% 
   mutate(bb253_per = round((bb253_num/resproviders)*100, 1))
 
-
 cvldattr_a <- cvldat %>% 
   group_by(tract) %>%
   summarize(resproviders = length(unique(ProviderName[which(Consumer == 1)])),

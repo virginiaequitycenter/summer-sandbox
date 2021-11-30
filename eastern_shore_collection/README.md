@@ -24,7 +24,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 * [NLCD - Land Cover, Tree Canopy, Impervious Surfaces](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_cville.html)
 * [Food Retailer Locations](https://virginiaequitycenter.github.io/summer-sandbox/food_retail_cville.html)
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_eastern.html)
-* [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_cville.html)
+* [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern.html)
 * LEHD Origin-Destination Employment Statistics (LODES)
     - Block level, [Block Group level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cville_blkgr.html), [Tract level](https://virginiaequitycenter.github.io/summer-sandbox/lodes_cvl_tract.html)
 * [Home Mortgage Disclosure Act Data](https://virginiaequitycenter.github.io/summer-sandbox/hmda_cville_tract.html)
