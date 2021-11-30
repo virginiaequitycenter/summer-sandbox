@@ -42,7 +42,7 @@ nelson <- fromJSON("https://chronicdata.cdc.gov/resource/cwsq-ngmh.json?countyfi
 
 cvldat <- bind_rows(cvillecity, albemarle, fluvanna, greene, louisa, nelson)
 
-# Droppping unecessary columns
+# Dropping unecessary columns
 
 cvldat$geolocation <- NULL
 

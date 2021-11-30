@@ -1,12 +1,14 @@
+# Get CDC Places 2020 Data
 # Author: Lee LeBoeuf
 # Last updated: 10/07/2021
 
-# This script uses the CDC Places APA to download health problem and prevention prevalence data for the greater Eastern Shore
-# Data are available at the tract level for the years 2017 and 2018. There are a number of health-related measures included, 
-# and each measures has a % prevalence estimation associated with it. For example, "Current asthma among adults aged >=18 years". Each measure
-# has 3 values: data_value (the prevalence estimate as a percent), low_confidence_limit and high_confidence_limit (the upper
-# and lower limits of the percent estimate). The percent estimates come from a multilevel statistical modeling framework used 
-# by the CDC (more information can be found here: https://www.cdc.gov/places/about/index.html). In the cleaning process, I just
+# This script uses the CDC Places APA to download health problem and prevention prevalence data for the greater Charlottesville area
+# Data are available at the tract level. The 2020 release uses 2018 BRFSS data for most (23) measures and 2017 BRFSS data for 4 measures 
+# (high blood pressure, taking high blood pressure medication, high cholesterol, and cholesterol screening); 
+# each measure has a % prevalence estimation associated with it. For example, "Current asthma among adults aged >=18 years". 
+# Each measure has 3 values: data_value (the prevalence estimate as a percent), low_confidence_limit and high_confidence_limit 
+# (the upper and lower limits of the percent estimate). The percent estimates come from a multilevel statistical modeling framework 
+# used  by the CDC (more information can be found here: https://www.cdc.gov/places/about/index.html). In the cleaning process, I 
 # select the actaul estimate and exclude the lower and higher limits. 
 
 invisible(lapply(list('tidyverse','jsonlite', 'stringr'),
@@ -17,16 +19,16 @@ source(paste0("https://raw.githubusercontent.com/jacob-gg/manager/main/R/loch_mi
 # The Eastern Shore: Accomack (51001) and Northampton (51131)
 
 # Downloading data ----------------------------------------------------------------------------------------------------------------
-# For some weird reason, when downloadind data for the entire state of VA at once, you end up with fewer observations for 
-# each county than if you download data for each county at a time. (Or at least that's how it worked for the Charlottesville region). 
-# So, below I download data for each county individually and then combine it into one data frame. 
+# The socrata API defaults to a limit of 1000 rows per page; it doesn't look like this can be changed in the call
+# e.g., adding '$limit=10000' to the query returns null
+# https://support.socrata.com/hc/en-us/articles/202949268-How-to-query-more-than-1000-rows-of-a-dataset
 
 accomack <- fromJSON("https://chronicdata.cdc.gov/resource/cwsq-ngmh.json?countyfips=51001")
 northampton <- fromJSON("https://chronicdata.cdc.gov/resource/cwsq-ngmh.json?countyfips=51131")
 
 eastdat <- bind_rows(accomack, northampton)
 
-# Droppping unecessary columns
+# Dropping unecessary columns
 
 eastdat$geolocation <- NULL
 
@@ -70,4 +72,4 @@ eastdatwidef <- eastdatwide %>%
 
 
 ## Writing out tract level summaries 
-write.csv(eastdatwidef, "cdcplaces_eastern_tract.csv", row.names = F)
+write.csv(eastdatwidef, "data/cdcplaces_eastern_tract.csv", row.names = F)

@@ -3,18 +3,27 @@ title: "Eastern Shore CDC Places"
 author: "Lee LeBoeuf"
 date: "10/7/2021"
 output: 
-  html_document:
-    toc: yes
+  html_document: 
+    toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'leaflet', 'rcartocolor', 'sf',
                       'RColorBrewer', 'viridis', 'rgdal', 'googlesheets4','stringr'),
                  function(pkg) library(pkg, character.only = TRUE)))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "cdc_places", gs4_deauth())
-eastdat <- read.csv("cdcplaces_eastern_tract.csv")
+
+# Main data
+eastdat <- read.csv("../data/cdcplaces_eastern_tract.csv")
+
+# Spatial data
+shape <- readRDS('../data/eastshore_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # for leaflet
 ```
 
 ## Data Source
@@ -22,6 +31,7 @@ eastdat <- read.csv("cdcplaces_eastern_tract.csv")
 * These data come from the Center for Disease Control and Prevention (CDC) PLACES: Local Data for Better Health.
 * More information about the CDC PLACES data can be found [here](https://www.cdc.gov/places/index.html). 
 * Data shown here were downloaded using the CDC PLACES API in October of 2021. Documentation for the API can be found [here](https://dev.socrata.com/foundry/chronicdata.cdc.gov/cwsq-ngmh) and documentation for the data can be found [here](https://chronicdata.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-Census-Tract-D/cwsq-ngmh). 
+* The CDC has not released an update schedule for CDC PLACES data.
 
 ## The Data Used Here
 
@@ -37,30 +47,31 @@ eastdat <- read.csv("cdcplaces_eastern_tract.csv")
 ## Variable descriptions
 These summaries are based on data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
-meta %>% 
-  filter(su_tract == 1) %>%
-  select(varname, about) %>% as.list()
+# meta %>% 
+#   filter(su_tract == 1) %>%
+#   select(varname, about) %>% as.list()
+
 glimpse(eastdat)
-eastdat %>% select(Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
-Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
-Annual_Checkup2018) %>% 
+
+eastdat %>% select(-c(locationname, countyname, totalpopulation)) %>%
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
 ## Visual distribution 
 These distributions show data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
-longdat <- eastdat %>% select(c(locationname, Coronary_Heart_Disease2018, Binge_Drinking2018, Mental_Health2018, High_Blood_Pressure2017, Physical_Inactivity2018, Diabetes2018, Current_Smoking2018,
-Cancer_except_skin2018, Current_Asthma2018, Dental_Visit2018, High_Cholesterol2017, COPD2018, Obesity2018, Physical_Health2018, Health_Insurance2018, less_than_sevenhr_sleep2018,
-Annual_Checkup2018)) %>% pivot_longer(-locationname, names_to = "measure", values_to = "value") 
+longdat <- eastdat %>% select(-c(countyname, totalpopulation)) %>% 
+  pivot_longer(-locationname, names_to = "measure", values_to = "value") 
+
 longdat$measure <- factor(longdat$measure,
                          levels = c("Coronary_Heart_Disease2018", "Binge_Drinking2018", "Mental_Health2018", "High_Blood_Pressure2017", "Physical_Inactivity2018", "Diabetes2018", "Current_Smoking2018", "Cancer_except_skin2018", "Current_Asthma2018", "Dental_Visit2018", "High_Cholesterol2017", "COPD2018", "Obesity2018", "Physical_Health2018", "Health_Insurance2018", "less_than_sevenhr_sleep2018", "Annual_Checkup2018"))
+
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
-  scale_fill_viridis(option = "Blues", discrete = TRUE, guide = FALSE) +
+  scale_fill_viridis(option = "viridis", discrete = TRUE, guide = "none") +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free", ncol = 4)
 ```
@@ -75,14 +86,15 @@ meta %>%
 
 ## Health outcomes {.tabset}
 ```{r, echo = FALSE}
-shape <- readRDS('eastshore_tracts.RDS')
-shape <- st_transform(shape, crs = 4326) # to WGS84, given error
 eastdat <- eastdat %>%
-  rename(GEOID = locationname)
-mapdat <- merge(shape, eastdat, by = 'GEOID', all.x = T)
+  rename(GEOID = locationname) %>% 
+   mutate(GEOID = as.character(GEOID))
+
+mapdat <- shape %>% 
+  left_join(eastdat, by = "GEOID")
 ```
 
-### Asthma {.tabset}
+### Asthma 
 * Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have asthma __and__ that they still have asthma.
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Asthma2018)
@@ -204,7 +216,7 @@ leaflet() %>%
 
 ## Health access {.tabset}
 
-### Lack of health insurance {.tabset}
+### Lack of health insurance 
 * Adjusted percent of respondents aged 18-64 who reported have no current health insurance. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Health_Insurance2018)
@@ -278,7 +290,7 @@ leaflet() %>%
 
 ## Health behaviors {.tabset}
 
-### Curent smoking in 2018 {.tabset}
+### Curent smoking in 2018 
 * Adjusted percent of survey respondents aged >= 18 who reported having smoked >= 100 cigarettes in their lifetime and currently smoke every day or some days. This indicator is not a measure of intent or attempts to quit smoking or exposure to secondhand smoke among non-smokers. 
 ```{r}
 pal <- colorNumeric("Blues", domain = mapdat$Current_Smoking2018)

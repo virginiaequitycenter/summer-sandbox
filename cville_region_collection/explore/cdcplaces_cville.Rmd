@@ -11,6 +11,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'leaflet', 'rcartocolor', 'sf',
                       'RColorBrewer', 'viridis', 'rgdal', 'googlesheets4','stringr'),
                  function(pkg) library(pkg, character.only = TRUE)))
@@ -54,7 +55,7 @@ glimpse(cvldat)
 cvldat %>% select(-c(locationname, countyname, totalpopulation)) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
@@ -74,7 +75,7 @@ longdat$measure <- factor(longdat$measure,
 
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
-  scale_fill_viridis(option = "Blues", discrete = TRUE, guide = FALSE) +
+  scale_fill_viridis(option = "viridis", discrete = TRUE, guide = "none") +
   geom_histogram() + 
   facet_wrap(~measure, scales = "free", ncol = 4)
 ```
