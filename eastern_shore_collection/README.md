@@ -21,7 +21,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 
 
 ### Community Assets and Infrastructure
-* [NLCD - Land Cover, Tree Canopy, Impervious Surfaces](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_cville.html)
+* [NLCD - Land Cover, Tree Canopy, Impervious Surfaces](https://virginiaequitycenter.github.io/summer-sandbox/nlcd_eastern.html)
 * [Food Retailer Locations](https://virginiaequitycenter.github.io/summer-sandbox/food_retail_cville.html)
 * [Low-Income Energy Affordability Data](https://virginiaequitycenter.github.io/summer-sandbox/lead_eastern.html)
 * [FCC Broadband Availability](https://virginiaequitycenter.github.io/summer-sandbox/fcc_eastern.html)
