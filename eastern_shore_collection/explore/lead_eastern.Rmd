@@ -2,30 +2,31 @@
 title: "Low-Income Energy Affordability Data"
 subtitle: "Data for Eastern Shore Region"
 author: "Marisa Lemma"
-date: "7/21/2021"
+date: "11/30/2021"
 output: 
   html_document: 
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Load libraries and data
 library(tidyverse)
-library(mosaic)
 library(stargazer)
-library(viridis)
 library(leaflet)
-library(rgdal)
 library(sf)
 library(googlesheets4)
 
-lead <- read_csv("~/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data/lead_easternshore_tract.csv")
+# Primary data
+lead <- read_csv("../data/lead_eastern_tract.csv")
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=1573436636", sheet="lead", gs4_deauth())
 
+# Spatial data
+eastshore_tracts <- readRDS("../data/eastshore_tracts.RDS")
 ```
 
 ## Data Source
@@ -33,7 +34,8 @@ meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deac
 Source: Low-Income Energy Affordability Data, 2018 Update
 
 * Download URL: https://data.openei.org/submissions/573 
-* About: https://lead.openei.org/assets/files/LEAD-Tool-Methodology.pdf
+* About: https://lead.openei.org/assets/docs/LEAD-Tool-Methodology.pdf
+* Data is from 2018 update. There is no set update schedule. 
 
 ### About the Data
 
@@ -51,57 +53,31 @@ meta %>%
   as.list()
 ```
 
+
 ## Summaries
 
 Summary of all non-missing variables:
 
 ```{r, message = F}
-lead %>% select(-c(FIP:tract)) %>% 
+lead %>% select(-c(FIP:county)) %>% 
   select(where(~is.numeric(.x) && !is.na(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 0,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
-## Visual Distributions
+## Visual Distributions {.tabset}
 Visual distributions of the data, shown with histograms and scatterplots
 
 ### Trends in Energy Burden
 
 ```{r, message = F}
-lead %>% select(FIP, averageburden) %>% 
-  pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
-  ggplot(aes(x = value, fill = measure)) + 
-  geom_histogram() + 
-  xlab("Average household energy burden")
-```
-
-```{r, message = F}
 lead %>% select(FIP, percentburdened) %>% 
   pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
-  geom_histogram(binwidth = 2) + 
-  xlab("Percent of households that are burdened")
-```
-
-```{r}
-lead %>%
-  ggplot() +
-  geom_point(aes(x=extremelyhighburden, y=percentburdened)) + 
-  xlab("Number of households with extremely high burden") +
-  ylab("Percent of households that are burdened") +
-  ggtitle("Extremely high energy burden vs. percent burdened") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-lead %>%
-  ggplot() +
-  geom_point(aes(x=lowburden, y=percentburdened)) +
-  xlab("Number of households with low burden") +
-  ylab("Percent of households that are burdened") +
-  ggtitle("Low energy burden vs. percent burdened") +
-  theme(plot.title = element_text(hjust = 0.5))
+  geom_histogram(binwidth=2) +
+  xlab("Percent of households that are burdened across tracts") +
+  guides(fill = "none")
 ```
 
 
@@ -113,7 +89,7 @@ lead %>% select(FIP, percent_0_30:percent_over_100) %>%
   ggplot(aes(x = value, fill = measure)) + 
   geom_histogram() + 
   facet_wrap(~measure, scales = "free") +
-  xlab("Percent of households burdened") +
+  xlab("Percent of households burdened across tracts") +
   scale_fill_discrete(labels = c("0-30% AMI", "30-60% AMI", "60-80% AMI", "80-100% AMI", "100%+ AMI"))
 ```
 
@@ -123,33 +99,34 @@ lead %>% select(FIP, percent_0_30:percent_over_100) %>%
 lead %>% select(FIP, percent_burdened_owners, percent_burdened_renters) %>% 
   pivot_longer(-FIP, names_to = "measure", values_to = "value") %>% 
   ggplot(aes(x = value, fill = measure)) + 
-  geom_histogram(binwidth = 4) + 
-  facet_wrap(~measure, scales = "free") +
-  xlab("Percent of households burdened") +
+  geom_histogram(binwidth = 5) + 
+  facet_wrap(~measure) +
+  xlab("Percent of households burdened across tracts") +
   scale_fill_discrete(labels = c("Owners", "Renters"))
 ```
 
-## Spatial Distributions
+## Spatial Distributions 
 
+### Key Outcomes {.tabset}
 Maps to show the distribution of variables across spatial units
 
 ```{r, include = F}
-# Open shapefile
-eastshore_tracts <- readRDS("../data/eastshore_tracts.RDS")
+# Join to shapefile
+lead <- lead %>% dplyr::rename(GEOID = FIP) %>% 
+  mutate(GEOID = as.character(GEOID))
 
-lead <- lead %>% dplyr::rename(GEOID = FIP)
-
-easternshapes <- merge(eastshore_tracts, lead, by = 'GEOID', all.x = T)
+easternshapes <- eastshore_tracts %>% 
+  left_join(lead, by = "GEOID")
 
 easternshapes <- st_transform(easternshapes, crs = 4326) # to WGS84, given error
-
 ```
 
 
-### Average Energy Burden
+#### Average Energy Burden
 
 ```{r}
 pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$averageburden)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -167,10 +144,11 @@ leaflet(easternshapes) %>%
 ```
 
 
-### Average Yearly Household Energy Expenditures
+#### Average Yearly Household Energy Expenditures
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$avg_hh_exp)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$avg_hh_exp)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -187,10 +165,11 @@ leaflet(easternshapes) %>%
 ```
 
 
-### Number of Energy Burdened Households
+#### Number of Energy Burdened Households
 
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$numberburdened)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$numberburdened)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -213,6 +192,7 @@ leaflet(easternshapes) %>%
 
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percentburdened)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -228,9 +208,11 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 #### 0-30% AMI
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_0_30)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -246,9 +228,11 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 #### 30-60% AMI
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_30_60)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -264,9 +248,11 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 #### 60-80% AMI
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_60_80)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -282,9 +268,11 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 #### 80-100% AMI
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_80_100)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -300,9 +288,11 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 #### 100%+ AMI
 ```{r}
 pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_over_100)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -318,11 +308,13 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Households", opacity = 0.7)
 ```
 
+
 ### Percent of Energy Burdened Renters/Owners{.tabset}
 
 #### Renters
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$percent_burdened_renters)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_burdened_renters)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -341,7 +333,8 @@ leaflet(easternshapes) %>%
 
 #### Owners
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = easternshapes$percent_burdened_owners)
+pal <- colorNumeric("Blues", reverse = FALSE, domain = easternshapes$percent_burdened_owners)
+
 leaflet(easternshapes) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = easternshapes,
@@ -357,5 +350,3 @@ leaflet(easternshapes) %>%
             title = "Percent of Energy Burdened Owned Households", opacity = 0.7)
 ```
 
-## Important Notes
-Census tracts 9801, 9802, 9901, and 9902 (all from Accomack County) do not appear in this data set. 9901 and 9902 contain only water. 9801 and 9802 contain land, but have a population of 0.

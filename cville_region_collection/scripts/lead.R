@@ -8,12 +8,12 @@ library(tidyverse)
 
 
 # Import data from source ----
-if (!dir.exists("dataraw")) {dir.create("dataraw")}
-
-url <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
-download.file(url = url,
-              destfile = paste(getwd(), "/dataraw/", "va2018lead.zip", sep = ""))
-unzip("dataraw/va2018lead.zip", exdir = paste(getwd(), "/dataraw/va2018lead/", sep = ""))
+# if (!dir.exists("dataraw")) {dir.create("dataraw")}
+# 
+# url <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
+# download.file(url = url,
+#               destfile = paste(getwd(), "/dataraw/", "va2018lead.zip", sep = ""))
+# unzip("dataraw/va2018lead.zip", exdir = paste(getwd(), "/dataraw/va2018lead/", sep = ""))
 
 
 # Read in data ----

@@ -1,32 +1,52 @@
-# Low-Income Energy Affordability 2018/Energy Burden
-# 6/25/21
-# Marisa Lemma
+# Get Low-Income Energy Affordability 2018/Energy Burden
+# Marisa Lemma, Michele Claibourn
+# Created: 2021-06-25
+# Last updated: 2021-11-30
+
 
 library(tidyverse)
-# Calling in data from source
-leadurl <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
-download.file(url = leadurl,
-              destfile = paste(getwd(), "/", "va2018lead.zip", sep = ""))
-unzip("va2018lead.zip", exdir = paste(getwd(), "/data/", sep = ""))
-
-ami_census_tracts <- read_csv("data/VA AMI Census Tracts 2018.csv")
 
 
+# Import data from source ----
+# if (!dir.exists("dataraw")) {dir.create("dataraw")}
+# 
+# url <- "https://data.openei.org/files/573/VA-2018-LEAD-data.zip"
+# download.file(url = url,
+#               destfile = paste(getwd(), "/dataraw/", "va2018lead.zip", sep = ""))
+# unzip("dataraw/va2018lead.zip", exdir = paste(getwd(), "/dataraw/va2018lead/", sep = ""))
+
+
+# Read in data ----
+ami_census_tracts <- read_csv("dataraw/va2018lead/VA AMI Census Tracts 2018.csv")
+
+
+# Define area of interest ----
+# Cville area
+# localfips <- c("540", "003", "065", "079", "109", "125")
+# Eastern shore area
+localfips <- c("001", "131")
+
+
+# Data preparation ----
 # Filter by area
-eastern_shore = filter(ami_census_tracts, (FIP%in%51001090100:51001990200 | 
-                                             FIP%in%51131930100:51131990100) & HINCP!="NA")
+cville_ami_tracts <- ami_census_tracts %>% 
+  mutate(state = str_sub(FIP, 1, 2),
+         county = str_sub(FIP, 3,5),
+         tract = str_sub(FIP, 6, 11)) %>% 
+  filter(state == "51" & county %in% localfips) %>% 
+  filter(HINCP != "NA")
 
-# Calculate average energy burden for each census tract
-energy_burden <- eastern_shore %>% 
-  group_by(FIP) %>% 
-  summarize(totalinc = sum(HINCP*UNITS, na.rm = TRUE),
+# # Calculate average energy burden for each census tract
+energy_burden <- cville_ami_tracts %>%
+  group_by(FIP) %>%
+  summarize(totalinc = sum(HINCP*UNITS),
             totalelep = sum(ELEP*UNITS, na.rm = TRUE),
             totalgas = sum(GASP*UNITS, na.rm = TRUE),
-            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>% 
+            totalother = sum(FULP*UNITS, na.rm = TRUE)) %>%
   mutate(averageburden = ((totalelep+totalgas+totalother)/totalinc)*100)
 
 # Calculate number of energy burdened households in each census tract
-hh_energy_burden <- eastern_shore %>%
+hh_energy_burden <- cville_ami_tracts %>%
   group_by(FIP) %>% 
   mutate(hh_energy_exp = ELEP+GASP+FULP) %>% 
   mutate(hh_burden = (hh_energy_exp/HINCP)*100)
@@ -69,6 +89,7 @@ burden_by_ami <- hh_energy_burden %>%
          burdened_60_80 = ifelse(AMI68=="60-80%", (high+veryhigh+extremelyhigh), no=0),
          burdened_80_100 = ifelse(AMI68=="80-100%", (high+veryhigh+extremelyhigh), no=0),
          burdened_over_100 = ifelse(AMI68=="100%+", (high+veryhigh+extremelyhigh), no=0),) 
+
 burden_by_ami <- burden_by_ami %>%  
   summarize(total_0_30 = sum(total_0_30, na.rm = TRUE),
             total_30_60 = sum(total_30_60, na.rm = TRUE),
@@ -98,6 +119,7 @@ burden_by_ten <- hh_energy_burden %>%
          total_renters = ifelse(TEN=="RENTER", (UNITS), no=0),
          burdened_owners = ifelse(TEN=="OWNER", (high+veryhigh+extremelyhigh), no=0),
          burdened_renters = ifelse(TEN=="RENTER", (high+veryhigh+extremelyhigh), no=0))
+
 burden_by_ten <- burden_by_ten %>% 
   summarize(total_owners = sum(total_owners, na.rm = TRUE),
             total_renters = sum(total_renters, na.rm = TRUE),
@@ -125,36 +147,27 @@ burden <- burden %>%
 burden <- burden %>% 
   mutate(percentburdened = (numberburdened/totalunits)*100)
 
-# Add column for county name
+# Add column for county fips and name
 burden <- burden %>% 
-  mutate(county = ifelse(FIP%in%51001090100:51001990200, "Accomack", no="Northampton"))
-
-# Create new variable, `tract`, that is labeled with tract numbers
-burden <- burden %>% 
-  mutate(tract = ifelse(FIP==51001090100, 901,
-                  ifelse(FIP==51001090200, 902,
-                  ifelse(FIP==51001090300, 903,
-                  ifelse(FIP==51001090400, 904,
-                  ifelse(FIP==51001090500, 905,
-                  ifelse(FIP==51001090600, 906,
-                  ifelse(FIP==51001090700, 907,
-                  ifelse(FIP==51001090800, 908,
-                  ifelse(FIP==51001980100, 9801,
-                  ifelse(FIP==51001980200, 9802,
-                  ifelse(FIP==51001990100, 9901,
-                  ifelse(FIP==51001990200, 9902,
-                  ifelse(FIP==51131930100, 9301,
-                  ifelse(FIP==51131930200, 9302,
-                  ifelse(FIP==51131930300, 9303,
-                  no=9901))))))))))))))))
-# Note: Census tracts 9801, 9802, 9901, and 9902 (from Accomack County) are not in this dataset
+  mutate(state_fip = str_sub(FIP, 1, 2),
+         county_fip = str_sub(FIP, 3,5),
+         tract_fip = str_sub(FIP, 6, 11)) %>% 
+  mutate(county = case_when(
+    county_fip == "001" ~ "Accomack",
+    county_fip == "131" ~ "Northampton"
+  ))
 
 # Change the order of the columns so that they make more sense
 burden <- burden %>%
-  select(FIP, county, tract, totalinc, totalelep, totalgas, totalother,
+  select(FIP, state_fip, county_fip, tract_fip, county, totalinc, totalelep, totalgas, totalother,
          averageburden, avg_hh_exp, lowburden, highburden, veryhighburden,
          extremelyhighburden, totalunits, numberburdened,
          percentburdened, everything())
 
-# Export to CSV
-write.csv(burden, "/Users/marisalemma/Desktop/Equity Center/summer-sandbox/eastern_shore_collection/data//lead_easternshore_tract.csv", row.names = F)
+
+# Save data ----
+# Cville area
+# write_csv(burden, "data/lead_cville_tract.csv")
+# Eastern shore area
+write_csv(burden, "data/lead_eastern_tract.csv")
+
