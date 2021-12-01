@@ -1,0 +1,233 @@
+---
+title: "FEMA NFIP Claims: Charlottesville"
+author: "Jordan House"
+date: "11/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(googlesheets4)
+library(viridis)
+library(leaflet)
+library(stargazer)
+library(sf)
+```
+
+## Data Source
+
+Source: FEMA, NFIP Redacted Claims, last updated July 2020
+
+* Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims)
+* Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv](https://www.fema.gov/api/open/v1/FimaNfipClaims.csv)
+
+```{r}
+cville_individual_FEMA <- read.csv("../data/fema_nfipclaims_ind.csv")
+```
+
+
+## Exploration
+```{r}
+glimpse(cville_individual_FEMA)
+```
+
+
+
+## Aggregate Data
+```{r}
+# Aggregate Data
+cvilleIndividualByTract <- cville_individual_FEMA %>%
+  group_by(censusTract) %>%
+  filter(!is.na(censusTract)) %>%
+  summarize(n = n(),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+cvilleIndividualByYear <- cville_individual_FEMA %>%
+  group_by(yearOfLoss) %>%
+  filter(!is.na(yearOfLoss)) %>%
+  summarize(n = n(),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+cvilleIndividualByOccupancyType <- cville_individual_FEMA %>%
+  group_by(occupancyType) %>%
+  filter(!is.na(occupancyType)) %>%
+  summarize(n = n(),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+cvilleIndividualByPrimaryResidence <- cville_individual_FEMA %>%
+  group_by(primaryResidence) %>%
+  filter(!is.na(primaryResidence)) %>%
+  summarize(n = n(),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+```
+
+
+## Charlottesville Graphs
+```{r}
+#Line graph of all claims per year
+ggplot(data = cvilleIndividualByYear, aes(x=yearOfLoss, y=n)) + 
+  geom_line() +
+  geom_point() +
+  labs(x="Year of Loss",
+       y="Number of Claims",
+       title="Number of Claims Per Year (1978-2020)")
+```
+
+
+```{r}
+#Bar graph of claims by occupancy type
+ggplot(data = cvilleIndividualByOccupancyType, aes(x=occupancyType, y=n)) + 
+  geom_col(fill="darkmagenta", color="darkblue") +
+  coord_flip() +
+  labs(x="Occupancy Type",
+       y="Number of Claims",
+       title="Number of Claims By Occupancy Type (1978-2020)")
+```
+
+
+```{r}
+#Bar graph of claims by Primary Residence
+ggplot(data = cvilleIndividualByPrimaryResidence, aes(x=primaryResidence, y=n)) + 
+  geom_col(fill="darkmagenta", color="darkblue") +
+  labs(x="Primary Residence",
+       y="Number of Claims",
+       title="Number of Claims By Primary Residence (1978-2020)")
+```
+
+#### Note: There are no claims for "Increased Cost Of Compliance" for the Charlottesville Area
+
+```{r}
+#Density plot for building insurance claims
+ggplot(cville_individual_FEMA, aes(x=amountPaidOnBuildingClaim, fill=occupancyType )) + 
+  geom_density()+
+  labs(x="Amount Received for Building Claims ($)",
+       title="Distribution of Amount Received for Building Claims (1978-2020)", 
+       fill= "Occupancy Type") +
+  geom_density(alpha=.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+```
+
+
+```{r}
+# Density plot for contents insurance claims
+ggplot(cville_individual_FEMA, aes(x=amountPaidOnContentsClaim, fill=occupancyType )) + 
+  geom_density()+
+  labs(x="Amount Received for Contents Claim ($)",
+       title="Distribution of Amount Received for Contents Claims (1978-2020)", 
+       fill= "Occupancy Type") +
+  geom_density(alpha=0.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+```
+
+
+```{r}
+# Density plot for all contents insurance claims
+ggplot(cville_individual_FEMA, aes(x=totalAmountPaid, fill=occupancyType )) + 
+  geom_density()+
+  labs(x="Amount Received for All Claims ($)",
+       title="Distribution of Total Amount Received for All Claims (1978-2020)", 
+       fill= "Occupancy Type") +
+  geom_density(alpha=0.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+## Maps
+
+
+```{r}
+#Matching tracts from cvilleIndividualByTract & county names from county_codes to cville_tracts
+
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
+
+cvilleIndividualByTract <- cvilleIndividualByTract %>% 
+  mutate(TRACT = str_sub(censusTract, 6,11),
+    TRACT = as.character(TRACT))
+
+# county_codes <- read_csv("../data/county_codes.csv")
+
+county_codes <- county_codes %>% 
+  mutate(code = as.character(code),
+         code = str_pad(code, width = 3, side = "left", pad = "0"))
+
+cville_indv_amount <- cville_tracts %>% 
+  left_join(cvilleIndividualByTract, by = c("TRACTCE" = "TRACT")) %>%
+  left_join(county_codes, by = c("COUNTYFP" = "code"))
+
+cville_indv_amount <- st_transform(cville_indv_amount, crs = 4326)
+
+
+tibble_cville_indv_amount <- as_tibble(na.omit(cville_indv_amount[c('censusTract', 'n', 'name')]))
+tibble_cville_indv_amount <- tibble_cville_indv_amount%>%
+  select(-c('geometry'))
+tibble_cville_indv_amount
+```
+
+
+### Number of Claims per Census Tract
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_indv_amount$n) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cville_indv_amount,
+              fillColor = ~pal(n),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", cville_indv_amount$NAME, "<br>",
+                             "Number: ", round(cville_indv_amount$n, 2), "<br>",
+                              "County: ", cville_indv_amount$name)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = cville_indv_amount$n, 
+            title = "Number of Insurance Claims Per Tract (1978-2020)", opacity = 0.7)
+```
+
+### Total Amount Paid per Census Tract
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_indv_amount$sumTotalAmountPaid) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = cville_indv_amount,
+              fillColor = ~pal(sumTotalAmountPaid),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", cville_indv_amount$NAME, "<br>",
+                             "Number: ", round(cville_indv_amount$sumTotalAmountPaid, 0), "<br>",
+                              "County: ", cville_indv_amount$name)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = cville_indv_amount$sumTotalAmountPaid, 
+            title = "Amount Received from Insurance Claims Per Tract (1978-2020)", opacity = 0.7)
+```

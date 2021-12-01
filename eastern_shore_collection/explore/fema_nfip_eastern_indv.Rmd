@@ -1,0 +1,243 @@
+---
+title: "FEMA NFIP Claims: Eastern Shore"
+author: "Jordan House"
+date: "10/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(mosaic)
+library(stargazer)
+library(googlesheets4)
+library(sf)
+library(viridis)
+library(leaflet)
+
+```
+
+## Data Source
+
+Source: FEMA, NFIP Redacted Claims, last updated July 2020
+
+* Source URL: [https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims)
+* Download URL: [https://www.fema.gov/api/open/v1/FimaNfipClaims.csv](https://www.fema.gov/api/open/v1/FimaNfipClaims.csv)
+
+```{r}
+eastern_individual_FEMA <- read.csv("fema_nfip_eastern_indv.csv")
+```
+
+
+
+## Exploration
+```{r}
+glimpse(eastern_individual_FEMA)
+```
+
+
+## Aggregate Data
+```{r}
+# Aggregate Data
+easternIndividualByTract <- eastern_individual_FEMA %>%
+  group_by(censusTract) %>%
+  filter(!is.na(censusTract)) %>% 
+  summarize(n = count(censusTract),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+easternIndividualByYear <- eastern_individual_FEMA %>%
+  group_by(yearOfLoss) %>%
+  filter(!is.na(yearOfLoss)) %>%
+  summarize(n = count(yearOfLoss),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+easternIndividualByOccupancyType <- eastern_individual_FEMA %>%
+  group_by(occupancyType) %>%
+  filter(!is.na(occupancyType)) %>%
+  summarize(n = count(occupancyType),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+
+easternIndividualByPrimaryResidence <- eastern_individual_FEMA %>%
+  group_by(primaryResidence) %>%
+  filter(!is.na(primaryResidence)) %>%
+  summarize(n = count(primaryResidence),
+            sumAmountPaidOnBuildingClaim = sum(amountPaidOnBuildingClaim, na.rm = T),
+            sumAmountPaidOnContentsClaim = sum(amountPaidOnContentsClaim, na.rm = T),
+            sumAmountPaidOnIncreasedCostOfComplianceClaim = sum(amountPaidOnIncreasedCostOfComplianceClaim, na.rm = T),
+            sumTotalAmountPaid = sum(totalAmountPaid, na.rm = T))
+```
+
+
+## Eastern Virginia Graphs
+```{r}
+#Line graph of all claims per year
+ggplot(data = easternIndividualByYear, aes(x=yearOfLoss, y=n)) + 
+  geom_line() +
+  geom_point() +
+  labs(x="Year of Loss",
+       y="Number of Claims",
+       title="Number of Claims Per Year (1978-2021)")
+```
+
+```{r}
+#Bar graph of claims by occupancy type
+ggplot(data = easternIndividualByOccupancyType, aes(x=occupancyType, y=n)) + 
+  geom_col(fill="darkmagenta", color="darkblue") +
+  coord_flip() +
+  labs(x="Occupancy Type",
+       y="Number of Claims",
+       title="Number of Claims By Occupancy Type (1978-2021)")
+```
+
+
+```{r}
+#Bar graph of claims by Primary Residence
+ggplot(data = easternIndividualByPrimaryResidence, aes(x=primaryResidence, y=n)) + 
+  geom_col(fill="darkmagenta", color="darkblue") +
+  labs(x="Primary Residence",
+       y="Number of Claims",
+       title="Number of Claims By Primary Residence (1978-2021)")
+```
+
+
+```{r}
+#Density plot for building insurance claims
+ggplot(eastern_individual_FEMA, aes(x=amountPaidOnBuildingClaim, fill=occupancyType)) + 
+  geom_density()+
+  labs(x="Amount Received for Building Claims ($)",
+       title="Distribution of Amount Received for Bulding Claims (1978-2021)", 
+       fill= "Occupancy Type") +
+  geom_density(color="darkblue", alpha=0.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+```
+
+
+```{r}
+# Density plot for contents insurance claims
+ggplot(eastern_individual_FEMA, aes(x=amountPaidOnContentsClaim, fill=occupancyType)) + 
+  geom_density()+
+  labs(x="Amount Received for Contents Claim ($)",
+       title="Distribution of Amount Received for Contents Claims (1978-2021)", 
+       fill= "Occupancy Type") +
+  geom_density(color="darkblue", alpha=0.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+```{r}
+# Density plot for increased cost of compliance insurance claims
+ggplot(eastern_individual_FEMA, aes(x=amountPaidOnIncreasedCostOfComplianceClaim, fill=occupancyType)) + 
+  geom_histogram(color="black", binwidth=2500) +
+  labs(x="Amount Received for Increased Cost Of Compliance Claims ($)",
+       title="Distribution of Amount Received for Increased Cost Of Compliance Claims
+       (1978-2021)",
+       fill= "Occupancy Type") +
+  theme(legend.position="bottom")
+```
+
+
+```{r}
+# Density plot for all contents insurance claims
+ggplot(eastern_individual_FEMA, aes(x=totalAmountPaid, fill=occupancyType)) + 
+  geom_density()+
+  labs(x="Amount Received for All Claims ($)",
+       title="Distribution of Total Amount Received for All Claims (1978-2021)", 
+       fill= "Occupancy Type") +
+  geom_density(color="darkblue", alpha=0.1) +
+  theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+## Maps
+```{r, echo = FALSE}
+#Matching tracts & county names
+
+eastern_tracts <- readRDS("eastshore_tracts.RDS")
+
+easternIndividualByTract <- easternIndividualByTract %>% 
+  mutate(TRACT = str_sub(censusTract, 6,11),
+    TRACT = as.character(TRACT))
+
+county_codes <- read_csv("county_codes.csv")
+
+county_codes <- county_codes %>% 
+  mutate(code = as.character(code),
+         code = str_pad(code, width = 3, side = "left", pad = "0"))
+
+eastern_indv_amount <- eastern_tracts %>% 
+  left_join(easternIndividualByTract, by = c("TRACTCE" = "TRACT")) %>%
+  left_join(county_codes, by = c("COUNTYFP" = "code"))
+
+eastern_indv_amount <- st_transform(eastern_indv_amount, crs = 4326)
+
+tibble_eastern_indv_amount <- as_tibble(na.omit(eastern_indv_amount[c('censusTract', 'n', 'name')]))
+tibble_eastern_indv_amount <- tibble_eastern_indv_amount%>%
+  select(-c('geometry'))
+tibble_eastern_indv_amount
+```
+
+
+### Number of Claims per Census Tract
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_indv_amount$n) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_indv_amount,
+              fillColor = ~pal(n),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", eastern_indv_amount$NAME, "<br>",
+                             "Number: ", round(eastern_indv_amount$n, 2), "<br>",
+                              "County: ", eastern_indv_amount$name)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_indv_amount$n, 
+            title = "Number of Insurance Claims Per Tract (1978-2020)", opacity = 0.7)
+```
+
+### Total Amount Paid per Census Tract
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_indv_amount$sumTotalAmountPaid) # viridis
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_indv_amount,
+              fillColor = ~pal(sumTotalAmountPaid),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("Tract Number: ", eastern_indv_amount$NAME, "<br>",
+                             "Number: ", round(eastern_indv_amount$sumTotalAmountPaid, 0), "<br>",
+                              "County: ", eastern_indv_amount$name)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_indv_amount$sumTotalAmountPaid, 
+            title = "Amount Received from Insurance Claims Per Tract (1978-2020)", opacity = 0.7)
+```

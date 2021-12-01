@@ -13,7 +13,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 library(tidyverse)
-library(mosaic)
 library(stargazer)
 library(googlesheets4)
 library(sf)
@@ -30,6 +29,7 @@ Source: FEMA, NFIP Redacted Claims, last updated July 2020
 
 ```{r}
 cvilleAmountPaidByTract <- read_csv("../data/fema_nfip_cville_tract.csv")
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=5733069", sheet = 'fema_nfip')
 ```
 
