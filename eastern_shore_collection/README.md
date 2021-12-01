@@ -12,7 +12,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 
 
 ### Hazards and Risks
-* [National Flood Hazard Layer's 1% and 2% annual floodplains](https://virginiaequitycenter.github.io/summer-sandbox/nfhl_cville.html)
+* [National Flood Hazard Layer's 1% and 2% annual floodplains](https://virginiaequitycenter.github.io/summer-sandbox/nfhl_eastern.html)
 * [Natural hazard risk/FEMA's National Risk Index](https://virginiaequitycenter.github.io/summer-sandbox/fema_nri_eastern.html)
 * [FEMA National Flood Insurance Program Claims](https://virginiaequitycenter.github.io/summer-sandbox/femaclaims_cville.html)
 * [EJSCREEN Environmental Indicators](https://virginiaequitycenter.github.io/summer-sandbox/ejscreen_eastern.html)

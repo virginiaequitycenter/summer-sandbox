@@ -1,0 +1,216 @@
+---
+title: "National Flood Hazard Layer Data"
+author: "Chase Dawson, Michele Claibourn"
+date: "11/30/2021"
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+    code_folding: hide
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE) 
+```
+
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(leaflet)
+library(sf)
+library(viridis)
+library(raster)
+library(stargazer)
+
+# Load data
+eastern_tracts <- readRDS("../data/eastshore_tracts.RDS")
+eastern_blkgps <- readRDS("../data/eastshore_blkgps.RDS")
+eastern_blocks <- readRDS("../data/eastshore_blocks.RDS")
+
+nfhl_eastern_tracts <- read_csv("../dataraw/nfhl_eastern_tracts.csv")
+nfhl_eastern_blkgps <- read_csv("../dataraw/nfhl_eastern_blkgps.csv")
+nfhl_eastern_blocks <- read_csv("../dataraw/nfhl_eastern_blocks.csv")
+
+# arrange data
+nfhl_eastern_tracts <- nfhl_eastern_tracts %>% 
+  dplyr::select(-c(`...1`, spatial_unit)) %>% 
+  mutate(GEOID = as.character(GEOID))
+
+nfhl_eastern_tracts2 <- nfhl_eastern_tracts %>% 
+  pivot_wider(names_from = zone, values_from = c(area, perc))
+
+nfhl_eastern_blkgps <- nfhl_eastern_blkgps %>% 
+  dplyr::select(-c(`...1`, spatial_unit)) %>% 
+  mutate(GEOID = as.character(GEOID))
+
+nfhl_eastern_blkgps2 <- nfhl_eastern_blkgps %>% 
+  pivot_wider(names_from = zone, values_from = c(area, perc))
+
+nfhl_eastern_blocks <- nfhl_eastern_blocks %>% 
+  dplyr::select(-c(`...1`, spatial_unit)) %>% 
+  mutate(GEOID = as.character(GEOID))
+
+nfhl_eastern_blocks2 <- nfhl_eastern_blocks %>% 
+  pivot_wider(names_from = zone, values_from = c(area, perc))
+
+# Join data to geometry
+nfhl_eastern_tracts_geo <- left_join(eastern_tracts, nfhl_eastern_tracts2)
+nfhl_eastern_blkgps_geo <- left_join(eastern_blkgps, nfhl_eastern_blkgps2)
+nfhl_eastern_blocks_geo <- left_join(eastern_blocks, nfhl_eastern_blocks2, by = c("GEOID10" = "GEOID"))
+```
+
+## Data Source
+
+* The data represented here come from FEMA's [National Flood Hazard Layer](https://www.fema.gov/flood-maps/national-flood-hazard-layer), containing current effective flood hazard data, as downloaed through [FEMA Flood Map Service Center.](https://msc.fema.gov/portal/advanceSearch#searchresultsanchor) 
+* The current data was downloaded in November 2021; the NFHL is being revised continuously.
+
+
+## Variable Descriptions and Summaries
+
+Variables include: 
+
+```{r}
+glimpse(nfhl_eastern_tracts2)
+```
+
+* GEOID: geographic identifer for spatial area (tracts, block groups, and blocks)
+* area_0: area (in km^2) of block/block group/tract/county that do not intersect with 100-year or 200-year floodplains, or areas with minimal chance of flooding.
+* area_1per: area (in km^2) of block/block group/tract/county that intersects with 100-year floodplain, or areas with a 1% annual chance of flooding.
+* area_2per: area (in km^2) of block/block group/tract/county that intersects with 100-year floodplain, or areas with a 2% annual chance of flooding. This zone is also used to designate base floodplains of lesser hazards, such as areas protected by levees from 100-year flood, or shallow flooding areas with average depths of less than one foot or drainage areas less than 1 square mile.
+* perc_0: percentage of block/block group/tract/county that does not overlap with the 1% or 2% annual flood zone.
+* perc_1per: percentage of block/block group/tract/county that overlaps with the 1% annual flood zone.
+* perc_2per: percentage of block/block group/tract/county that overlaps with the 2% annual flood zone.
+
+5-number summaries of variables by block groups:
+
+```{r}
+nfhl_eastern_blkgps2 %>%  
+  dplyr::select(where(~is.numeric(.x) && !is.na(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+```
+
+## Visual Distributions{.tabset}
+
+### Tracts
+Percent of tract in minimal flood, 1% annual floodplain, and 2% annual floodplain zones
+```{r}
+nfhl_eastern_tracts %>% 
+  ggplot(aes(x = perc, fill = zone)) + 
+  geom_histogram() + 
+  scale_fill_viridis(option = "viridis", discrete = TRUE, guide = FALSE) +
+  facet_wrap(~zone, scales = "free")
+```
+  
+### Block Groups
+Percent of block group in minimal flood, 1% annual floodplain, and 2% annual floodplain zones
+```{r}
+nfhl_eastern_blkgps %>% 
+  ggplot(aes(x = perc, fill = zone)) + 
+  geom_histogram() + 
+  scale_fill_viridis(option = "viridis", discrete = TRUE, guide = FALSE) +
+  facet_wrap(~zone, scales = "free")
+```
+
+### Blocks 
+Percent of block in minimal flood, 1% annual floodplain, and 2% annual floodplain zones
+```{r}
+nfhl_eastern_blocks %>% 
+  ggplot(aes(x = perc, fill = zone)) + 
+  geom_histogram() + 
+  scale_fill_viridis(option = "viridis", discrete = TRUE, guide = FALSE) +
+  facet_wrap(~zone, scales = "free")
+```
+
+## Maps
+### 1% Annual Flood Zone{.tabset}
+
+#### Tracts
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = nfhl_eastern_tracts_geo$perc_1per)
+
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = nfhl_eastern_tracts_geo,
+              fillColor = ~pal(perc_1per),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", nfhl_eastern_tracts_geo$GEOID, "<br>",
+                             "Percent in 1% floodplain: ", nfhl_eastern_tracts_geo$perc_1per)) %>%
+  addLegend("bottomright", pal = pal, values = nfhl_eastern_tracts_geo$perc_1per,
+            title = "Percent in 1% Annual Floodplain", opacity = 0.7)
+```
+
+
+#### Block Groups
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = nfhl_eastern_blkgps_geo$perc_1per)
+
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = nfhl_eastern_blkgps_geo,
+              fillColor = ~pal(perc_1per),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", nfhl_eastern_blkgps_geo$GEOID, "<br>",
+                             "Percent in 1% floodplain: ", nfhl_eastern_blkgps_geo$perc_1per)) %>%
+  addLegend("bottomright", pal = pal, values = nfhl_eastern_blkgps_geo$perc_1per,
+            title = "Percent in 1% Annual Floodplain", opacity = 0.7)
+```
+
+#### Blocks
+
+Block level maps are slow to render and may be added later.
+
+
+### 2% Annual Flood Zone{.tabset}
+
+#### Tracts
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = nfhl_eastern_tracts_geo$perc_2per)
+
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = nfhl_eastern_tracts_geo,
+              fillColor = ~pal(perc_2per),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", nfhl_eastern_tracts_geo$GEOID, "<br>",
+                             "Percent in 2% floodplain: ", nfhl_eastern_tracts_geo$perc_2per)) %>%
+  addLegend("bottomright", pal = pal, values = nfhl_eastern_tracts_geo$perc_2per,
+            title = "Percent in 2% Annual Floodplain", opacity = 0.7)
+```
+
+#### Block Groups
+```{r}
+pal <- colorNumeric("viridis", reverse = TRUE, domain = nfhl_eastern_blkgps_geo$perc_2per)
+
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = nfhl_eastern_blkgps_geo,
+              fillColor = ~pal(perc_2per),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("FIPS Code: ", nfhl_eastern_blkgps_geo$GEOID, "<br>",
+                             "Percent in 2% floodplain: ", nfhl_eastern_blkgps_geo$perc_2per)) %>%
+  addLegend("bottomright", pal = pal, values = nfhl_eastern_blkgps_geo$perc_2per,
+            title = "Percent in 2% Annual Floodplain", opacity = 0.7)
+```
+
+#### Blocks
+
+Block level maps are slow to render and may be added later.
