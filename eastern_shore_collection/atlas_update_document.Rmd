@@ -1,0 +1,431 @@
+---
+title: "Eastern Shore Region Climate Equity Atlas Update"
+author: "Equity Center Data Team"
+date: "12/1/2021"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+<details><summary>Team members</summary><br/>
+
+- Michele Claibourn   
+- Michael Salgueiro   
+- Chase Dawson
+- Jacob Goldstein-Greenwood
+- Jordan House
+- Khalila Karefa-Kargbo
+- Lee LeBoeuf
+- Marisa Lemma
+- Helena Lindsay
+- Tolu Odukoya
+
+</details>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# load libraries
+library(tidyverse)
+library(leaflet)
+library(googlesheets4)
+library(googledrive)
+library(DT)
+library(sf)
+library(lubridate)
+library(RColorBrewer)
+library(viridis)
+library(plotly)
+
+# download process image
+drive_deauth()
+drive_download("https://docs.google.com/drawings/d/1H1ALiYYQY7WObLpUeoRZXBufvYam6E24j81T2fS4Psc/edit?usp=sharing", path = "images/Data Process.png", type = "png", overwrite = TRUE)
+
+# read google sheet
+table <- read_sheet("https://docs.google.com/spreadsheets/d/1vfuiVf_aQikUNd7OW7TdUOHttp4ziSWnOO108CbXn0I/edit?usp=sharing", gs4_deauth())
+
+```
+
+## Data Collection Process
+Throughout the summer and fall of 2021, we've been creating and refining a replicable data collection process to build a data collection resource for use in our collective work and by anyone in the community. The process is intended to make our work transparent, to provide resources for other to use, and to be highly automated for easier updates.
+
+<img src="images/Data Process.png" width="500">
+
+Beginning with needs and requests for additional information and data from within our coalition, and those articulated by additional community partners, we 
+
+1. Begin researching available sources, seeking to undertand the provenance and genesis of the data (e.g., collected via surveys, captured from satellite imagery, derived from models build around station monitors, etc.), the temporality and spatial granularity (how frequently is it updated, what areas is it available for or could it be aggreated to), and the available variables and measures within the initial sources.
+2. Create code to acquire the data from source, working to remove as many manual steps as possible; to process the data, filtering to our region, checking data quality, deriving additional measures from included variables, aggregating to administrative boundaries for integration with demographic and population data. Output includes replication code and a csv file of the resulting data.
+3. Create code to build a documentation file identifying the source of the data, providing variable definitions, and generating initial visualization of the key metrics. Output include replicate code and a web document providing more details about the data source.
+
+This winter and spring, we will continue to add to the current data collections, clean up and refine our work to date, and begin (4) to integrate the data sources for further analysis and visualization
+
+## Newly Available Data Collections
+To build on the the population data we've collected as part of the broader [Equity Atlas Prototype](https://commpaslab.shinyapps.io/cville-region/) (e.g., demographic, economic, health, and other social data) and [Shelter in Place](https://virginiaequitycenter.github.io/cvilleequity_covid/SIP/) measures (e.g., food, car, broadband access), the table below provides an overview of the data collections, including motivating questions, key measures, and data sources. The table can be filtered for key topics (climate measures, risk factors, community assets and infrastructure, transportation). In the next stage, we'll begin to merge these measures with previously compiled data to visualize relationships between residents and resources.
+
+```{r}
+img_uri <- function(x) { sprintf('<img src="%s"/ height="50">', knitr::image_uri(x)) }
+
+c <- img_uri("icons/climate.png")
+t <- img_uri("icons/transportation.png")
+r <- img_uri("icons/risk.png")
+i <- img_uri("icons/infrastructure.png")
+e <- img_uri("icons/economic.png")
+
+library(stringi)
+for (z in 1:nrow(table)) {
+  topic_vec <- unlist(stri_split(table[z, 'Topics'], regex = ', ')) # split up topics for data source
+  icon_vec <- sapply(topic_vec, function(x) case_when(x == "Climate measures" ~ c,
+                                                      x == "Transportation" ~ t,
+                                                      x == "Risk factors" ~ r,
+                                                      x == "Community assets & infrastructure" ~ i,
+                                                      x == "Social & economic characteristics" ~ e) # identify corresponding icons
+  )
+  icon_vec <- paste0(icon_vec, collapse = ', ') # paste the icon sources together
+  table[z, 'Icon'] <- icon_vec # add icons to table
+  table <- table %>% select(Icon, Topics, everything()) # reorder `Icon` to be 1st column
+}
+```
+
+<details><summary>Topic icon attribution</summary><br/>
+
+* Climate measures, `r c`: https://www.flaticon.com/authors/ultimatearm
+* Risk factors, `r r`: https://www.freepik.com
+* Community assets and infrastructure, `r i`: https://www.flaticon.com/authors/eucalyp
+* Social and economic characteristics, `r e`: https://www.flaticon.com/authors/ultimatearm
+* Transportation, `r t`: https://www.flaticon.com/authors/geotatah
+
+</details>
+
+<br>
+
+<style>
+table {
+    table-layout:fixed;
+}
+td{
+    overflow:hidden;
+    text-overflow: ellipsis;
+}
+</style>
+
+```{r}
+datatable(table,
+          filter = 'top', rownames = F, options = list(
+            columnDefs = list(list(targets = c(1,2,3,6), width = '200px'),
+                              list(targets = c(0,4,5,7), width = '150px')),
+            pageLength = 5,
+            scrollX = T,
+            autoWidth = T), 
+          escape = F)
+```
+
+## Data Examples
+
+### CDC Places: Health Outcomes {.tabset}
+These data come from the Center for Disease Control and Prevention (CDC) PLACES: Local Data for Better Health. The data provide model-based estimates for chronic disease risk factors, health outcomes, and clinical prevention services. According the the website, "CDC uses an innovative peer-reviewed multilevel regression and poststratification (MPR) approach that links geocoded health surveys and high spatial resolution population demographic and socioeconomic data."
+
+```{r}
+# Main data
+eastdat <- read.csv("data/cdcplaces_eastern_tract.csv")
+eastdat <- eastdat %>%
+   mutate(GEOID = as.character(locationname))
+
+# Spatial data
+shape <- readRDS('data/eastshore_tracts.RDS')
+shape <- st_transform(shape, crs = 4326) # for leaflet
+
+mapdat <- shape %>% 
+  left_join(eastdat, by = "GEOID")
+```
+
+#### Asthma 
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have asthma __and__ that they still have asthma.
+```{r}
+pal <- colorNumeric("BuPu", domain = mapdat$Current_Asthma2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Current_Asthma2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with asthma: ", mapdat$Current_Asthma2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Current_Asthma2018), 
+            title = "Predicted % of adults <br> with current asthma <br> in 2018", opacity = 0.7)
+
+```
+
+#### Coronary Heart Disease
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they had angina or coronary hearth disease. 
+```{r}
+pal <- colorNumeric("BuPu", domain = mapdat$Coronary_Heart_Disease2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Coronary_Heart_Disease2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with Coronary Heart Disease: ", mapdat$Coronary_Heart_Disease2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Coronary_Heart_Disease2018), 
+            title = "Predicted % of adults <br> with Coronary Heart Disease <br> in 2018", opacity = 0.7)
+
+```
+
+#### Cancer (excluding skin cancer)
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they have any type of cancer except skin cancer. This variable is not specific to any type of cancer.
+```{r}
+pal <- colorNumeric("BuPu", domain = mapdat$Cancer_except_skin2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Cancer_except_skin2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with cancer: ", mapdat$Coronary_Heart_Disease2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Cancer_except_skin2018), 
+            title = "Predicted % of adults <br> with cancer (excluding skin) <br> in 2018", opacity = 0.7)
+
+```
+
+#### Diabetes 
+* Adjusted percent of survey respondents aged >= 18 who reported that they had ever been told by a health professional that they had diabetes (excluding diabetes during pregnancy). 
+```{r}
+pal <- colorNumeric("BuPu", domain = mapdat$Diabetes2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Diabetes2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults with diabetes: ", mapdat$Diabetes2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Diabetes2018), 
+            title = "Predicted % of adults <br> with diabetes <br> in 2018", opacity = 0.7)
+
+```
+
+#### Obesity
+* Adjusted percent of survey respondents aged >= 18 who reported that they have a BMI >= 30kg/m^2. This indicator is calculated by the CDC from self-reported weight and height, excluding pregnant women. Self-reported height and weight tend to lead to lower BMI estimates than clinical height and weight measurements. 
+```{r}
+pal <- colorNumeric("BuPu", domain = mapdat$Obesity2018)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat,
+              fillColor = ~pal(mapdat$Obesity2018),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
+                             "Percent of adults who have a BMI >= 30: ", mapdat$Obesity2018)) %>% 
+  leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Obesity2018), 
+            title = "Predicted % of adults <br> who had a BMI >= 30 <br> in 2018", opacity = 0.7)
+
+```
+
+### Employment and Commute Patterns {.tabset}
+The Origin-Destination Employment Statistics (LODES) pairs the census blocks for where employees live and work, allowing us to estimate outcomes like the the number of low-wage jobs, the median commuting distance of residents in the Eastern Shore region, and the percent of workers in the region who live elsewhere.
+
+```{r}
+# employment: number of jobs and percent low-wage jobs
+lodes_employ <- read.csv("data/lodes_employment_eastern_blkgr.csv")
+lodes_employ <- lodes_employ %>% 
+  mutate(GEOID = as.character(w_blkgr))
+
+# commute: median commute time of residents and percent of workers outside of region
+lodesresidents_blkgp <- read.csv("data/lodes_residentcommute_eastern_blkgp.csv")
+lodesworkers_blkgp <- read.csv("data/lodes_workercommute_east_blkgp.csv")
+lodesresidents_blkgp <- lodesresidents_blkgp %>% 
+  mutate(GEOID = as.character(blkgroup))
+lodesworkers_blkgp <- lodesworkers_blkgp %>% 
+  mutate(GEOID = as.character(blkgroup))
+
+# spatial data
+shape_blkgp <- readRDS('data/eastshore_blkgps.RDS')
+shape_blkgp <- st_transform(shape_blkgp, crs = 4326) # to WGS84, given error
+
+```
+
+#### Number of Jobs
+
+```{r}
+lodes_employ_geo <- shape_blkgp %>% 
+  left_join(lodes_employ, by = "GEOID")
+
+pal <- colorNumeric("plasma", reverse = TRUE, domain = lodes_employ_geo$alljobs)
+
+leaflet(lodes_employ_geo) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = lodes_employ_geo,
+              fillColor = ~pal(alljobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", lodes_employ_geo$GEOID, "<br>",
+                             "Number of jobs: ", lodes_employ_geo$alljobs, 2)) %>% 
+  addLegend("bottomright", pal = pal, values = lodes_employ_geo$alljobs, 
+            title = "Number of jobs", opacity = 0.7)
+
+```
+
+#### Percent of Low-Wage Jobs
+Proportion of low-wage earning jobs (earnings $1250/month or less).
+
+```{r}
+pal <- colorNumeric("plasma", domain = lodes_employ_geo$lowwage_p)
+
+leaflet(lodes_employ_geo) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = lodes_employ_geo,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+                ),
+              popup = paste0("GEOID: ", lodes_employ_geo$GEOID, "<br>",
+               "Prop. low-wage jobs: ", round(lodes_employ_geo$lowwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = lodes_employ_geo$lowwage_p, 
+            title = "Proportion of <br> low-wage jobs", opacity = 0.7)
+```
+
+#### Median Commute Distance among Residents
+
+```{r}
+lodes_commute_geo <- shape_blkgp %>% 
+  left_join(lodesresidents_blkgp, by = "GEOID") %>% 
+  left_join(lodesworkers_blkgp, by = "GEOID")
+
+pal <- colorNumeric("plasma", reverse = T, domain = lodes_commute_geo$medc_allblk)
+
+leaflet(lodes_commute_geo) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = lodes_commute_geo,
+              fillColor = ~pal(medc_allblk),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", lodes_commute_geo$GEOID, "<br>",
+                             "Median commute (mi): ", round(lodes_commute_geo$avgc_allblk, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = lodes_commute_geo$medc_allblk, 
+            title = "Median commute (mi)", opacity = 0.7)
+```
+
+#### Percent of Non-Residential Workers
+```{r}
+pal <- colorNumeric("plasma", reverse = T, domain = lodes_commute_geo$perc_workers_liveoutsideRegionblkgr)
+
+leaflet(lodes_commute_geo) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = lodes_commute_geo,
+              fillColor = ~pal(perc_workers_liveoutsideRegionblkgr),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", lodes_commute_geo$GEOID, "<br>",
+                             "Percent of workers: ", round(lodes_commute_geo$perc_workers_liveoutsideRegionblkgr, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = lodes_commute_geo$perc_workers_liveoutsideRegionblkgr, 
+            title = "Percent of workers <br> who live outside <br> Eastern Shore  region", opacity = 0.7)
+```
+
+### HMDA: Home Mortgage Applications {.tabset}
+These data come from the Consumer Financial Protection Bureau and Federal Financial Institutions Examinations Council. All data were collected as part of the Home Mortgage Disclosure Act (HMDA). The data shown below include __only__ home purchase loans, meaning that mortgages for home improvement or refinancing are excluded.
+
+#### Applications over Time
+```{r}
+esdat <- read.csv("data/hmda_eastern_tract.csv")
+esdat <- esdat %>% 
+  mutate(census_tract = as.character(census_tract),
+         countyfips = str_sub(census_tract, 3,5),
+         countyname = ifelse(countyfips == "001", "Accomack", "Northampton"))
+
+p <- esdat %>% 
+  group_by(countyname, year) %>% 
+  summarize(white_apps = sum(appRace_White),
+            black_apps = sum(appRace_Black)) %>% 
+  pivot_longer(-c(countyname, year), names_to = "race", values_to = "apps") %>% 
+  ggplot(aes(x = year, y = apps, color = countyname)) +
+  geom_line() +
+  scale_color_viridis_d() +
+  facet_wrap(~race) +
+  labs(title = "Number of Home Mortgage Applications by Race")
+ggplotly(p)
+```
+
+#### Applications by Tract, 2020
+
+```{r}
+mapdat <- left_join(shape, esdat, by = c('GEOID'= "census_tract"))
+mapdat2020 <- mapdat[which(mapdat$year == 2020),]
+
+pal <- colorNumeric("viridis", reverse = TRUE, domain = mapdat2020$total_apps)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = mapdat2020,
+              fillColor = ~pal(mapdat2020$total_apps),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T
+              ),
+              popup = paste0("GEOID: ", mapdat2020$GEOID, "<br>",
+                             "Number of applications: ", mapdat2020$total_apps)
+  ) %>% 
+  addLegend("bottomright", pal = pal, values = (mapdat2020$total_apps), 
+            title = "Total number of <br>mortgage applications <br> in 2020", opacity = 0.7)
+```

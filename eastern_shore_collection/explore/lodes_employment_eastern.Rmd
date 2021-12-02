@@ -168,6 +168,7 @@ leaflet(eastern_lodes_tract) %>%
 #### By Block Groups
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_blkgp$alljobs)
+
 leaflet(eastern_lodes_blkgp) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addPolygons(data = eastern_lodes_blkgp,

@@ -191,8 +191,8 @@ The Origin-Destination Employment Statistics (LODES) pairs the census blocks for
 
 ```{r}
 # load data
-lodesrescommute <- read_csv("data/lodes_commute_cville_blkgp.csv")
-lodesworkers <- read_csv("data/lodes_workerscommute_cville_blkgp.csv")
+lodesrescommute <- read_csv("data/lodes_residentcommute_cville_blkgp.csv")
+lodesworkers <- read_csv("data/lodes_workercommute_cville_blkgp.csv")
 lodesworkpatterns <- read_csv("data/lodes_workerscommutepatterns_cvlcounty.csv")
 
 # read shapefile

@@ -2,6 +2,8 @@
 
 Building a data collection for Eastern Shore climate justice work/platform.
 
+[Overview Document](https://virginiaequitycenter.github.io/summer-sandbox/atlas_update_document.html)
+
 ## Data Descriptions
 
 ### Climate Measures

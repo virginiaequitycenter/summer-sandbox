@@ -45,7 +45,7 @@ shape <- st_transform(shape, crs = 4326) # for leaflet
 * Data are available at the tract levels for Accomack and Northampton counties.
 
 ## Variable descriptions
-These summaries are based on data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
+
 ```{r}
 # meta %>% 
 #   filter(su_tract == 1) %>%
@@ -61,7 +61,7 @@ eastdat %>% select(-c(locationname, countyname, totalpopulation)) %>%
 ```
 
 ## Visual distribution 
-These distributions show data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
+
 ```{r}
 longdat <- eastdat %>% select(-c(countyname, totalpopulation)) %>% 
   pivot_longer(-locationname, names_to = "measure", values_to = "value") 
