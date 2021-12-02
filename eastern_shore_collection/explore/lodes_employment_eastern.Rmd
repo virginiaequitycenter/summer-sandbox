@@ -1,0 +1,401 @@
+---
+title: "LEHD LODES"
+subtitle: "Eastern Shore Region 2018 Data"
+author: "Lee LeBoeuf"
+date: "07/20/2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r libraries, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+invisible(lapply(list('tidyverse', 'stargazer', 'sf', 'leaflet', 
+                      'RColorBrewer', 'viridis',  'googlesheets4'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+
+# main data
+# tract
+lodes_tract <- read.csv("../data/lodes_employment_eastern_tract.csv")
+lodes_tract <- lodes_tract %>% 
+  mutate(GEOID = as.character(w_tract))
+
+# block group
+lodes_blkgp <- read.csv("../data/lodes_employment_eastern_blkgr.csv")
+lodes_blkgp <- lodes_blkgp %>% 
+  mutate(GEOID = as.character(w_blkgr))
+
+# block
+lodes_block <- read.csv("../data/lodes_employment_eastern_block.csv")
+lodes_block <- lodes_block %>% 
+  mutate(GEOID10 = as.character(w_geocode))
+
+meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "lehd_lodes", gs4_deauth())
+
+# spatial data
+shape_tract <- readRDS('../data/eastshore_tracts.RDS')
+shape_tract <- st_transform(shape_tract, crs = 4326) # to WGS84, given error
+
+shape_blkgp <- readRDS('../data/eastshore_blkgps.RDS')
+shape_blkgp <- st_transform(shape_blkgp, crs = 4326) # to WGS84, given error
+
+shape_block <- readRDS('../data/eastshore_blocks.RDS')
+shape_block <- st_transform(shape_block, crs = 4326) # to WGS84, given error
+
+```
+
+## Data source 
+* Data structure description: https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf
+* Data download: https://lehd.ces.census.gov/data/lodes/LODES7/va/
+* Helpful article about how these data are collected and how they can be used: https://www.researchgate.net/publication/328700665_The_US_Census_Longitudinal_Employer-Household_Dynamics_Datasets
+
+## Data specifics
+* The Longitudinal Employer Household Dynamics (LEHD) program at the US Census Bureau releases the Origin Destination Employment Statistis (LODES) datasets annually based on employer-employee insurance records. 
+* This data file uses data from the Workplace Area Characteristics (WAC) datafile from LEHD. 
+* Data presented here are from 2018 and spatial units are based on the 2010 census. As of July of 2021, 2018 is the most recent year for which data are available. The earliest year for which data are available is 2002. 
+* The data contains the number of jobs within a spatial unit (SU), disaggregated by wage earnings, education-attainment of the worker, and race of the worker (all of which were pulled from the WAC data file)
+* Some limitations: jobs counts do not include those working in defense-related industries; the data are prone to imperfect geocoding for certain jobs (jobs for companies with multiple branches are often all coded in the same location); although there are datasets from 2002-2018, these data are not suitable for longitudinal analysis; and student-workers are unlikely to be represented in these data because their jobs are not typically covered by state unemployment insurance.
+
+## Variable descriptions
+```{r}
+glimpse(lodes_blkgp)
+
+lodes_blkgp %>% select(lowwage_jobs:Bach_AdvDeg_jobs) %>% 
+  select(where(~is.numeric(.x))) %>% 
+  as.data.frame() %>% 
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
+            summary.stat = c("mean", "sd", "min", "median", "max"))
+
+meta %>% 
+  filter(su_blkgp == 1) %>%
+  select(varname, about) %>% as.list()
+```
+
+## Total jobs counts {.tabset}
+### Tracts
+```{r}
+lodes_tract %>% select(c(w_tract:alljobs)) %>% 
+  pivot_longer(-w_tract, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = "none") +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("higwage_jobs", "lowwage_jobs", "midwage_jobs", "alljobs")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+### Block Groups
+```{r}
+lodes_blkgp %>% select(c(w_blkgr:alljobs)) %>% 
+  pivot_longer(-w_blkgr, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("higwage_jobs", "lowwage_jobs", "midwage_jobs", "alljobs")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+### Blocks
+```{r}
+lodes_block %>% select(c(w_geocode:alljobs)) %>% 
+  pivot_longer(-w_geocode, names_to = "measure", values_to = "value") %>% 
+  ggplot(aes(x = value, fill = measure)) + 
+  scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
+  geom_histogram() + 
+  facet_wrap(~measure, scales = "free")
+```
+
+```{r, results = "asis"}
+meta %>% 
+  filter(varname %in% c("higwage_jobs", "lowwage_jobs", "midwage_jobs", "alljobs")) %>%
+  mutate(label = paste0(varname, ": ", about)) %>% 
+  select(label) %>% 
+  as.list()
+```
+
+## Mapping the data 
+```{r, echo = FALSE}
+eastern_lodes_tract <- shape_tract %>% 
+  left_join(lodes_tract, by = "GEOID")
+
+eastern_lodes_blkgp <- shape_blkgp %>% 
+  left_join(lodes_blkgp, by = "GEOID")
+
+eastern_lodes_block <- shape_block %>% 
+  left_join(lodes_block, by = "GEOID10")
+```
+
+### All jobs {.tabset}
+Number of jobs in each spatial unit.
+
+#### By Tracts
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_tract$alljobs)
+
+leaflet(eastern_lodes_tract) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_tract,
+              fillColor = ~pal(alljobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_tract$GEOID, "<br>",
+                             "Number of jobs: ", eastern_lodes_tract$alljobs, 2)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_tract$alljobs, 
+            title = "Number of jobs", opacity = 0.7)
+```
+
+#### By Block Groups
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_blkgp$alljobs)
+leaflet(eastern_lodes_blkgp) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_blkgp,
+              fillColor = ~pal(alljobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_blkgp$GEOID, "<br>",
+                             "Number of jobs: ", eastern_lodes_blkgp$alljobs, 2)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_blkgp$alljobs, 
+            title = "Number of jobs", opacity = 0.7)
+```
+
+#### By Blocks
+
+Block level maps are slow to render and may be added later.
+
+### Low-wage jobs {.tabset} 
+Proportion of low-wage jobs (earnings $1250/month or less) in each spatial unit.
+
+#### By Tracts
+
+```{r}
+pal <- colorNumeric("BuPu", domain = eastern_lodes_tract$lowwage_p)
+
+leaflet(eastern_lodes_tract) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_tract,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+                ),
+              popup = paste0("GEOID: ", eastern_lodes_tract$GEOID, "<br>",
+               "Prop. low-wage jobs: ", round(eastern_lodes_tract$lowwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_tract$lowwage_p, 
+            title = "Proportion of <br> low-wage jobs", opacity = 0.7)
+```
+
+#### By Block Group
+
+```{r}
+pal <- colorNumeric("plasma", domain = eastern_lodes_blkgp$lowwage_p)
+leaflet(eastern_lodes_blkgp) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_blkgp,
+              fillColor = ~pal(lowwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+                ),
+              popup = paste0("GEOID: ", eastern_lodes_blkgp$GEOID, "<br>",
+               "Prop. low-wage jobs: ", round(eastern_lodes_blkgp$lowwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_blkgp$lowwage_p, 
+            title = "Proportion of <br> low-wage jobs", opacity = 0.7)
+```
+
+#### By Blocks
+
+Block level maps are slow to render and may be added later.
+
+
+### High-wage Jobs {.tabset}
+
+Proportion of high-wage jobs (earnings greater than $3333/month) in each spatial unit.
+
+#### By Tracts
+
+```{r}
+pal <- colorNumeric("plasma", domain = eastern_lodes_tract$higwage_p)
+
+leaflet(eastern_lodes_tract) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_tract,
+              fillColor = ~pal(higwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_tract$GEOID, "<br>",
+                             "Prop. high-wage jobs: ", round(eastern_lodes_tract$higwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_tract$higwage_p, 
+            title = "Proportion of <br> high-wage jobs", opacity = 0.7)
+```
+
+#### By Block Group
+
+```{r}
+# High wage jobs
+pal <- colorNumeric("plasma", domain = eastern_lodes_blkgp$higwage_p)
+
+leaflet(eastern_lodes_blkgp) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_blkgp,
+              fillColor = ~pal(higwage_p),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_blkgp$GEOID, "<br>",
+                             "Prop. high-wage jobs: ", round(eastern_lodes_blkgp$higwage_p, 2))) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_blkgp$higwage_p, 
+            title = "Proportion of <br> high-wage jobs", opacity = 0.7)
+```
+
+#### By Blocks
+Block level maps are slow to render and may be added later.
+
+
+### College-Education Jobs {.tabset}
+Number of jobs for college-educated workers in each spatial unit.
+
+#### By Tracts
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_tract$Bach_AdvDeg_jobs)
+
+leaflet(eastern_lodes_tract) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_tract,
+              fillColor = ~pal(Bach_AdvDeg_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_tract$GEOID,  "<br>",
+                             "Number of jobs: ", eastern_lodes_tract$Bach_AdvDeg_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_tract$Bach_AdvDeg_jobs, 
+            title = "Number of jobs for <br> college-educated workers", opacity = 0.7)
+```
+
+#### By Block Group
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_blkgp$Bach_AdvDeg_jobs)
+
+leaflet(eastern_lodes_blkgp) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_blkgp,
+              fillColor = ~pal(Bach_AdvDeg_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_blkgp$GEOID, "<br>",
+                             "Number of jobs: ", eastern_lodes_blkgp$Bach_AdvDeg_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_blkgp$Bach_AdvDeg_jobs, 
+            title = "Number of jobs for <br> college-educated workers", opacity = 0.7)
+```
+
+#### By Blocks
+Block level maps are slow to render and may be added later.
+
+### High School-Education Jobs {.tabset}
+Number of jobs for high school-educated workers in each spatial unit.
+
+#### By Tracts
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_tract$HSnoCollege_jobs)
+
+leaflet(eastern_lodes_tract) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_tract,
+              fillColor = ~pal(HSnoCollege_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_tract$GEOID,  "<br>",
+                             "Number of jobs: ", eastern_lodes_tract$HSnoCollege_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_tract$HSnoCollege_jobs, 
+            title = "Number of jobs for <br> high school-educated <br> workers", opacity = 0.7)
+```
+
+#### By Block Group
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_lodes_blkgp$HSnoCollege_jobs)
+
+leaflet(eastern_lodes_blkgp) %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = eastern_lodes_blkgp,
+              fillColor = ~pal(HSnoCollege_jobs),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.6,
+              smoothFactor = 0.3,
+              highlight = highlightOptions(
+                weight = 1, fillOpacity = 0.8, bringToFront = T
+              ),
+              popup = paste0("GEOID: ", eastern_lodes_blkgp$GEOID, "<br>",
+                             "Number of jobs: ", eastern_lodes_blkgp$HSnoCollege_jobs)) %>% 
+  addLegend("bottomright", pal = pal, values = eastern_lodes_blkgp$HSnoCollege_jobs, 
+            title = "Number of jobs for <br> high school-educated workers", opacity = 0.7)
+```
+
+#### By Blocks
+Block level maps are slow to render and may be added later.
+
+
+

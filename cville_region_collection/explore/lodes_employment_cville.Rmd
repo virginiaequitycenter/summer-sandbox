@@ -17,7 +17,6 @@ invisible(lapply(list('tidyverse', 'stargazer', 'sf', 'leaflet',
                       'RColorBrewer', 'viridis',  'googlesheets4'),
                  function(pkg) library(pkg, character.only = TRUE)))
 
-# 'janitor', 'tigris', 'rcartocolor', 'rgdal', 'lodes', 'psych', 'reshape2', , 'sp'
 # main data
 # tract
 lodes_tract <- read.csv("../data/lodes_employment_cville_tracts.csv")
@@ -142,6 +141,7 @@ cvl_lodes_block <- shape_block %>%
 ```
 
 ### All jobs {.tabset}
+Number of jobs in each spatial unit.
 
 #### By Tracts
 ```{r}
@@ -191,12 +191,12 @@ Block level maps are slow to render and may be added later.
 
 
 ### Low-wage jobs {.tabset} 
-Proportion of low-wage jobs (earnings $1250/month or less) in each spatial
+Proportion of low-wage jobs (earnings $1250/month or less) in each spatial unit.
 
 #### By Tracts
 
 ```{r}
-pal <- colorNumeric("BuPu", domain = cvl_lodes_tract$lowwage_p)
+pal <- colorNumeric("plasma", domain = cvl_lodes_tract$lowwage_p)
 
 leaflet(cvl_lodes_tract) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
@@ -218,7 +218,7 @@ leaflet(cvl_lodes_tract) %>%
 #### By Block Groups
 
 ```{r}
-pal <- colorNumeric("BuPu", domain = cvl_lodes_tract$lowwage_p)
+pal <- colorNumeric("plasma", domain = cvl_lodes_tract$lowwage_p)
 
 leaflet(cvl_lodes_tract) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
@@ -243,10 +243,12 @@ Block level maps are slow to render and may be added later.
 
 ### High-wage Jobs {.tabset}
 
+Proportion of high-wage jobs (earnings greater than $3333/month) in each spatial unit.
+
 #### By Tracts
 
 ```{r}
-pal <- colorNumeric("BuPu", domain = cvl_lodes_tract$higwage_p)
+pal <- colorNumeric("plasma", domain = cvl_lodes_tract$higwage_p)
 
 leaflet(cvl_lodes_tract) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
@@ -269,7 +271,7 @@ leaflet(cvl_lodes_tract) %>%
 #### By Block groups
 
 ```{r}
-pal <- colorNumeric("BuPu", domain = cvl_lodes_blkgp$higwage_p)
+pal <- colorNumeric("plasma", domain = cvl_lodes_blkgp$higwage_p)
 
 leaflet(cvl_lodes_blkgp) %>% 
   addProviderTiles("CartoDB.Positron") %>% 
@@ -294,6 +296,7 @@ Block level maps are slow to render and may be added later.
 
 
 ### College-Education Jobs {.tabset}
+Number of jobs for college-educated workers in each spatial unit.
 
 #### By Tracts
 
@@ -345,6 +348,7 @@ leaflet(cvl_lodes_blkgp) %>%
 Block level maps are slow to render and may be added later.
 
 ### High School-Education Jobs {.tabset}
+Number of jobs for high school-educated workers in each spatial unit.
 
 #### By Tracts
 ```{r}
