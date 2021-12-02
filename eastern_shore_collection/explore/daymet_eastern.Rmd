@@ -1,22 +1,35 @@
 ---
 title: "DAYMET Temperature and Precipitation Data"
-author: "Lee LeBoeuf"
+author: "Lee LeBoeuf & Tolu Odukoya"
 date: "10/01/2021"
-output: 
-  html_document:
-    toc: yes
-    toc_float: true
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 
-                      'RColorBrewer', 'viridis', 'rgdal', 'lodes', 'psych', 'reshape2', 'googlesheets4', 
-                      'sp', 'geosphere', 'stringr', 'ggrepel', 'transformr', 'gifski', 'dygraphs', 'xts'),
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE) 
+
+invisible(lapply(list('tidyverse', 'stargazer', 'janitor', 'tigris', 'sf', 'leaflet', 'rcartocolor', 'RColorBrewer', 'viridis', 'googlesheets4', 'sp', 'geosphere', 'stringr', 'ggrepel', 'dygraphs'),
                  function(pkg) library(pkg, character.only = TRUE)))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit?usp=sharing", sheet = "DAYMET", gs4_deauth())
-eastdat <- read.csv("daymet_eastern_county.csv")
-eastdatblkgr <- read.csv("daymet_eastern_blkgrps.csv")
+
+# main data
+eastdat <- read.csv("../data/daymet_eastern_county.csv")
+eastdat <- eastdat %>% 
+  mutate(GEOID = as.character(GEOID))
+
+eastdatblkgr <- read.csv("../data/daymet_eastern_blkgrps.csv")
+eastdatblkgr <- eastdatblkgr %>% 
+  mutate(GEOID = as.character(GEOID))
+
+# spatial data
+shape <- readRDS('../data/eastshore_blkgps.RDS')
+shape <- st_transform(shape, crs = 4326) # to WGS84, given error
+
 ```
 
 ## Data Source
@@ -37,14 +50,12 @@ eastdatblkgr <- read.csv("daymet_eastern_blkgrps.csv")
 ## Variable descriptions
 These summaries are based on data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
-meta %>% 
-  filter(su_blkgp == 1) %>%
-  select(varname, about) %>% as.list()
 glimpse(eastdat)
+
 eastdat %>% select(June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, TotpercInch) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 
@@ -52,8 +63,10 @@ eastdat %>% select(June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, Totp
 These distributions show data at the block group level from the years 1980-2020. Data are also available at the block, tract, and county levels. 
 ```{r}
 longdat <- eastdat %>% select(c(GEOID, June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, TotpercInch)) %>% pivot_longer(-GEOID, names_to = "measure", values_to = "value") 
+
 longdat$measure <- factor(longdat$measure,
                          levels = c("June_AvgMaxTF", "July_AvgMaxTF", "Aug_AvgMaxTF", "AvgAnnMaxTF", "TotpercInch"))
+
 longdat %>%
   ggplot(aes(x = value, fill = measure)) +
   scale_fill_viridis(option = "plasma", discrete = TRUE, guide = FALSE) +
@@ -72,12 +85,10 @@ meta %>%
 ## Block Group Variation in 2020 {.tabset}
 All of the following maps show data from the year 2020, but data are available for years 1980-2020. 
 ```{r, echo = FALSE}
-shape <- readRDS('eastshore_blkgps.RDS')
-shape <- st_transform(shape, crs = 4326) # to WGS84, given error
-mapdat <- merge(shape, eastdatblkgr, by = 'GEOID', all.x = T)
+mapdat <- left_join(shape, eastdatblkgr, by = 'GEOID')
 ```
 
-### Average maximum annual temperature {.tabset}
+### Average maximum annual temperature 
 ```{r}
 mapdat2020 <- mapdat[which(mapdat$year == 2020),]
 
@@ -153,9 +164,10 @@ leaflet() %>%
 
 ## County variation over time {.tabset}
 
-### Annual average temperature {.tabset}
+### Annual average temperature 
 ```{r, echo=FALSE}
 cville_sf1p <- eastdat %>% dplyr::select(NAMELSAD, year, AvgAnnMaxTF)
+
 cville_sf1ac <- filter(cville_sf1p, NAMELSAD == "Accomack County")
 cville_sf1nc <- filter(cville_sf1p, NAMELSAD == "Northampton County") %>%
   rename(NAMELSAD1 = NAMELSAD, AvgAnnMaxTF1 = AvgAnnMaxTF, year1 = year)
@@ -180,6 +192,7 @@ dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>%
 ### Average maximum August temperatures 
 ```{r, echo=FALSE}
 cville_sf1p <- eastdat %>% dplyr::select(NAMELSAD, year, Aug_AvgMaxTF)
+
 cville_sf1ac <- filter(cville_sf1p, NAMELSAD == "Accomack County")
 cville_sf1nc <- filter(cville_sf1p, NAMELSAD == "Northampton County") %>%
   rename(NAMELSAD1 = NAMELSAD, Aug_AvgMaxTF1 = Aug_AvgMaxTF, year1 = year)
@@ -204,6 +217,7 @@ dyLegend(show = "always", hideOnMouseOut = FALSE, width = 400) %>%
 ### Annual precipitation 
 ```{r, echo=FALSE}
 cville_sf1p <- eastdat %>% dplyr::select(NAMELSAD, year, TotpercInch)
+
 cville_sf1ac <- filter(cville_sf1p, NAMELSAD == "Accomack County")
 cville_sf1nc <- filter(cville_sf1p, NAMELSAD == "Northampton County") %>%
   rename(NAMELSAD1 = NAMELSAD, TotpercInch1 = TotpercInch, year1 = year)

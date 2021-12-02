@@ -1,7 +1,7 @@
 # Get DAYMET temperature and precipitation Data
 # 2021-07-28
-# Tolu Odukoya
-### Last updated 09/22 by Lee LeBoeuf
+# Tolu Odukoya, Lee LeBoeuf
+# Last updated 09/22/2021
 
 ## This script downloads daymet data using the FedData function to pull the following variables at the block,
 # block group, tract, and county levels
@@ -20,7 +20,7 @@
 # Data are pulled from the years 1980-2020. In the future, more data can be added one year at a time 
 
 # Need to download the development version of FedData in order to be able to use the tempo argument. As of 09/20, it works!
-devtools::install_github("ropensci/FedData")
+# devtools::install_github("ropensci/FedData")
 
 #Load Libraries 
 invisible(lapply(list('tidyverse', 'sf', 'raster', 'mapview', 'ggplot2', 'transformr', 'FedData', 'magrittr', 
@@ -41,10 +41,10 @@ convertp <- function(precipmm) {
 }
 
 # Reading in shape files 
-eastern_blocks <- readRDS('eastshore_blocks.RDS')
-eastern_blkgrp <- readRDS('eastshore_blkgps.RDS')
-eastern_tracts <- readRDS('eastshore_tracts.RDS')
-eastern_counties <- readRDS('eastshore_counties.RDS')
+eastern_blocks <- readRDS('data/eastshore_blocks.RDS')
+eastern_blkgrp <- readRDS('data/eastshore_blkgps.RDS')
+eastern_tracts <- readRDS('data/eastshore_tracts.RDS')
+eastern_counties <- readRDS('data/eastshore_counties.RDS')
 
 # Define years of interest
 yearswant <- 1980:2020 # Can change this to whichever year of interest--should not need to download data from before 2020 again,
@@ -201,7 +201,7 @@ eastern_alldaymetblock$CountyName <- eastern_alldaymetblock$COUNTYFP %>%
   recode("001" = "Accomack", "131" = "Northampton")
 
 ## Writing out block level data to csv ## 
-write.csv(eastern_alldaymetblock, 'daymet_eastern_block.csv', row.names = F)
+write.csv(eastern_alldaymetblock, 'data/daymet_eastern_block.csv', row.names = F)
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -335,7 +335,7 @@ eastern_alldaymetblkgr$CountyName <- eastern_alldaymetblkgr$COUNTYFP %>%
   recode("001" = "Accomack", "131" = "Northampton")
 
 ## Writing out block level data to csv ## 
-write.csv(eastern_alldaymetblkgr, 'daymet_eastern_blkgrps.csv', row.names = F)
+write.csv(eastern_alldaymetblkgr, 'data/daymet_eastern_blkgrps.csv', row.names = F)
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -469,7 +469,7 @@ eastern_alldaymettract$CountyName <- eastern_alldaymettract$COUNTYFP %>%
   recode("001" = "Accomack", "131" = "Northampton")
 
 ## Writing out block level data to csv ## 
-write.csv(eastern_alldaymettract, 'daymet_eastern_tract.csv', row.names = F)
+write.csv(eastern_alldaymettract, 'data/daymet_eastern_tract.csv', row.names = F)
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -599,5 +599,5 @@ eastern_daymet_pdatyearsf1long <- eastern_daymet_pdatyearsf1long %>%
 eastern_alldaymetcounty <- merge(eastern_alltempdat, eastern_daymet_pdatyearsf1long, by = c('GEOID', 'year', 'STATEFP', 'COUNTYFP', 'NAMELSAD'))
 
 ## Writing out block level data to csv ## 
-write.csv(eastern_alldaymetcounty, 'daymet_eastern_county.csv', row.names = F)
+write.csv(eastern_alldaymetcounty, 'data/daymet_eastern_county.csv', row.names = F)
 

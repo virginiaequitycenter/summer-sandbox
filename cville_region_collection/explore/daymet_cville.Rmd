@@ -54,7 +54,7 @@ glimpse(cvldat)
 cvldat %>% select(June_AvgMaxTF, July_AvgMaxTF, Aug_AvgMaxTF, AvgAnnMaxTF, TotpercInch) %>% 
   select(where(~is.numeric(.x))) %>% 
   as.data.frame() %>% 
-  stargazer(., type = "text", title = "Summary Statistics", digits = 2,
+  stargazer(., type = "text", title = "Summary Statistics", digits = 1,
             summary.stat = c("mean", "sd", "min", "median", "max"))
 ```
 

@@ -5,7 +5,7 @@ Building a data collection for Eastern Shore climate justice work/platform.
 ## Data Descriptions
 
 ### Climate Measures
-* [Daymet Summer/Annual Maximum Temperature and Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/daymet_cville.html)
+* [Daymet Summer/Annual Maximum Temperature and Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/daymet_eastern.html)
 * [Air Quality (Replication Data) - Tract level](https://virginiaequitycenter.github.io/summer-sandbox/airquality_eastern.html)
 * [NOAA County-level Temp/Precipitation](https://virginiaequitycenter.github.io/summer-sandbox/noaa_eastern.html)
 
