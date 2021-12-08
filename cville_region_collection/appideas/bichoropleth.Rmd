@@ -1,0 +1,207 @@
+---
+title: "Bivariate Choropleth"
+author: "Michele"
+date: "12/7/2021"
+output: 
+  html_document: 
+    code_folding: hide
+---
+
+```{r start, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+
+```{r setup}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(leafem)
+library(biscale)
+library(patchwork)
+library(scales)
+
+places <- read_csv("../data/cdcplaces_cville_tract.csv")
+places <- places %>% 
+  mutate(GEOID = as.character(locationname))
+
+airquality <- read_csv("../data/airquality_cville_tract.csv")
+airquality <- airquality %>% 
+  mutate(GEOID = as.character(gid))
+
+tracts <- readRDS("../data/cville_tracts.RDS")
+
+df <- left_join(places, airquality, by = "GEOID")
+df <- left_join(tracts, df)
+```
+
+
+## Using `geom_sf` and `biscale`
+More on biscale: https://slu-opengis.github.io/biscale/articles/biscale.html
+
+```{r biscale}
+# create classes
+df_bs <- bi_class(df, x = pm2_5_2016, y = Current_Asthma2018, style = "quantile", dim = 3)
+
+map <- ggplot() +
+  geom_sf(data = df_bs, 
+          mapping = aes(fill = bi_class), color = "white", size = 0.1, show.legend = FALSE) +
+  bi_scale_fill(pal = "DkBlue", dim = 3) +
+  labs(title = "Air Quality and Asthma") +
+  bi_theme()
+
+# legend
+legend <- bi_legend(pal = "DkBlue",
+                    dim = 3,
+                    xlab = "PM ",
+                    ylab = "Asthma  ",
+                    size = 8)
+
+map + inset_element(legend, left = 0.7, bottom = 0.7, right = 1, top = 1)
+```
+
+## Use `geom_sf` and manually defined palette
+Palette defined here: https://www.joshuastevens.net/cartography/make-a-bivariate-choropleth-map/ 
+
+```{r palette}
+# to use
+bipal <- c("#e8e8e8", "#dfd0d6", "#be64ac", # A-1, A-2, A-3,
+           "#ace4e4", "#a5add3", "#8c62aa", # B-1, B-2, B-3
+           "#5ac8c8", "#5698b9", "#3b4994") # C-1, C-2, C-2
+
+# to show
+bipal2 <- c("#be64ac", "#8c62aa", "#3b4994",
+            "#dfd0d6", "#a5add3", "#5698b9",
+            "#e8e8e8", "#ace4e4", "#5ac8c8") 
+            # A-3, B-3, C-3
+            # A-2, B-2, C-2
+            # A-1, B-1, C-1
+
+show_col(bipal2)
+```
+
+Estimate terciles of variables and use above palette to map; recreate legend manually.
+```{r manual}
+# create class
+df <- df %>%
+  mutate(asthma = ntile(Current_Asthma2018, 3),
+         pm25_2016 = ntile(pm2_5_2016, 3)) %>%
+  mutate(pm25_2016 = if_else(pm25_2016 == 1, 'A', 
+                          if_else(pm25_2016 == 2, 'B', 'C')),
+         biclass = paste0(pm25_2016, asthma)) 
+
+map2 <- ggplot(df) + 
+  geom_sf(aes(fill = biclass), color = "white", size = 0.1, show.legend = FALSE) + 
+  scale_fill_manual(values = bipal) +
+  labs(title = "Air Quality and Asthma") +
+  theme_void()
+
+# make legend
+bipal3 <- tibble(
+  "3-3" = "#3b4994", # high pm2.5, high asthma
+  "2-3" = "#8c62aa",
+  "1-3" = "#be64ac", # low pm2.5, high asthma
+  "3-2" = "#5698b9",
+  "2-2" = "#a5add3", # medium pm2.5, medium asthma
+  "1-2" = "#dfd0d6",
+  "3-1" = "#5ac8c8", # high pm2.5, low asthma
+  "2-1" = "#ace4e4",
+  "1-1" = "#e8e8e8" # low pm2.5, low asthma
+) %>%
+  gather("group", "fill")
+
+bipal3 <- bipal3 %>% 
+  separate(group, into = c("pm2.5", "asthma"), sep = "-") %>%
+  mutate(pm2.5 = as.integer(pm2.5),
+         asthma = as.integer(asthma))
+
+legend2 <- ggplot() +
+  geom_tile(
+    data = bipal3,
+    mapping = aes(
+      x = pm2.5,
+      y = asthma,
+      fill = fill)
+  ) +
+  scale_fill_identity() +
+  labs(x = expression("Higher pm2.5" %->%  ""),
+       y = expression("Higher asthma" %->% "")) +
+  theme_void() +
+  # make font small enough
+  theme(
+    axis.title = element_text(size = 6),
+    axis.title.y = element_text(angle = 90)
+  ) +
+  # quadratic tiles
+  coord_fixed()
+
+# plot
+map2 + inset_element(legend2, left = 0.8, bottom = 0.8, right = 1, top = 1)
+```
+
+## Use `leaflet`
+
+Can't find a way to adapt the leaflet legend so saving the ggplot legend figure as an image and adding it in with `addLogo`.
+
+```{r leaflet}
+# save image
+ggsave(plot = legend2, filename = "bivariate_legend.svg",
+       width = 1, height = 1)
+
+df_4326 <- st_transform(df, 4326)
+
+factpal <- colorFactor(bipal, domain = df_4326$biclass)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = df_4326,
+              fillColor = ~factpal(biclass),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.8,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", df_4326$GEOID, "<br>",
+                             "% with Asthma: ", 
+                             df_4326$Current_Asthma2018, "<br>",
+                             "PM_2.5 Levels: ", 
+                             round(df_4326$pm2_5_2016,1))) %>% 
+    addLogo("bivariate_legend.svg", src = "local",
+          position = "topright", width = 100, height = 100,
+          alpha = 0.8)
+```
+
+ARRRRRGH! In my R script, this worked, but I can't seem to get the legend image to appear in the R markdown version here! If I save the image online (outside of the script) and call it, does it work?
+
+```{r leaflet2}
+img <- "https://raw.githubusercontent.com/virginiaequitycenter/summer-sandbox/main/cville_region_collection/images/bivariate_legend.svg"
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = df_4326,
+              fillColor = ~factpal(biclass),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.8,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", df_4326$GEOID, "<br>",
+                             "% with Asthma: ", 
+                             df_4326$Current_Asthma2018, "<br>",
+                             "PM_2.5 Levels: ", 
+                             round(df_4326$pm2_5_2016,1))) %>% 
+    addLogo(img,
+          position = "topright", width = 100, height = 100,
+          alpha = 0.8)
+```
+
+Yay? As that's totally useless to me for use in a more generalized way in an app.
+
+
+
