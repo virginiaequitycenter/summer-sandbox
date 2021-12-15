@@ -1,0 +1,198 @@
+---
+title: "Rendering locally saved legend in Leaflet map"
+author: "jacob-gg"
+date: "12/14/2021"
+output:
+  html_document:
+      code_folding: hide
+---
+
+I’ve been looking into the cause of the issue Michele described in bichoropleth test doc (`bichoropleth.html`), where the custom Leaflet legend wouldn’t appear once the map was rendered (unless the legend was hosted on the web and called in). 
+
+When I looked at the underlying HTML of the rendered map, the path to the legend appeared wrong to me:
+`logo = addElement();logo.html('<img src=\"../graphs/bivariate_legend.svg\", width=100, height=100,`
+`style=\"opacity:0.8;filter:alpha(opacity=80);\", ><\/a>');\n`
+
+`../graphs/...` is a temporary directory created by the `leafem::addLogo()` function. I think the `../` relative path and/or the temporary graphs folder cause rendering issues. I was able to manually fix the problem by editing the HTML in a browser: When I switched the HTML above to a full local path (below), the legend appeared correctly.
+`<img src="/Users/jacob_local_path/summer-sandbox/cville_region_collection/images/bivariate_legend.svg" ,=""` `style="opacity:0.8;filter:alpha(opacity=80);" width="100," height="100,">,`
+
+To try and create a fix (at least a temporary one), I modified the `addLogo()` source code so that it no longer puts the custom legend in a temporary folder. The approach I've found that currently gets the legend to successfully render without needing to host it somewhere on the web is:
+
+- Drop the legend .svg in the same folder as the Rmd (or, down the line, the Shiny app)
+- Add it to the map using the custom `addLocalLogo()` function below, and avoid `../` to travel backward on the file path.
+
+(Folded code below just loads relevant data + color palette. The legend used in the map is `bivariate_legend.svg` in the `appideas` folder.)
+```{r dat, message = F}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(leafem)
+library(biscale)
+library(patchwork)
+library(scales)
+
+places <- read_csv("../data/cdcplaces_cville_tract.csv")
+places <- places %>% 
+  mutate(GEOID = as.character(locationname))
+
+airquality <- read_csv("../data/airquality_cville_tract.csv")
+airquality <- airquality %>% 
+  mutate(GEOID = as.character(gid))
+
+tracts <- readRDS("../data/cville_tracts.RDS")
+
+df <- left_join(places, airquality, by = "GEOID")
+df <- left_join(tracts, df)
+
+df <- df %>%
+  mutate(asthma = ntile(Current_Asthma2018, 3),
+         pm25_2016 = ntile(pm2_5_2016, 3)) %>%
+  mutate(pm25_2016 = if_else(pm25_2016 == 1, 'A', 
+                          if_else(pm25_2016 == 2, 'B', 'C')),
+         biclass = paste0(pm25_2016, asthma)) 
+
+bipal <- c("#e8e8e8", "#dfd0d6", "#be64ac", # A-1, A-2, A-3,
+           "#ace4e4", "#a5add3", "#8c62aa", # B-1, B-2, B-3
+           "#5ac8c8", "#5698b9", "#3b4994") # C-1, C-2, C-2
+```
+
+### Leaflet map with legend saved as a local file
+Define a new function for calling the locally saved legend:
+```{r class.source = 'fold-show'}
+# This is a modified version of leafem::addLogo(): https://rdrr.io/cran/leafem/src/R/logo.R
+# The HTML that function generated for inserting the locally saved legend had a file path that
+# didn't work (at least for me). It also generated and inserted the HTML in two steps by calling
+# a separate localImage() function inside of addLogo(). I modified the code to generate HTML with a
+# working file path, and, for concision, I condensed things into one function.
+
+addLocalLogo <- function(map,
+                    img,
+                    alpha = 1,
+                    src = c("remote", "local"),
+                    url,
+                    position = c("topleft", "topright",
+                                 "bottomleft", "bottomright"),
+                    offset.x = 50,
+                    offset.y = 13,
+                    width = 60,
+                    height = 60) {
+
+  if (inherits(map, "mapview")) map <- mapview2leaflet(map)
+  stopifnot(inherits(map, c("leaflet", "leaflet_proxy")))
+
+  position <- position[1]
+  src <- src[1]
+  
+  div_topleft <- paste0("newDiv.css({
+                        'position': 'absolute',
+                        'top': '", offset.y, "px',
+                        'left': '", offset.x, "px',
+                        'background-color': 'transparent',
+                        'border': '0px solid black',
+                        'width': '", width, "px',
+                        'height': '", height, "px',
+});")
+  
+  div_topright <- paste0("newDiv.css({
+                         'position': 'absolute',
+                         'top': '", offset.y, "px',
+                         'right': '", offset.x, "px',
+                         'background-color': 'transparent',
+                         'border': '0px solid black',
+                         'width': '", width, "px',
+                         'height': '", height, "px',
+                         });")
+  
+  div_bottomleft <- paste0("newDiv.css({
+                           'position': 'absolute',
+                           'bottom': '", offset.y, "px',
+                           'left': '", offset.x, "px',
+                           'background-color': 'transparent',
+                           'border': '0px solid black',
+                           'width': '", width, "px',
+                           'height': '", height, "px',
+                           });")
+  
+  div_bottomright <- paste0("newDiv.css({
+                            'position': 'absolute',
+                            'bottom': '", offset.y, "px',
+                            'right': '", offset.x, "px',
+                            'background-color': 'transparent',
+                            'border': '0px solid black',
+                            'width': '", width, "px',
+                            'height': '", height, "px',
+                            });")
+  
+  div <- switch(position,
+                topleft = div_topleft,
+                topright = div_topright,
+                bottomleft = div_bottomleft,
+                bottomright = div_bottomright)
+  
+  div_funk <- paste0("function(el, x, data) {
+                     // we need a new div element because we have to handle
+                     // the mouseover output seperately
+                     // debugger;
+                     function addElement () {
+                     // generate new div Element
+                     var newDiv = $(document.createElement('div'));
+                     // append at end of leaflet htmlwidget container
+                     $(el).append(newDiv);
+                     //provide ID and style
+                     newDiv.addClass('logo');\n",
+                     div,
+                     "return newDiv;
+                     }")
+  
+  div_add <- paste0("// check for already existing logo class to not duplicate
+                    var logo = $(el).find('.logo');
+                    if(!logo.length) {
+                    logo = addElement();")
+
+  style <- paste0(', style="opacity:',
+                  alpha,
+                  ';filter:alpha(opacity=',
+                  alpha * 100, ');"')
+  
+  div_html <- paste0("logo.html('<img src=", '"', img, '"',
+                     ", width=", width, ", height=", height, style,
+                     ", ></a>');
+                       var map = HTMLWidgets.find('#' + el.id).getMap();
+                     };
+                     }")
+  
+  render_stuff <- paste0(div_funk, div_add, div_html)
+  
+  map <- htmlwidgets::onRender(map, render_stuff)
+  
+  map
+}
+```
+
+Render the map:
+```{r class.source = 'fold-show'}
+df_4326 <- st_transform(df, 4326)
+
+factpal <- colorFactor(bipal, domain = df_4326$biclass)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = df_4326,
+              fillColor = ~factpal(biclass),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.8,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("GEOID: ", df_4326$GEOID, "<br>",
+                             "Percent with asthma: ", 
+                             df_4326$Current_Asthma2018, "<br>",
+                             "PM2.5 rate: ", 
+                             round(df_4326$pm2_5_2016,1))) %>%
+  addLocalLogo("bivariate_legend.svg", src = "local",
+          position = "topleft", width = 100, height = 100,
+          alpha = 0.8)
+```
