@@ -22,6 +22,7 @@ metablkgr <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe
     * Health
     * Indices
     * Housing
+    * Commute
 
 ```{r}
 metatract %>%
@@ -40,6 +41,7 @@ metatract %>%
     * Health
     * Indices
     * Housing
+    * Commute
 
 ```{r}
 metablkgr %>%
