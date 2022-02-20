@@ -169,7 +169,7 @@ leaflet() %>%
                 fillOpacity = 0.8,
                 bringToFront = T),
               popup = paste0("GEOID: ", mapdat$GEOID, "<br>",
-                             "Percent of adults with cancer: ", mapdat$Coronary_Heart_Disease2018)) %>% 
+                             "Percent of adults with cancer: ", mapdat$Cancer_except_skin2018)) %>% 
   leaflet::addLegend("bottomright", pal = pal, values = (mapdat$Cancer_except_skin2018), 
             title = "Predicted % of adults <br> with cancer (excluding skin) <br> in 2018", opacity = 0.7)
 

@@ -15,6 +15,8 @@
 # * Median personal earnings
 # * Net school enrollment
 # * Commute data: number of people with different average commute times. 
+# * Broadband: percent of households with broadband and % with broadband and a computer 
+# * Housing age: percent of housing units in a tract built within certain bands of time
 
 # Based on: ACS 2015-2019 
 # Geography: Tracts in Localities in Charlottesville region
@@ -74,12 +76,18 @@ library(tidycensus)
 ##  - Median personal earnings of all workers with earnings ages 16 and older -- S2001_C01_002
 ##  - Percent of cost-burdened renters -- B25070_007+B25070_008+B25070_009+B25070_010/B25070_001
 ##  - Home ownership rates -- B25003_002/B25003_002
-##  - Housing vacant unitss -- B25002_003/B25002_001
-##  - Estimated <20 minutes commute -- B08134_002 + B08134_003 + B08134_004
-##  - Estimated 20 to 34 minutes commute -- B08134_005 + B08134_006 + B08134_008
-##  - Estimated 35 to 59 minutes commute -- B08134_008 + B08134_009 
-##  - Estimated >=60 minutes commute -- B08134_010
-
+##  - Housing vacant units -- B25002_003/B25002_001
+##  - Percent with <20 minutes commute -- B08134_002 + B08134_003 + B08134_004
+##  - Percent with 20 to 34 minutes commute -- B08134_005 + B08134_006 + B08134_008
+##  - Percent with 35 to 59 minutes commute -- B08134_008 + B08134_009 
+##  - Percent with >=60 minutes commute -- B08134_010
+##  - Percent that have a broadband subscription of any kind -- B28002_004
+##  - Percent that have a computer and a broadband subscription -- B28003_004
+##  - Percent of housing units built before 1940 -- B25034_011
+##  - Percent of housing units biult between 1940 and 1959 -- B25034_010 + B25034_009
+##  - Percent of housing units built between 1960 and 1979 -- B25034_008 + B25034_007
+##  - Percent of housing units built between 1980 and 1999 -- B25034_006 + B25034_005
+##  - Percent of housing units built after 2000 -- B25034_004 + B25034_003 + B25034_002
 
 # ....................................................
 # 2. Define localities, variables, pull data ----
@@ -118,7 +126,9 @@ varlist_b = c("B01003_001", # totalpop
               "B25003_002",  # owner-occupied housing units
               "B25003_001",  # occupied housing units
               "B25002_003",  # vacant housing units
-              "B25002_001")  # housing units
+              "B25002_001",  # housing units
+              "B28002_004", # Broadband of any type
+              "B28003_004") # Have a computer and broadband
 
 # pull variables
 tract_data_s <- get_acs(geography = "tract",
@@ -161,7 +171,9 @@ names(tract_data_b) = c("GEOID", "NAME",
                         "ownoccE", "ownoccM",
                         "occhseE", "occhseM",
                         "vachseE", "vachseM",
-                        "allhseE", "allhseM")
+                        "allhseE", "allhseM",
+                        "broadE", "broadM",
+                        "compbroadE", "compbroadM")
 
 # Derive some variables
 tract_data_b <- tract_data_b %>% 
@@ -178,6 +190,16 @@ tract_data_b <- tract_data_b %>%
          vacrateM = moe_prop(vachseE, allhseE, vachseM, allhseM),
          vacrateM = round(vacrateM*100, 1)) %>% 
   select(-c(rentersumE, rentersumM,rent30E:occhseM))
+
+# Derive broadband variables 
+tract_data_b <- tract_data_b %>% 
+  mutate(pbroadE = round(broadE/ allhseE* 100, 1),
+         pbroadM = moe_prop(broadE, allhseE, broadM, allhseM),
+         pbroadM = round(pbroadM*100, 1),
+         pcompbroadE = round(compbroadE/ allhseE* 100, 1),
+         pcompbroadM = moe_prop(compbroadE, allhseE, compbroadE, allhseM),
+         pcompbroadM = round(pcompbroadM*100, 1)) %>% 
+  select(-c(broadE, broadM, compbroadE, compbroadM))
 
 # for commute variables  
 varlist_c = c("B08134_002",  # < 10 min commute to work
@@ -227,6 +249,81 @@ tract_data_c <- tract_data_c %>%
   select(GEOID, NAME, cunder20minE, cunder20minM, c20to34minE, c20to34minM, c35to59minE, 
          c35to59minM, cgreater_60minE, cgreater_60minM)
 
+# For home age variables 
+varlist_ha = c("B25034_001",  # Total housing 
+               "B25034_002",  # House built 2014 or later
+              "B25034_003",  # House built 2010 - 2013
+              "B25034_004",  # House built 2000 - 2009
+              "B25034_005",  # House built 1990 - 1999
+              "B25034_006",  # House built 1980 - 1989
+              "B25034_007",  # House built 1970 - 1979
+              "B25034_008",  # House built 1960 - 1969
+              "B25034_009",  # House built 1950 - 1959
+              "B25034_010",  # House built 1940 - 1949
+              "B25034_011")  # House built 1939 or earlier
+
+# Pull variables
+tract_data_ha <- get_acs(geography = "tract",
+                        variables = varlist_ha,
+                        show_call = T,
+                        state = "VA", 
+                        county = region, 
+                        survey = "acs5",
+                        year = 2019, 
+                        output = "wide")
+
+# rename variables -- these should be in the correct order given the download, but double check with future downloads 
+# by matching the variable names above. 
+names(tract_data_ha) = c("GEOID", "NAME",
+                         "tothousinguE", "tothousinguM",
+                        "b2014lE", "b2014lM",
+                        "b2010_2013E", "b2010_2013M",
+                        "b2000_2009E", "b2000_2009M",
+                        "b1990_1999E", "b1990_1999M",
+                        "b1980_1989E", "b1980_1989M",
+                        "b1970_1979E", "b1970_1979M",
+                        "b1960_1969E", "b1960_1969M",
+                        "b1950_1959E", "b1950_1959M",
+                        "b1940_1949E", "b1940_1949M",
+                        "bbefore1940E", "bbefore1940M")
+
+# Derive some variables
+tract_data_ha <- tract_data_ha %>% 
+  mutate(bbefore1940E = round(bbefore1940E/tothousinguE*100, 1),
+         bbefore1940M = moe_prop(bbefore1940E, tothousinguE, bbefore1940M, tothousinguM),
+         bbefore1940M = round(sqrt(bbefore1940M)*1.645, 2),
+         
+         bb1940_1959sumE = b1940_1949E + b1950_1959E,
+         bb1940_1959sumM = (b1940_1949M / 1.645)^2 + (b1950_1959M / 1.645)^2,
+         bb1940_1959sumM = sqrt(bb1940_1959sumM) * 1.645,
+         bb1940_1959E = round((bb1940_1959sumE / tothousinguE)*100, 1),
+         bb1940_1959M = moe_prop(bb1940_1959sumE, tothousinguE, bb1940_1959sumM, tothousinguM),
+         bb1940_1959M = round(sqrt(bb1940_1959M)*1.645, 2),
+         
+         bb1960_1979sumE = b1960_1969E + b1970_1979E,
+         bb1960_1979sumM = (b1960_1969M / 1.645)^2 + (b1970_1979M / 1.645)^2,
+         bb1960_1979sumM = sqrt(bb1960_1979sumM) * 1.645,
+         bb1960_1979E = round((bb1960_1979sumE / tothousinguE)*100, 1),
+         bb1960_1979M = moe_prop(bb1960_1979sumE, tothousinguE, bb1960_1979sumM, tothousinguM),
+         bb1960_1979M = round(sqrt(bb1960_1979M)*1.645, 2),
+         
+         bb1980_1999sumE = b1980_1989E + b1990_1999E,
+         bb1980_1999sumM = (b1980_1989M / 1.645)^2 + (b1990_1999M / 1.645)^2,
+         bb1980_1999sumM = sqrt(bb1980_1999sumM) * 1.645,
+         bb1980_1999E = round((bb1980_1999sumE / tothousinguE)*100, 1),
+         bb1980_1999M = moe_prop(bb1980_1999sumE, tothousinguE, bb1980_1999sumM, tothousinguM),
+         bb1980_1999M = round(sqrt(bb1980_1999M)*1.645, 2),
+         
+         ba2000sumE = b2000_2009E + b2010_2013E + b2014lE,
+         ba2000sumM = (b2000_2009M / 1.645)^2 + (b2010_2013M / 1.645)^2 + (b2014lM / 1.645)^2,
+         ba2000sumM = sqrt(ba2000sumM) * 1.645,
+         ba2000E = round((ba2000sumE / tothousinguE)*100, 1),
+         ba2000M = moe_prop(ba2000sumE, tothousinguE, ba2000sumM, tothousinguM),
+         ba2000M = round(sqrt(ba2000M)*1.645, 2)) %>%
+  select(GEOID, NAME, tothousinguE, tothousinguM, bbefore1940E, bbefore1940M, bb1940_1959E, bb1940_1959M, bb1960_1979E, 
+         bb1960_1979M, bb1980_1999E, bb1980_1999M, ba2000E, ba2000M)
+
+
 # Get Data
 # pull tables (easier to just pull tables separately)
 tract_race <- get_acs(geography = "tract", 
@@ -249,7 +346,6 @@ tract_enroll <- get_acs(geography = "tract",
                         county = region, 
                         survey = "acs5", 
                         year = 2019)
-
 
 # ....................................................
 # 3. Reduce and Combine data ----
@@ -366,7 +462,8 @@ tract_data <- tract_data_s %>%
   left_join(tract_age24) %>% 
   left_join(tract_age64) %>% 
   left_join(tract_age65) %>%
-  left_join(tract_data_c)
+  left_join(tract_data_c) %>%
+  left_join(tract_data_ha)
 
 tract_data <- tract_data %>% 
   mutate(year = "2019") %>% 
