@@ -1,0 +1,7 @@
+"fips","state","county","life_expectancy","life_expectancy_(aian)","life_expectancy_(aian)_95%_ci_-_low","life_expectancy_(aian)_95%_ci_-_high","life_expectancy_(asian)","life_expectancy_(asian)_95%_ci_-_low","life_expectancy_(asian)_95%_ci_-_high","life_expectancy_(black)","life_expectancy_(black)_95%_ci_-_low","life_expectancy_(black)_95%_ci_-_high","life_expectancy_(hispanic)","life_expectancy_(hispanic)_95%_ci_-_low","life_expectancy_(hispanic)_95%_ci_-_high","life_expectancy_(white)","life_expectancy_(white)_95%_ci_-_low","life_expectancy_(white)_95%_ci_-_high"
+"51003","Virginia","Albemarle",83.0042709,NA,NA,NA,92.118031966,82.526555534,101.7095084,77.755416531,76.040156074,79.470676988,90.870008585,79.834786397,101.90523077,83.379230365,82.79831116,83.960149569
+"51065","Virginia","Fluvanna",80.728037886,NA,NA,NA,NA,NA,NA,78.530999314,75.772568411,81.289430216,NA,NA,NA,80.89656724,79.474374543,82.318759937
+"51079","Virginia","Greene",79.894073332,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"51109","Virginia","Louisa",78.133201156,NA,NA,NA,NA,NA,NA,77.22550163,74.726907211,79.724096049,NA,NA,NA,77.922256929,76.806882577,79.037631282
+"51125","Virginia","Nelson",78.04309464,NA,NA,NA,NA,NA,NA,76.56897292,72.910270324,80.227675516,NA,NA,NA,77.94536072,76.219214488,79.671506953
+"51540","Virginia","Charlottesville City",79.751236188,NA,NA,NA,94.26727731,64.988367736,123.54618688,75.368878146,73.316002926,77.421753366,94.457753643,63.483288377,125.43221891,80.660055407,79.648514187,81.671596627
