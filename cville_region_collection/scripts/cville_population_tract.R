@@ -202,7 +202,8 @@ tract_data_b <- tract_data_b %>%
   select(-c(broadE, broadM, compbroadE, compbroadM))
 
 # for commute variables  
-varlist_c = c("B08134_002",  # < 10 min commute to work
+varlist_c = c("B08134_001", # total workers
+              "B08134_002",  # < 10 min commute to work
               "B08134_003",  # 10 - 15 min comute to work (will become <20 min commute)
               "B08134_004",  # 15 - 19 min commute to work (will become <20 min commute)
               "B08134_005",  # 20 - 24 min commute to work (will become <20 min commute)
@@ -224,7 +225,8 @@ tract_data_c <- get_acs(geography = "tract",
 
 # rename variables -- these should be in the correct order given the download, but double check with future downloads 
 # by matching the variable names above. 
-names(tract_data_c) = c("GEOID", "NAME",
+names(tract_data_c) = c("GEOID", "NAME", 
+                        "totalworkersE", "totalworkersM",
                          "c10minE", "c10minM",
                          "c10_15minE", "c10_15minM",
                          "c15_19minE", "c15_19minM",
@@ -237,17 +239,33 @@ names(tract_data_c) = c("GEOID", "NAME",
 
 # Derive some variables
 tract_data_c <- tract_data_c %>% 
-  mutate(cunder20minE = (c10minE + c10_15minE + c15_19minE),
-         cunder20minM = (c10minM/1.645)^2 + (c10_15minM/1.645)^2 + (c15_19minM/1.645)^2,
-         cunder20minM = round(sqrt(cunder20minM)*1.645, 2),
-         c20to34minE = (c20_24minE + c25_29minE + c30_34minE),
-         c20to34minM = (c20_24minM/1.645)^2 + (c25_29minM/1.645)^2 + (c30_34minM/1.645)^2,
-         c20to34minM = round(sqrt(c20to34minM)*1.645, 2),
-         c35to59minE = (c35_44minE + c44_59minE),
-         c35to59minM = (c35_44minM/1.645)^2 + (c44_59minM/1.645)^2,
-         c35to59minM = round(sqrt(c35to59minM)*1.645, 2)) %>%
-  select(GEOID, NAME, cunder20minE, cunder20minM, c20to34minE, c20to34minM, c35to59minE, 
-         c35to59minM, cgreater_60minE, cgreater_60minM)
+  mutate(cunder20minsumE = (c10minE + c10_15minE + c15_19minE),
+         cunder20minsumM = (c10minM/1.645)^2 + (c10_15minM/1.645)^2 + (c15_19minM/1.645)^2,
+         cunder20minsumM = round(sqrt(cunder20minsumM)*1.645, 2),
+         perc_cUnder20minE = round(cunder20minsumE / totalworkersE * 100, 1),
+         perc_cUnder20minM = moe_prop(cunder20minsumE, totalworkersE, cunder20minsumM, totalworkersM),
+         perc_cUnder20minM = round(perc_cUnder20minM*100,1),
+
+         c20to34minsumE = (c20_24minE + c25_29minE + c30_34minE),
+         c20to34minsumM = (c20_24minM/1.645)^2 + (c25_29minM/1.645)^2 + (c30_34minM/1.645)^2,
+         c20to34minsumM = round(sqrt(c20to34minsumM)*1.645, 2),
+         perc_c20to34minE = round(c20to34minsumE / totalworkersE * 100, 1),
+         perc_c20to34minM = moe_prop(c20to34minsumE, totalworkersE, c20to34minsumM, totalworkersM),
+         perc_c20to34minM = round(perc_c20to34minM*100,1),
+         
+         c35to59minsumE = (c35_44minE + c44_59minE),
+         c35to59minsumM = (c35_44minM/1.645)^2 + (c44_59minM/1.645)^2,
+         c35to59minsumM = round(sqrt(c35to59minsumM)*1.645, 2),
+         perc_c35to59minE = round(c35to59minsumE / totalworkersE * 100, 1),
+         perc_c35to59minM = moe_prop(c35to59minsumE, totalworkersE, c35to59minsumM, totalworkersM),
+         perc_c35to59minM = round(perc_c35to59minM*100,1),
+         
+         perc_cgreater_60minE = round(cgreater_60minE / totalworkersE * 100, 1),
+         perc_cgreater_60minM = moe_prop(cgreater_60minE, totalworkersE, cgreater_60minM, totalworkersM),
+         perc_cgreater_60minM = round(perc_cgreater_60minM*100, 1)) %>%
+  select(GEOID, NAME, perc_cUnder20minE, perc_cUnder20minM, perc_c20to34minE, 
+         perc_c20to34minM, perc_c35to59minE, perc_c35to59minM,
+         perc_cgreater_60minE, perc_cgreater_60minM)
 
 # For home age variables 
 varlist_ha = c("B25034_001",  # Total housing 
