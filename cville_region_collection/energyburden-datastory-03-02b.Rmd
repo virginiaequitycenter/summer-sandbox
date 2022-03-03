@@ -1,0 +1,450 @@
+---
+title: "Local Energy Burden"
+author: "Marisa Lemma and Lee LeBoeuf"
+output:
+  html_document:
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+invisible(lapply(list('tidyverse', 'sf','leaflet', 'biscale', 'DT', 'biscale',
+                      'patchwork', 'scales', 'leafem', 'scales','plotly', 'stringi',
+                      'ggpubr'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+
+# load data
+lead <- read_csv("../data/lead_cville_tract.csv")
+daymet <- read_csv("../data/daymet_cville_tract.csv")
+population <- read_csv("../data/acs_tract_cville.csv")
+cville_tracts <- readRDS("../data/cville_tracts.RDS")
+
+# filter daymet to just 2020
+daymet <- daymet %>% 
+  filter(year==2020)
+
+# merge into one dataset
+lead <- lead %>% rename(GEOID = FIP)
+lead_temp <- merge(lead, daymet, by = "GEOID")
+all <- merge(lead_temp, population, by = "GEOID")
+
+# merge with spatial data
+cvlshapes <- merge(cville_tracts, all, by = 'GEOID', all.x = T)
+cvlshapes <- st_transform(cvlshapes, crs = 4326) # to WGS84, given error
+
+# Remove Albemarle 109.03, the university census tract (because it is usually an outlier)
+cvlshapes <- cvlshapes[-c(14), ]
+all <- all[-c(14), ]
+```
+
+## What does the term "energy burden" mean?  
+
+__Energy burden refers to the percent of a household's income spent on energy costs.__
+
+A household’s energy burden might be higher if a household has a lower income (because the electric bill eats up a lot of each paycheck). Or, a household’s energy burden could be higher if they live in a poorly insulated house, meaning that the heating/cooling systems need to be run more often.
+
+The median energy burden for The United States is 3.1%.^[National energy burden average: [The American Council for an Energy-Efficiient Economy](https://www.aceee.org/sites/default/files/pdfs/ACEEE-01%20Energy%20Burden%20-%20National.pdf)], while the average energy burden for the state of Virginia is slightly lower at 2%.^[Virginia energy burden average: [The Office of Energy Efficiency & Renewable Energy](https://www.energy.gov/eere/slsc/maps/lead-tool)] The average energy burden for each census tract in the Charlottesville region ranges from about 1.5% to 6.5%. 
+
+__Energy burdened households are households that spend more than 6% of their income on energy costs.__^[ The 6% affordability threshold is based on Fisher, Sheehan and Colton’s Home Energy Affordability Gap Analysis. This affordability percentage is based on the assumption that an affordable housing burden is less than 30% of income spent on energy, and 20% of housing costs should be allocated to energy bills. This leads to 6% of an affordable housing burden spent on energy costs, or a 6% energy burden. For more information, [click here](www.homeenergyaffordabilitygap.com)] Burdens that exceed 6% can interfere with a households’ ability to pay for other critical expenses or increase the risk of energy shutoffs by utility companies. The map below shows the percentage of households in each census tract that are energy burdened.
+
+```{r}
+pal <- colorNumeric("Blues", reverse = FALSE, domain = cvlshapes$percentburdened)
+leaflet(cvlshapes) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = cvlshapes,
+              fillColor = ~pal(percentburdened),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0(cvlshapes$NAME.y, "<br>",
+                            "Pct. Burdened: ", round(cvlshapes$percentburdened, 2))) %>%
+  addLegend("bottomright", pal = pal, values = cvlshapes$percentburdened,
+            title = "Percent of Energy<br>Burdened Households", opacity = 0.7)
+```
+
+## What factors are related to energy burden?
+
+### Socio-economic factors 
+
+The following graphs show the association between poverty, unemployment, and median household income, respectively, with energy burden. For each measure, we have grouped each census tract in the region into terciles, meaning a low rank (1) includes the tracts with the lowest rate of each variable and high (3) includes those with the highest.
+
+As we can see from these graphs, higher poverty rates, higher unemployment rates, and lower median household income are all associated with a higher percentage of energy-burdened households.
+
+```{r, message=FALSE, warning=FALSE}
+dat <- all
+
+## poverty plot 
+dat1 <- bi_class(dat, x = povrateE, y = percentburdened, style = "quantile", dim = 3)
+dat1$povrank <- stri_extract(dat1$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat2 <- dat1 %>%  
+  dplyr::select(allhseE, percentburdened, povrank) %>%
+  filter(!is.na(percentburdened), !is.na(povrank)) %>% 
+  mutate(mh_num = allhseE*(percentburdened/100)) %>% 
+  group_by(povrank) %>% 
+  summarize(mh_num = sum(mh_num),
+            num = sum(allhseE),
+            mh_per = round((mh_num/num)*100,1))
+
+povplot <- dat2 %>% 
+  ggplot(aes(povrank, mh_per, fill=povrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Rank") + 
+  labs(x = "% in poverty", y = "% of burdened households") + theme_bw()
+
+
+## unemployment plot
+dat6 <- bi_class(dat, x = unempE, y = percentburdened, style = "quantile", dim = 3)
+dat6$unemployrank <- stri_extract(dat6$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat6 <- dat6 %>%  
+  dplyr::select(allhseE, percentburdened, unemployrank) %>%
+  filter(!is.na(percentburdened), !is.na(unemployrank)) %>% 
+  mutate(ph_num = allhseE*(percentburdened/100)) %>% 
+  group_by(unemployrank) %>% 
+  summarize(ph_num = sum(ph_num),
+            num = sum(allhseE),
+            ph_per = round((ph_num/num)*100,1))
+
+employplot <- dat6 %>% 
+  ggplot(aes(unemployrank, ph_per, fill=unemployrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Rank") + 
+  labs(x = "% unemployed", y = "% of burdened households") + theme_bw()
+
+
+## income plot
+dat7 <- bi_class(dat, x = hhincE, y = percentburdened, style = "quantile", dim = 3)
+dat7$incrank <- stri_extract(dat7$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat7 <- dat7 %>%  
+  dplyr::select(hhincE, percentburdened, incrank) %>%
+  filter(!is.na(percentburdened), !is.na(incrank)) %>% 
+  mutate(ph_num = hhincE*(percentburdened/100)) %>% 
+  group_by(incrank) %>% 
+  summarize(in_num = sum(ph_num),
+            num = sum(hhincE),
+            in_per = round((ph_num/num)*100,1))
+
+incomeplot <- dat7 %>% 
+  ggplot(aes(incrank, in_per, fill=incrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Median household income rank") + 
+  labs(x = "Median household income", y = "% of burdened households") + theme_bw()
+
+ggarrange(povplot, employplot, incomeplot, ncol = 3, common.legend = TRUE)
+
+```
+
+### Racial demographics 
+
+The following graphs show the association between the racial composition of census tracts and energy burden. Just like in the graphs above, in each graph, a low rank (1) includes the tracts with the lowest rate of each variable and high (3) includes those with the highest. 
+
+The graphs show that percent of energy burdened households is much higher in tracts with higher percent non-White (particularly Black) residents, but much lower in tracts with higher percent White populations.
+
+```{r, message=FALSE, warning=FALSE}
+all <- all %>% 
+  mutate(bipoc = 100 - whiteE)
+
+# percent non-white plot
+dat8 <- bi_class(all, x = bipoc, y = percentburdened, style = "quantile", dim = 3)
+dat8$bipocrank <- stri_extract(dat8$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat8 <- dat8 %>%  
+  dplyr::select(hhincE, percentburdened, bipocrank) %>%
+  filter(!is.na(percentburdened), !is.na(bipocrank)) %>% 
+  mutate(ph_num = hhincE*(percentburdened/100)) %>% 
+  group_by(bipocrank) %>% 
+  summarize(in_num = sum(ph_num),
+            num = sum(hhincE),
+            in_per = round((ph_num/num)*100,1))
+
+bipocplot <- dat8 %>% 
+  ggplot(aes(bipocrank, in_per, fill=bipocrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Rank") + 
+  labs(x = "% Non-White", y = "% of burdened households") + theme_bw()
+
+# percent Black plot 
+dat4 <- bi_class(dat, x = blackE, y = percentburdened, style = "quantile", dim = 3)
+dat4$perBlackrank <- stri_extract(dat4$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat4 <- dat4 %>%  
+  dplyr::select(allhseE, percentburdened, perBlackrank) %>%
+  filter(!is.na(percentburdened), !is.na(perBlackrank)) %>% 
+  mutate(ca_num = allhseE*(percentburdened/100)) %>% 
+  group_by(perBlackrank) %>% 
+  summarize(ca_num = sum(ca_num),
+            num = sum(allhseE),
+            ca_per = round((ca_num/num)*100,1))
+
+raceplot <- dat4 %>%  
+  ggplot(aes(perBlackrank, ca_per, fill=perBlackrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Rank") + 
+  labs(x = "% Black", y = "% of burdened households") + theme_bw()
+
+# percent White plot
+dat9 <- bi_class(dat, x = whiteE, y = percentburdened, style = "quantile", dim = 3)
+dat9$perWhiterank <- stri_extract(dat9$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat9 <- dat9 %>%  
+  dplyr::select(allhseE, percentburdened, perWhiterank) %>%
+  filter(!is.na(percentburdened), !is.na(perWhiterank)) %>% 
+  mutate(ca_num = allhseE*(percentburdened/100)) %>% 
+  group_by(perWhiterank) %>% 
+  summarize(ca_num = sum(ca_num),
+            num = sum(allhseE),
+            ca_per = round((ca_num/num)*100,1))
+
+whiteplot <- dat9 %>%  
+  ggplot(aes(perWhiterank, ca_per, fill=perWhiterank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low", "mid", "high"),
+                    values = c("#a5add3", "#dfd0d6", "#5698b9"),
+                    name = "Rank") + 
+  labs(x = "% White", y = "% of burdened households") + theme_bw()
+
+ggarrange(bipocplot, raceplot, whiteplot, ncol = 3, common.legend = TRUE)
+```
+
+### Home ownership
+
+The following graph shows the percent of energy burdened households, broken down by owners and renters, across localities. We see that in general, renters face far greater energy burdens than homeowners.  
+
+There are a few plausible reasons for this pattern. Renters may, on average, have lower incomes than homeowners. Additionally, homeowners often have a greater incentive to make upgrades to their homes that improve energy efficiency and reduce their energy costs. In contrast, improvements made by landlords mostly serve to lower energy costs for tenants. Both of these phenomena may be influencing local trends. 
+
+```{r}
+# filter to just variables of interest
+bar <- all %>% 
+  group_by(county) %>% 
+  summarize(pctrenters = mean(percent_burdened_renters),
+            pctowners = mean(percent_burdened_owners))
+bar <- bar %>% arrange(pctrenters)
+
+# convert from wide to long
+bar_long <- gather(bar, type, percent, pctrenters:pctowners)
+
+bar_long$county <- ifelse(bar_long$county == "Charlottesville city", "Charlottesville", bar_long$county)
+
+# graph
+ggplot(bar_long, aes(x = county, y = percent, fill = type)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(labels = c("% burdened (owners)", "% burdened (renters)"),
+                    values = c("#a5add3", "#5698b9"),
+                    name = "Resident type") + 
+  labs(x = "Locality", y = "% of burdened households") + theme_bw()
+```
+
+### Temperature
+
+This map shows the correlation between the number of energy-burdened households and average maximum July temperatures. Tracts are divided into groups based on their relative ranking on percent energy burdened households and the average maximum July temperatures. 
+
+Mapping both variables together allows one to see how tracts that are warmer, on average, also tend to have a higher percentage of energy-burdened households. This trend is particularly stark in Louisa County.
+
+```{r}
+# manually define palette
+bipal <- c("#e8e8e8", "#dfd0d6", "#be64ac", # A-1, A-2, A-3,
+           "#ace4e4", "#a5add3", "#8c62aa", # B-1, B-2, B-3
+           "#5ac8c8", "#5698b9", "#3b4994") # C-1, C-2, C-2
+
+cvlshapes <- cvlshapes %>%
+  mutate(burdenrank = ntile(percentburdened, 3),
+         temprank = ntile(July_AvgMaxTF, 3)) %>%
+  mutate(burdenrank = if_else(burdenrank == 1, 'A',
+                          if_else(burdenrank == 2, 'B', 'C')),
+         biclass = paste0(burdenrank, temprank))
+
+# make legend
+bipal3 <- tibble(
+  "3-3" = "#3b4994", # high average burden, high temperature
+  "2-3" = "#8c62aa",
+  "1-3" = "#be64ac", # low average burden, high temp
+  "3-2" = "#5698b9",
+  "2-2" = "#a5add3", # medium avg burden, medium temp
+  "1-2" = "#dfd0d6",
+  "3-1" = "#5ac8c8", # high avg burden, low temp
+  "2-1" = "#ace4e4",
+  "1-1" = "#e8e8e8" # low avg burden, low temp
+) %>%
+  gather("group", "fill")
+
+bipal3 <- bipal3 %>%
+  separate(group, into = c("burdenrank", "temprank"), sep = "-") %>%
+  mutate(burdenrank = as.integer(burdenrank),
+         povertyrank = as.integer(temprank))
+
+legend2 <- ggplot() +
+  geom_tile(
+    data = bipal3,
+    mapping = aes(
+      x = burdenrank,
+      y = temprank,
+      fill = fill)
+  ) +
+  scale_fill_identity() +
+  labs(x = expression("% energy burdened" %->%  ""),
+       y = expression("Higher temperature" %->% "")) +
+  theme_void() +
+  # make font small enough
+  theme(
+    axis.title = element_text(size = 6),
+    axis.title.y = element_text(angle = 90)
+  ) +
+  # quadratic tiles
+  coord_fixed()
+
+# Jacob's fix for the legend
+ggsave(plot = legend2, filename = "bivariate_legend.svg",
+       width = 1, height = 1)
+addLocalLogo <- function(map,
+                    img,
+                    alpha = 1,
+                    src = c("remote", "local"),
+                    url,
+                    position = c("topleft", "topright",
+                                 "bottomleft", "bottomright"),
+                    offset.x = 50,
+                    offset.y = 13,
+                    width = 60,
+                    height = 60) {
+
+  if (inherits(map, "mapview")) map <- mapview2leaflet(map)
+  stopifnot(inherits(map, c("leaflet", "leaflet_proxy")))
+
+  position <- position[1]
+  src <- src[1]
+  
+  div_topleft <- paste0("newDiv.css({
+                        'position': 'absolute',
+                        'top': '", offset.y, "px',
+                        'left': '", offset.x, "px',
+                        'background-color': 'transparent',
+                        'border': '0px solid black',
+                        'width': '", width, "px',
+                        'height': '", height, "px',
+});")
+  
+  div_topright <- paste0("newDiv.css({
+                         'position': 'absolute',
+                         'top': '", offset.y, "px',
+                         'right': '", offset.x, "px',
+                         'background-color': 'transparent',
+                         'border': '0px solid black',
+                         'width': '", width, "px',
+                         'height': '", height, "px',
+                         });")
+  
+  div_bottomleft <- paste0("newDiv.css({
+                           'position': 'absolute',
+                           'bottom': '", offset.y, "px',
+                           'left': '", offset.x, "px',
+                           'background-color': 'transparent',
+                           'border': '0px solid black',
+                           'width': '", width, "px',
+                           'height': '", height, "px',
+                           });")
+  
+  div_bottomright <- paste0("newDiv.css({
+                            'position': 'absolute',
+                            'bottom': '", offset.y, "px',
+                            'right': '", offset.x, "px',
+                            'background-color': 'transparent',
+                            'border': '0px solid black',
+                            'width': '", width, "px',
+                            'height': '", height, "px',
+                            });")
+  
+  div <- switch(position,
+                topleft = div_topleft,
+                topright = div_topright,
+                bottomleft = div_bottomleft,
+                bottomright = div_bottomright)
+  
+  div_funk <- paste0("function(el, x, data) {
+                     // we need a new div element because we have to handle
+                     // the mouseover output seperately
+                     // debugger;
+                     function addElement () {
+                     // generate new div Element
+                     var newDiv = $(document.createElement('div'));
+                     // append at end of leaflet htmlwidget container
+                     $(el).append(newDiv);
+                     //provide ID and style
+                     newDiv.addClass('logo');\n",
+                     div,
+                     "return newDiv;
+                     }")
+  
+  div_add <- paste0("// check for already existing logo class to not duplicate
+                    var logo = $(el).find('.logo');
+                    if(!logo.length) {
+                    logo = addElement();")
+
+  style <- paste0(', style="opacity:',
+                  alpha,
+                  ';filter:alpha(opacity=',
+                  alpha * 100, ');"')
+  
+  div_html <- paste0("logo.html('<img src=", '"', img, '"',
+                     ", width=", width, ", height=", height, style,
+                     ", ></a>');
+                       var map = HTMLWidgets.find('#' + el.id).getMap();
+                     };
+                     }")
+  
+  render_stuff <- paste0(div_funk, div_add, div_html)
+  
+  map <- htmlwidgets::onRender(map, render_stuff)
+  
+  map
+}
+
+df_4326 <- st_transform(cvlshapes, 4326)
+
+factpal <- colorFactor(bipal, domain = df_4326$biclass)
+
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron") %>% 
+  addPolygons(data = df_4326,
+              fillColor = ~factpal(biclass),
+              weight = 1,
+              opacity = 1,
+              color = "white", 
+              fillOpacity = 0.8,
+              highlight = highlightOptions(
+                weight = 2,
+                fillOpacity = 0.8,
+                bringToFront = T),
+              popup = paste0("County: ", df_4326$county, "<br>",
+                             "Percent Burdened: ", 
+                             round(df_4326$percentburdened, 2), "<br>",
+                             "Average Max July Temperature: ", 
+                             round(df_4326$July_AvgMaxTF,1))) %>% 
+    addLocalLogo("bivariate_legend.svg", src = "local",
+          position = "topright", width = 100, height = 100,
+          alpha = 0.8)
+```
+
+<details><summary>Click here info on the data sources presented here</summary><br/>
+
+* [Low-Income Energy Affordability Data, 2018 Update](https://data.openei.org/submissions/573 )
+* [Daymet: Monthly Climate Summaries on a 1-km Grid for North America](https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1855)
+* Census Bureau's American Community Survey 5-Year Estimates from 2015-2019
+
+</details> 
