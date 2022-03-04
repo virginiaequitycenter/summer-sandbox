@@ -1,0 +1,554 @@
+---
+title: "Health outcomes in the Charlottesville Region"
+author: "Lee LeBoeuf, Michael Salgueiro, Michele Claibourn, Equity Center Democratization of Data Initiative"
+output:
+  html_document:
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r libraries, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+invisible(lapply(list('tidyverse', 'cartogram', 'broom', 'tweenr', 'gganimate',
+                      'maptools', 'RColorBrewer', 'viridis', 'rgdal',
+                      'googlesheets4','stringr','psych','GGally', 'sf', 
+                      'tmap', 'purrr', 'ggplot2', 'reticulate',
+                      'ggExtra', 'leaflet', 'biscale', 'leafem',
+                      'patchwork', 'scales', 'svglite', 'ggpubr', 'transformr', 'stringi',
+                      'plotly'),
+                 function(pkg) library(pkg, character.only = TRUE)))
+
+
+# load data
+popdat <- read.csv("acs_tract_cville.csv")
+
+shape <- readRDS('cville_tracts.RDS')
+shape$GEOID <- as.numeric(shape$GEOID)
+shape <- st_transform(shape, crs = 6639)
+
+healthdat <- read.csv("cdcplaces_cville_tract.csv")
+healthdat <- healthdat %>%
+  rename(GEOID = locationname)
+air <- read.csv("airquality_cville_tract.csv")
+air <- air %>%
+  rename(GEOID = gid)
+
+
+edat <- read.csv('lodes_employment_cville_tracts.csv')
+edat <- edat %>%
+  rename(GEOID = w_tract)
+
+lead <- read.csv("leadexposure_cville_tract.csv")
+
+surface <- read.csv("landsat8_cville_tracts.csv")
+surface <- surface %>% 
+  filter(start_date == as.Date("2020-07-04")) %>% 
+  mutate(med_dev = median - mean(median))
+
+cdat <- popdat %>%
+  left_join(healthdat) %>%
+  left_join(edat) %>%
+  left_join(air) %>%
+  left_join(lead) %>% 
+  left_join(surface)
+```
+
+## Health outcomes and enviroment
+
+Many health outcomes have been shown to be associated with environmental factors connected with climate change. For example:
+
+* Exposure to poor air quality, both indoor and outdoor, can cause health problems, such as asthma.[^1]
+* A national survey found that among doctors who serve in African American communities, a majority said they have seen the harms of climate change in their own patients. The most common health effects reported were injuries from severe storms, floods, and wildfires; worsening of chronic diseases due to air pollution and hotter temperatures; and an increase in allergies, due to mold and other exposures.[^2]
+* There is increasing evidence that exposure to the adverse impacts of climate change can can worsen mental health outcomes.[^3]
+
+This data story seeks to further analyze health outcomes and varied social determinants of health locally in light of this climate reality.
+
+
+## Health outcomes and demographic characteristics
+
+Many demographic characteristics -- characteristics of people like age or income -- and health outcomes are correlated. That is, individual features like age are often related to outcomes like physical health in predicable ways. Individuals' environments also impact health, things like air and housing quality. And because individuals with similar characteristics often cluster together in neighborhoods, either by choice or necessity, we can use information about people and their neighborhoods to examine what population and environmental characteristics are related to different health outcomes.[^4]
+
+Some relationships, or correlations, between population characteristics and health outcomes are unavoidable. For example, as people age, their risk of developing cancer increases. So communities with more residents who are 65 and older also tend to have more residents who have been diagnosed with cancer than younger communities. You can see this clearly in the scatter plot of Charlottesville Region census tracts below.[^5] 
+
+```{r}
+
+xyscatter <- plot_ly(data = cdat, x = cdat$age65E, y = cdat$Cancer_except_skin2018,
+                     type = "scatter",
+                     mode = "markers",
+                     fill = ~'', # to remove line.width error
+                     size = ~totalpopE, 
+                     sizes = c(1, 500),
+                     color = ~countyname, colors = "Dark2",
+                     alpha = .75,
+                     text = paste0("Locality: ", cdat$countyname, "<br>",
+                                   "Census tract: ", cdat$tract, "<br>",
+                                   "Population: ", cdat$totalpopE, "<br>",
+                                   "% with Cancer: ", cdat$Cancer_except_skin2018, "<br>",
+                                   "% 65+: ", cdat$age65E),
+                     hoverinfo = "text") %>%
+      layout(xaxis = list(title = "Percent 65 and older", showticklabels = TRUE),
+             yaxis = list(title = "Percent with cancer (excluding skin cancer)", showticklabels = TRUE),
+             legend = list(orientation = "h", x = 0, y = -0.2))
+
+xyscatter %>% layout(annotations = 
+                       list(x=33, y=2, text="Correlation = 0.92",
+                            showarrow=FALSE))
+
+```
+
+<details><summary>Click here for variable details</summary><br/>
+
+* __Population size__ (the size of each data point): Small-area population estimates are from the Census Bureau's American Community Survey 5-Year Estimates. Sent to approximately 3.5 million addresses per year, the 5-year survey estimates provide up-to-date estimates for localities that may be changing between censuses. As these are estimates derived from surveys, and not a full census, they are subject to variability due to sampling error. 
+
+* __Percent 65 and older__: The percent of population 65 or older estimates the proportion of adults most likely to be retirement age. Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __Percent with cancer__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they have any type of cancer except skin cancer. Not specific to cancer type. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate. Source: CDC Places: Local Data for Better Health
+
+</details><br/>  
+
+
+In the plot above, each census tract in the Charlottesville Region is represented with a dot (a data point) color-coded by locality. The size of each dot is based on the population of the tract so that more populous tracts appear larger.
+
+The plot above makes the strong positive correlation between age and cancer easy to see. Tracts that fall higher on the X-axis (percent of residents 65+ years old) also tend to fall higher on the Y-axis (percent of residents with cancer). This trend means that as the percent of residents 65+ increases, so does the percent of residents with cancer. Aging over 65 years doesn't mean that someone will develop cancer, but it does increase their chances. 
+
+## More health outcomes {.tabset}
+
+Scatter plots can make correlations easy to see, but you can also calculate a Pearson correlation coefficient to summarize the strength of a relationship. Correlation coefficients fall between -1 and 1, and the closer the number is to 1, the stronger the relationship. Cancer and age (above) have a very strong correlation, with a correlation coefficient of 0.92. Measures can also be negatively correlated when one characteristic tends to be high and the other tends to be low. So a correlation of -0.92 would still be very strong!
+
+We can summarize the correlations between many variables at once in a correlation table like those in the tabs below. The tables represent the correlations or relationships between several health outcomes and various demographic, socio-economic, and environmental measures across all of the census tracts in the region. Explore the table by choosing a variable on the left side of the graphic and variable along the bottom of the graphic (for example, ‘Income’ and ‘Asthma’), and then finding the box in line with each variable (for ‘Income’ and ‘Asthma’, the number is -0.68, a strong negative correlation; tracts with higher income households experience lower rates of asthma).
+
+Many of the relationships shown below cannot be explained by physical processes like aging, as in the example of age and cancer. Instead, these trends likely stem from structural conditions and policy choices. For example, the percent of Black residents in a tract is negatively correlated with the percent of residents with health insurance and household income in that tract. In other words, neighborhoods with a large proportion of Black residents also tend to have lower household income and fewer people with health insurance. 
+
+Click across the various tabs to see additional variables. The variables in each plot are abbreviated, but you can find the full names and more information about them by clicking on the drop down in each tab. What weak or strong correlations do you see? Are any of them surprising?
+
+<details><summary>How to read a correlation</summary><br/>  
+
+In order to interpret the numbers in the table, chose a left-side and bottom variable, and then complete the following sentences, replacing the bold statements with your chosen variable or related outcome:
+
+“An increase in **[chosen variable on the left]** is associated with a **[if number is negative, say decrease; if number is positive, say increase]** in **[chosen variable on the bottom]**. The correlation is **[strong if the number is closer to 1 or -1; weak if the number is close to 0]**.”
+
+As an example, “An increase in the **median household income of a tract** is associated with a **decrease** in the **percentage of residents with asthma**. The correlation is **strong**.”
+
+</details>
+
+```{r}
+econcordat <- cdat %>%
+  select(hlthinsE, hhincE, unempE, bamoreE,
+         COPD2018, Current_Asthma2018, Diabetes2018, Obesity2018,
+         Mental_Health2018, Physical_Health2018, Cancer_except_skin2018) %>%
+  rename("Income" = hhincE,
+         "College" = bamoreE,
+         "Jobless" = unempE,
+         "Insurance" = hlthinsE,
+         "COPD" = COPD2018,
+         "Asthma" = Current_Asthma2018,
+         "Diabetes" = Diabetes2018,
+         "Obesity" = Obesity2018,
+         "Poor MH" = Mental_Health2018,
+         "Poor PH" = Physical_Health2018,
+         "Cancer" = Cancer_except_skin2018)
+
+racecordat <- cdat %>%
+  select(blackE, whiteE, ltnxE, asianE, 
+         COPD2018, Current_Asthma2018, Diabetes2018, Obesity2018,
+         Mental_Health2018, Physical_Health2018, Cancer_except_skin2018) %>%
+  rename("White" = whiteE,
+         "Black" = blackE,
+         "Hispanic" = ltnxE,
+         "Asian" = asianE,
+         "COPD" = COPD2018,
+         "Asthma" = Current_Asthma2018,
+         "Diabetes" = Diabetes2018,
+         "Obesity" = Obesity2018,
+         "Poor MH" = Mental_Health2018,
+         "Poor PH" = Physical_Health2018,
+         "Cancer" = Cancer_except_skin2018)
+
+agecordat <- cdat %>%
+  select(age17E, age24E, age64E, age65E,
+         COPD2018, Current_Asthma2018, Diabetes2018, Obesity2018,
+         Mental_Health2018, Physical_Health2018, Cancer_except_skin2018) %>%
+  rename("<=17" = age17E,
+         "18-24" = age24E,
+         "25-64" = age64E,
+         "65+" = age65E,
+         "COPD" = COPD2018,
+         "Asthma" = Current_Asthma2018,
+         "Diabetes" = Diabetes2018,
+         "Obesity" = Obesity2018,
+         "Poor MH" = Mental_Health2018,
+         "Poor PH" = Physical_Health2018,
+         "Cancer" = Cancer_except_skin2018)
+
+climatedat <- cdat %>%
+  select(ba2000E, housing_risk, pm2_5_2016, med_dev,
+         COPD2018, Current_Asthma2018, Diabetes2018, Obesity2018,
+         Mental_Health2018, Physical_Health2018, Cancer_except_skin2018) %>%
+  rename("New home" = ba2000E, 
+         "Lead risk" = housing_risk,
+         "Pollution" = pm2_5_2016,
+         "Temp" = med_dev,
+         "COPD" = COPD2018,
+         "Asthma" = Current_Asthma2018,
+         "Diabetes" = Diabetes2018,
+         "Obesity" = Obesity2018,
+         "Poor MH" = Mental_Health2018,
+         "Poor PH" = Physical_Health2018,
+         "Cancer" = Cancer_except_skin2018)
+
+cormat1 <- as.data.frame(round(cor(econcordat, use = "pairwise.complete.obs"),2))
+cormat2 <- as.data.frame(round(cor(racecordat, use = "pairwise.complete.obs"),2))
+cormat3 <- as.data.frame(round(cor(agecordat, use = "pairwise.complete.obs"),2))
+cormat4 <- as.data.frame(round(cor(climatedat, use = "pairwise.complete.obs"),2))
+
+# Getting rid of extra rows and columns so that the demographic variables 
+# are rows and health outcomes are columns 
+cormat1 <- cormat1[1:4, 5:11]
+cormat2 <- cormat2[1:4, 5:11]
+cormat3 <- cormat3[1:4, 5:11]
+cormat4 <- cormat4[1:4, 5:11]
+
+py$cormat1 = r_to_py(cormat1)
+py$cormat2 = r_to_py(cormat2)
+py$cormat3 = r_to_py(cormat3)
+py$cormat4 = r_to_py(cormat4)
+```
+
+### Socio-economic characteristics 
+
+```{python}
+import seaborn as sns
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+sns.heatmap(cormat1, fmt="g", cmap ='viridis', annot = True,vmin=-1, vmax=1, center=0, linewidths=1, linecolor='white',cbar=True, square=True)
+plt.show()
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __COPD__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had COPD, emphysema, or chronic bronchitis. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Asthma__: Adjusted percent of respondents aged >= 18 years who answer "yes" to both of the following questions: (1) "Have you ever been told by a doctor, nurse, or other health professional that you have asthma?" and (2) "Do you still have asthma?" This indicator requires doctor diagnosis, which may not include all persons with asthma.
+
+* __Diabetes__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had diabetes (other than diabetes during pregnancy). Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Obesity__: Adjusted percent of respondents aged >= 18 years who have a BMI >= 30 kg/m^2 calculated from self-reported weight and height excluding respondents who were <3ft tall or >= 8ft; weighed <50lbs or >= 650 lbs; BMI < 12 or >= 100; pregnant women. Self-reports of height and weight lead to lower BMI estimates compared to height and weight measurements.
+
+* __Poor MH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Poor PH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Cancer__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they have any type of cancer except skin cancer. Not specific to cancer type. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __Income__: The American Community Survey measures income at the household level, capturing income in the last 12 months of all individuals 15 and older in the household. The median household income is the income threshold that divides households into two halves -- with half of the households below the value and half of the households above the value. 
+
+* __Insurance__: Health Insurance---The American Community Survey asks if an individual is currently covered by any type of health insurance -- provided by an employer or union; purchased directly from an insurance company; Medicare, Medicaid, military-provided, or VA-provided; or any type of health coverage plan. Individuals answering yes to any of these are considered to have health insurance.
+
+* __Unemployed__: The American Community Survey estimates unemployment only among individuals 16 years and older who are in the labor force. Individuals who have never worked or who are retired are not in the labor forace; individuals who are actively working are in the labor force and employed; individuals who are not actively working  but who have recently worked and would like to work are in the labor force and unemployed.
+
+* __College__: The American Community Survey asks about the highest degree or level of school completed for individuals 25 years old or older. The percent of the population with a Bachelors degree or more includes individuals whose highest degree earned is a Bachelors, masters or professional degree, or doctoral degree.
+
+</details><br/>  
+
+
+### Racial demographics
+```{python}
+sns.heatmap(cormat2, fmt="g", cmap ='viridis', annot = True,vmin=-1, vmax=1, center=0, linewidths=1, linecolor='white',cbar=True, square=True)
+plt.show()
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __COPD__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had COPD, emphysema, or chronic bronchitis. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Asthma__: Adjusted percent of respondents aged >= 18 years who answer "yes" to both of the following questions: (1) "Have you ever been told by a doctor, nurse, or other health professional that you have asthma?" and (2) "Do you still have asthma?" This indicator requires doctor diagnosis, which may not include all persons with asthma.
+
+* __Diabetes__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had diabetes (other than diabetes during pregnancy). Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Obesity__: Adjusted percent of respondents aged >= 18 years who have a BMI >= 30 kg/m^2 calculated from self-reported weight and height excluding respondents who were <3ft tall or >= 8ft; weighed <50lbs or >= 650 lbs; BMI < 12 or >= 100; pregnant women. Self-reports of height and weight lead to lower BMI estimates compared to height and weight measurements.
+
+* __Poor MH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Poor PH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Cancer__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they have any type of cancer except skin cancer. Not specific to cancer type. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __White__: The American Community Survey allows individuals to select as many as six race options and Hispanic/Latino is captured separately. The percent white refers to individuals who identified themselves only as white (no other races) and as not Hispanic or Latino. 
+
+* __Black__: The American Community Survey allows individuals to select as many as six race options and Hispanic/Latino is captured separately. The percent black refers to individuals who identified themselves only as black or African American (no other races) and as not Hispanic or Latino.
+
+* __Hispanic__: The American Community Survey captures Hispanic/Latino ethnicity separately from race. The percent Hispanic refers to individuals who identified as Hispanic along with any other race.
+
+* __Asian__: The American Community Survey allows individuals to select as many as six race options and Hispanic/Latino is captured separately. The percent Asian refers to individuals who identified themselves as one of Asian Indian, Chinese, Filipino, Japanese, Korean, Vietnamese, or other Asian (no other races) and as not Hispanic or Latino.
+
+
+</details><br/>  
+
+### Age
+```{python}
+sns.heatmap(cormat3, fmt="g", cmap ='viridis', annot = True,vmin=-1, vmax=1, center=0, linewidths=1, linecolor='white',cbar=True, square=True)
+plt.show()
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __COPD__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had COPD, emphysema, or chronic bronchitis. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Asthma__: Adjusted percent of respondents aged >= 18 years who answer "yes" to both of the following questions: (1) "Have you ever been told by a doctor, nurse, or other health professional that you have asthma?" and (2) "Do you still have asthma?" This indicator requires doctor diagnosis, which may not include all persons with asthma.
+
+* __Diabetes__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had diabetes (other than diabetes during pregnancy). Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Obesity__: Adjusted percent of respondents aged >= 18 years who have a BMI >= 30 kg/m^2 calculated from self-reported weight and height excluding respondents who were <3ft tall or >= 8ft; weighed <50lbs or >= 650 lbs; BMI < 12 or >= 100; pregnant women. Self-reports of height and weight lead to lower BMI estimates compared to height and weight measurements.
+
+* __Poor MH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Poor PH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Cancer__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they have any type of cancer except skin cancer. Not specific to cancer type. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __<=17__: The percent of population 17 or younger estimates the proportion of children in the population, ages 0 to 17.
+
+* __18-24__: The percent of population 18 to 24 estimates the proportion of young adults most likely to be a traditional college age in the population.
+
+* __25-64__: The percent of population 25 to 64 estimates the proportion of adults most likely to be working age in the population.
+
+* __65+__: The percent of population 65 or older estimates the proportion of adults most likely to be retirement age.
+
+
+</details><br/>  
+
+### Environmental conditions
+```{python}
+sns.heatmap(cormat4, fmt="g", cmap ='viridis', annot = True,vmin=-1, vmax=1, center=0, linewidths=1, linecolor='white',cbar=True, square=True)
+plt.show()
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __COPD__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had COPD, emphysema, or chronic bronchitis. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Asthma__: Adjusted percent of respondents aged >= 18 years who answer "yes" to both of the following questions: (1) "Have you ever been told by a doctor, nurse, or other health professional that you have asthma?" and (2) "Do you still have asthma?" This indicator requires doctor diagnosis, which may not include all persons with asthma.
+
+* __Diabetes__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they had diabetes (other than diabetes during pregnancy). Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+* __Obesity__: Adjusted percent of respondents aged >= 18 years who have a BMI >= 30 kg/m^2 calculated from self-reported weight and height excluding respondents who were <3ft tall or >= 8ft; weighed <50lbs or >= 650 lbs; BMI < 12 or >= 100; pregnant women. Self-reports of height and weight lead to lower BMI estimates compared to height and weight measurements.
+
+* __Poor MH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Poor PH__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __Cancer__: Adjusted percent of respondents aged >= 18 years who report ever having been told by a health professional that they have any type of cancer except skin cancer. Not specific to cancer type. Based on being diagnosed and respondent recall of diagnosis, so might be underestimate.
+
+Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __New home__: The percent of housing units in a tract built after 2000. Calculated by adding the number of housing units built from 2000-2009, 2010-2014, and after 2014 and then dividing by the total number of housing units.
+
+* __Lead risk__: Estimated percent of houses at risk for lead. Derived from U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019 following a methods developed by the Washington State Department of Health and Vox.
+
+* __Pollution__: Air pollution, via the concentrations of fine particulate matter that is less than 2.5 micrometers in diameter (PM2.5), at each census tract. PM2.5 concentrations are measured by the number of micrograms per cubic meter. High concentrations of PM2.5 indicate higher levels of air pollution. Here we use the estimated concentration of PM2.5 in 2016. Source: Replication Data for: Disparities in PM2.5 air pollution in the United States
+
+* __Temp__: The median land surface temperature within each census tract on July 4, 2020 as a deviation or difference from the median recorded temperature in the region. Land surface temperature is recorded across each 30m gridded cell in area based on Landsat8 satellite imagery.
+
+</details><br/>
+
+## Geographic concentration
+
+Another way to understand the relationship between two variables, in this case income and physical health, mental health, and asthma, respectively, is to use bar charts. The bar charts below break all of the census tracts in the region into three categories - low-income, mid-income, and high-income, based on the median household income within the tract.[^6] The bars then show the average level for the respective outcome for each category. 
+
+The graphs show a pattern where increased average income in a tract is associated with improved health outcomes in a tract. The most stark pattern can be seen in the middle graph comparing income levels and the percent of individuals who report having poor mental health. Why might higher income be associated with better health outcomes? 
+
+### Physical health, mental health, asthma, and income
+
+```{r}
+dat <- cdat
+dat1 <- bi_class(dat, x = hhincE, y = lowwage_p, style = "quantile", dim = 3)
+dat1$incrank <- stri_extract(dat1$bi_class, regex = '^\\d{1}(?=-\\d)')
+
+dat1 <- dat1[-which(dat1$GEOID == "51003010903"),]
+
+dat2 <- dat1 %>%  
+  dplyr::select(totalpopE, Mental_Health2018, incrank) %>%
+  filter(!is.na(Mental_Health2018), !is.na(incrank)) %>% 
+  mutate(mh_num = totalpopE*(Mental_Health2018/100)) %>% 
+  group_by(incrank) %>% 
+  summarize(mh_num = sum(mh_num),
+            num = sum(totalpopE),
+            mh_per = round((mh_num/num)*100,1))
+
+mentalhealthplot <- dat2 %>% 
+  ggplot(aes(incrank, mh_per, fill=incrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low-income", "mid-income", "high-income"),
+                    values = c('#22A884FF', '#414487FF', '#440154FF'),
+                    name = "Household income rank") + 
+  labs(x = "Rank", y = "% of population with poor mental health")
+
+dat4 <- dat1 %>%  
+  dplyr::select(totalpopE, Current_Asthma2018, incrank) %>%
+  filter(!is.na(Current_Asthma2018), !is.na(incrank)) %>% 
+  mutate(ca_num = totalpopE*(Current_Asthma2018/100)) %>% 
+  group_by(incrank) %>% 
+  summarize(ca_num = sum(ca_num),
+            num = sum(totalpopE),
+            ca_per = round((ca_num/num)*100,1))
+
+asthmaplot <- dat4 %>%  
+  ggplot(aes(incrank, ca_per, fill=incrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low-income", "mid-income", "high-income"),
+                    values = c('#22A884FF', '#414487FF', '#440154FF'),
+                    name = "Household income rank") + 
+  labs(x = "Rank", y = "% of population with asthma")
+
+dat6 <- dat1 %>%  
+  dplyr::select(totalpopE, Physical_Health2018, incrank) %>%
+  filter(!is.na(Physical_Health2018), !is.na(incrank)) %>% 
+  mutate(ph_num = totalpopE*(Physical_Health2018/100)) %>% 
+  group_by(incrank) %>% 
+  summarize(ph_num = sum(ph_num),
+            num = sum(totalpopE),
+            ph_per = round((ph_num/num)*100,1))
+
+physicalhealthplot <- dat6 %>% 
+  ggplot(aes(incrank, ph_per, fill=incrank)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  scale_fill_manual(labels = c("low-income", "mid-income", "high-income"),
+                    values = c('#22A884FF', '#414487FF', '#440154FF'),
+                    name = "Household income rank") + 
+  labs(x = "Rank", y = "% of population with poor physical health")
+
+ggarrange(physicalhealthplot, mentalhealthplot, asthmaplot, ncol = 3, common.legend = TRUE)
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __% of population with poor mental health__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __% of population with poor physical health__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+* __% of population with asthma__: Adjusted percent of respondents aged >= 18 years who answer "yes" to both of the following questions: (1) "Have you ever been told by a doctor, nurse, or other health professional that you have asthma?" and (2) "Do you still have asthma?" This indicator requires doctor diagnosis, which may not include all persons with asthma.
+
+Source: U.S. Census Bureau, American Community Survey 5-year estimates 2015-2019.
+
+* __Median household income__: The American Community Survey measures income at the household level, capturing income in the last 12 months of all individuals 15 and older in the household. The median household income is the income threshold that divides households into two halves---with half of the households below the value and half of the households above the value. 
+
+</details><br/>  
+
+
+Another way to visualize the geographic distribution of outcomes across tracts is through a cartogram, where each tract is resized based on its score on a variable rather than its geographic boundaries. The animations below transition between showing the geographic area of each census tracts and a cartogram where tracts are resized by the percent of the population who report having poor mental health and poor physical health, respectively.[^7]
+
+When resized based on the percentage of residents who report having poor mental health, several tracts within the City of Charlottesville grow dramatically in size. Overall, rates of poor mental health are much higher within Charlottesville City relative to the surrounding localities.
+
+```{r}
+dat2 <- shape %>%
+  left_join(cdat, by = "GEOID")
+dat2$id <- rep("Normal Geographic Boundaries", 50)
+
+cart1 <- cartogram_cont(dat2,
+                        weight = "Mental_Health2018",
+                        itermax = 18,
+                        prepare = "remove",
+                        threshold = 1)
+
+cart1dat <- as.data.frame(cart1)
+cart1dat$id <- rep("Re-sized by % with Poor Mental Health", 50)
+
+transdat <- dat2 %>%
+  bind_rows(cart1dat)
+
+## Basic version 
+anim <- ggplot(transdat) + geom_sf(aes(fill = Mental_Health2018)) + 
+  scale_fill_viridis() + 
+  transition_states(id, transition_length = 3, wrap = T) + 
+  theme_void() + 
+  labs(title = "{closest_state}", fill = "% with poor mental health")
+
+anim
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __% with poor mental health__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their mental health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+
+</details><br/>  
+
+Unlike the prior animation, the rates of poor physical health are much higher in the localities surrounding the City—--Nelson and Greene counties especially—--so the distortion of Charlottesville City tracts in the resized map is not as stark.
+
+
+```{r}
+cart2 <- cartogram_cont(dat2,
+                        weight = "Physical_Health2018",
+                        itermax = 4,
+                        prepare = "remove",
+                        threshold = 0)
+
+cart2dat <- as.data.frame(cart2)
+cart2dat$id <- rep("Re-sized by % with Poor Physical Health", 50)
+
+transdat2 <- dat2 %>%
+  bind_rows(cart2dat)
+
+## Basic version 
+anim2 <- ggplot(transdat2) + geom_sf(aes(fill = Physical_Health2018)) + 
+  scale_fill_viridis() + 
+  transition_states(id, transition_length = 3, wrap = T) + 
+  theme_void() + 
+  labs(title = "{closest_state}", fill = "% with poor physical health")
+
+anim2
+```
+
+<details><summary>Click here for variable details</summary><br/>  
+
+Source: CDC Places: Local Data for Better Health
+
+* __% with poor physical health__: Adjusted percent of respondents aged >= 18 years who report 14 or more days during the past 30 days during which their physical health was not good. Based self-assessment only and does not have an objective health component, so it's difficult to assess reliability and validity.
+
+
+</details><br/>  
+
+
+## Conclusion
+
+The series of visualizations above highlights how access to economic and environmental resources are related to important health outcomes. These data cannot prove a causal relationship. In other words, we're unable to say, "Having a lower household income causes someone to have poor mental health" based on these data alone. However, it is easy to imagine how having a lower household income adds additional stress to one's life -- anxiety about affording housing, childcare, health care -- so, communities with lower average household incomes tend to have higher levels of poor mental health. 
+
+
+### Notes
+
+[^1]: [See here for more information on asthma and air quality](https://www.edf.org/sites/default/files/documents/African%20American%20Communities%20and%20Climate%20Change.pdf)
+
+[^2]: [See here for more information on climate change and health outcomes](https://www.edf.org/sites/default/files/documents/African%20American%20Communities%20and%20Climate%20Change.pdf)
+
+[^3]: [See here for more information on climate change and mental health](https://www.ehn.org/mental-health-2655533166/what-we-found)
+
+[^4]: The challenge of "ecological inference", though, means we cannot directly draw conclusions about **individual**-level behaviors from aggregate-level data.
+
+[^5]: Census tracts are geographic regions defined for the purpose of taking a census, and are commonly used as a stand-in for neighborhoods, though they are generally larger than the sense we have of our own neighborhoods.
+
+[^6]: Tract 10903 in Albemarle County has been removed from the graphs below because it includes UVa's campus, where most students live. The median household income for students is so low that it obscures interpretation for tracts that aren't majority students.
+
+[^7]: The white spaces in the reshaped cartogram are a result of newly scaled census tracts not fitting together perfectly. They do not represent a specific tract/geographic area.
+
