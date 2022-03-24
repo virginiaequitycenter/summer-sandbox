@@ -509,32 +509,4 @@ ggplot(tract_data, aes(x = bamoreE, y = giniE)) +
 
 # ....................................................
 # 5. Save ----
-write.csv(tract_data, "acs_tract_cville.csv", row.names = F) 
-# tract_data <- readRDS("data/tract_data.RDS")
-
-
-# initailly added earnings and school enrollment in November/later
-# but have since re-run with these included
-# leaving this here for future additions
-
-# # add year
-# tract_earn <- tract_earn %>% 
-#   mutate(year = "2018") 
-# tract_schl <- tract_schl %>% 
-#   mutate(year = "2018") 
-# tract_grad <- tract_grad %>% 
-#   mutate(year = "2018") 
-# 
-# # joining columns
-# tract_data <- tract_data %>% 
-#   left_join(tract_earn, by = c("GEOID", "NAME", "year"))
-# 
-# tract_data <- tract_data %>% 
-#   left_join(tract_schl, by = c("GEOID", "year")) 
-# 
-# tract_data <- tract_data %>% 
-#   left_join(tract_grad, by = c("GEOID", "year")) 
-#
-# # reorder
-# tract_data <- tract_data %>% 
-#   select(GEOID:bamoreM, gradmoreE, gradmoreM, unempE:tract)
+write.csv(tract_data, "acs_cville_tract.csv", row.names = F) 

@@ -4,6 +4,7 @@ library(tidyverse)
 library(ggplot2)
 library(ggExtra)
 library(plotly)
+library(RColorBrewer)
 
 lead <- read_csv("data/lead_cville_tract.csv")
 exposure <- read_csv("data/leadexposure_cville_tract.csv")
@@ -52,23 +53,61 @@ xhist <- plot_ly(data = all, x = ~percentile_2016, type = 'histogram',
          xaxis = list(showticklabels = FALSE))
 xhist
 
+
+xhist2 <- plot_ly(data = all, x = ~percentile_2016, type = 'histogram', 
+                 nbinsx = 20, alpha =.75,
+                 color = ~Current_Asthma2018, colors = "Blues") %>% 
+  layout(yaxis = list(showgrid = FALSE,
+                      showticklabels = FALSE),
+         xaxis = list(showticklabels = FALSE))
+xhist2
+
+
 xyscatter <- plot_ly(data = all, 
                      x = ~percentile_2016, 
                      y = ~Current_Asthma2018, 
                      type = 'scatter',
                      size = ~totalpopE, 
-                     sizes = c(1, 500),
+                     sizes = c(1, 750),
                      color = ~county, 
                      colors = "Dark2", 
                      alpha = .75,
-                     hovertemplate = paste('County: %{county}',
-                                           '<br>Population: %{totalpopE}',
-                                           '<br>X: %{percentile_2016}',
-                                           '<br>Y: %{Current_Asthma2018}')) %>% 
+                     text = paste0("County: ", all$county, "<br>",
+                                   "Population: ", all$totalpopE, "<br>",
+                                   "Census tract: ", all$tractfips, "<br>",
+                                   "X: ", all$percentile_2016, "<br>",
+                                   "Y: ", all$Current_Asthma2018, "<br>"),
+                     hoverinfo = "text") %>% 
   layout(xaxis = list(title = "PM2.5 Percentile, 2016"),
          yaxis = list(title = "Percent with Asthma"),
-         legend = list(orientation = "h", x = 0, y = -0.2))
+         legend = list(orientation = "h", x = 0.0, y = -0.2))
 xyscatter
+
+
+pal2 <- brewer.pal(6, "Dark2")
+
+xyscatter2 <- plot_ly(data = all, 
+                     x = ~percentile_2016, 
+                     y = ~Current_Asthma2018, 
+                     type = 'scatter',
+                     marker = list(size = ~totalpopE, sizeref = 250, sizemode = "diameter"),
+                     color = ~county,
+                     colors = pal2,
+                     alpha = 0.75,
+                     text = paste0(all$county, "<br>",
+                                   "Tract: ", all$tractfips),
+                     hovertemplate = paste(
+                       "<b>%{text}</b><br>",
+                       "Population: %{marker.size}<br>",
+                       "%{yaxis.title.text}: %{y}<br>",
+                       "%{xaxis.title.text}: %{x}<br>",
+                       "<extra></extra>")
+                     ) %>% 
+  layout(xaxis = list(title = "PM2.5 Percentile"),
+         yaxis = list(title = "Percent with Asthma"),
+         legend = list(orientation = "h", x = 0.0, y = -0.2))
+xyscatter2
+
 
 yhist <- plot_ly(data = all, y = ~Current_Asthma2018, type = 'histogram', 
                  nbinsx = 20, alpha = .75, color = I("grey")) %>% 
@@ -77,7 +116,17 @@ yhist <- plot_ly(data = all, y = ~Current_Asthma2018, type = 'histogram',
          yaxis = list(showticklabels = FALSE))
 yhist
 
-subplot(xhist, plotly_empty(), xyscatter, yhist,
+
+yhist2 <- plot_ly(data = all, y = ~Current_Asthma2018, type = 'histogram', 
+                 nbinsx = 20, alpha = .75,
+                 color = ~Current_Asthma2018, colors = "Blues") %>% 
+  layout(xaxis = list(showgrid = FALSE,
+                      showticklabels = FALSE),
+         yaxis = list(showticklabels = FALSE))
+yhist2
+
+
+subplot(xhist, plotly_empty(), xyscatter2, yhist,
         nrows = 2, heights = c(.2, .8), widths = c(.8,.2), margin = 0,
         shareX = TRUE, shareY = TRUE) %>% 
   style(showlegend = FALSE, traces = c(1,9)) %>%  # remove hist symbols from legend  

@@ -10,11 +10,11 @@ output:
 
 <details><summary>Team members</summary><br/>
 
-- Marisa Lemma (primary document author)
 - Michele Claibourn   
 - Lee LeBoeuf
-- Jacob Goldstein-Greenwood
+- Marisa Lemma 
 - Chase Dawson
+- Jacob Goldstein-Greenwood
 - Tolu Odukoya
 - Helena Lindsay
 - Khalila Karefa-Kargbo
@@ -192,7 +192,7 @@ The Origin-Destination Employment Statistics (LODES) pairs the census blocks for
 ```{r}
 # load data
 lodesrescommute <- read_csv("data/lodes_residentcommute_cville_blkgp.csv")
-lodesworkers <- read_csv("data/lodes_workercommute_cville_blkgp.csv")
+#lodesworkers <- read_csv("data/lodes_workercommute_cville_blkgp.csv")
 lodesworkpatterns <- read_csv("data/lodes_workerscommutepatterns_cvlcounty.csv")
 
 # read shapefile
@@ -304,14 +304,6 @@ leaflet(scene) %>%
                              "Median Temp: ", round(scene$median, 2))) %>%
   addLegend("bottomright", pal = pal, values = scene$median,
             title = "Median Temp (°F)", opacity = 0.7)
-
-#scene %>%
-#  ggplot() +
-#  geom_sf(data = scene, aes(fill = median), color="white", size=0.15) +
-#  scale_fill_viridis_c(option = "magma") +
-#  labs(title = "Surface Temperature Reading from 08/24/2021 at 11:53am EST",
-#       fill = "Median Temp (°F)") +
-#  theme_minimal()
 ```
 
 ### Temperature over Time{.tabset}
@@ -328,12 +320,6 @@ cville_sf <- readRDS("data/cville_counties.RDS")
 cville_sf <- cville_sf %>% rename(county = COUNTYFP)
 
 cville_noaa <- left_join(cville_sf, noaa, by ="county")
-
-# cville_sf1 <- cbind(cville_sf1, st_coordinates(st_centroid(cville_sf1)))
-
-#cville_sf1 <- cville_sf1 %>%
-#  dplyr::select(NAME, Year, CNTY_FIPS, X, Y,
-#                geometry, everything())
 
 cville_noaa <- cville_noaa %>% 
   filter_at(vars(Avg_Tempmin:Decpcp),all_vars(!is.na(.))) %>% 
