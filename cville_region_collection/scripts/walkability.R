@@ -23,14 +23,14 @@ vars = c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE", "D3B", "D4A", "D2B_E8MIXA
 
 # Reduce data ----
 local <- df %>% 
-  select(vars) %>% 
+  dplyr::select(vars) %>% 
   mutate(across(c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE"), as.character),
          COUNTYFP = str_pad(COUNTYFP, 3, side = "left", pad = "0"),
          TRACTCE = str_pad(TRACTCE, 6, side = "left", pad = "0"),
          FIPS_TRACT = paste0(STATEFP, COUNTYFP, TRACTCE),
          FIPS_BLKGP = paste0(FIPS_TRACT, BLKGRPCE)) %>% 
   filter(STATEFP == "51" & COUNTYFP %in% localfips) %>% 
-  select(FIPS_TRACT, FIPS_BLKGP, everything())
+  dplyr::select(FIPS_TRACT, FIPS_BLKGP, everything())
 
 # Rename, Recode variables
 ggplot(local, aes(x = D4A)) + geom_histogram()
@@ -56,10 +56,32 @@ local <- local %>%
                                                            "Above Average Walkable", "Most Walkable")))
 
 
-
-# Save data ----
+# Save data block group data ----
 # Cville area
-write_csv(local, "data/cville_walk.csv")
+write.csv(local, "data/cville_walk_blkgr.csv", row.names = F)
 # Eastern shore area
 # write_csv(local, "data/eastern_walk.csv")
+
+## Aggregating some variables up to tract level 
+
+tract <- local %>%
+  group_by(FIPS_TRACT) %>%
+  summarise(avg_intersection_density = mean(intersection_density),
+            avg_int_density_rank = mean(int_density_rank),
+            avg_proximity_transit = mean(proximity_transit),
+            avg_prox_transit_rank = mean(prox_transit_rank, na.rm = T),
+            avg_employment_mix = mean(employment_mix),
+            avg_emp_housing_mix = mean(emp_housing_mix),
+            avg_emp_hou_mix_rank = mean(emp_hou_mix_rank),
+            avg_walkability_index = mean(walkability_index)) %>%   
+  mutate(walkability_bins = case_when(
+    avg_walkability_index <= 5.75 ~ "Least Walkable",
+    avg_walkability_index > 5.76 & avg_walkability_index <= 10.5 ~ "Below Average Walkable",
+    avg_walkability_index > 10.5 & avg_walkability_index <= 15.25 ~ "Above Average Walkable",
+    avg_walkability_index > 15.25 ~ "Most Walkable"),
+    walkability_bins = factor(walkability_bins, levels = c("Least Walkable", "Below Average Walkable",
+                                                                     "Above Average Walkable", "Most Walkable")))
+## Saving tract data   
+write.csv(tract, "data/cville_walk_tract.csv", row.names = F)
+
 
