@@ -27,10 +27,15 @@ ejscreen <- read_csv("../data/ejscreen_cville_blkgps.csv")
 ejscreen <- ejscreen %>% 
   mutate(ID = as.character(ID))
 
+ejscreentr <-  read_csv("../data/ejscreen_cville_tract.csv")
+ejscreentr <- ejscreentr %>% 
+  mutate(tract = as.character(tract))
+
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=840479384", sheet = "ejscreen", gs4_deauth())
 
 # Spatial data
 cville_blkgps <- readRDS("../data/cville_blkgps.RDS")
+cville_tract <- readRDS("../data/cville_tracts.RDS")
 
 ```
 
@@ -92,7 +97,7 @@ ejscreen %>% select(ID, PRE1960PCT:PM25) %>%
 ```{r}
 meta %>% 
   filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
+  mutate(label = paste0(varname, ": ", description)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -109,7 +114,7 @@ ejscreen %>% select(PRE1960PCT:PM25) %>%
 ```{r}
 meta %>% 
   filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
+  mutate(label = paste0(varname, ": ", description)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -122,6 +127,10 @@ cvilleshapes <- cville_blkgps %>%
   left_join(ejscreen, by = c("GEOID" = "ID"))
 
 cvilleshapes <- st_transform(cvilleshapes, crs = 4326) # to WGS84, for leaflet
+
+cvilleshapestr <- cville_tract %>% 
+  left_join(ejscreentr, by = c("GEOID" = "tract"))
+cvilleshapestr <- st_transform(cvilleshapestr, crs = 4326)
 ```
 
 ### Proximity to treatment storage and disposal facilities (TSDFs)
@@ -164,77 +173,77 @@ leaflet(cvilleshapes) %>%
 
 ### Distribution of PM~2.5~
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$PM25)
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapestr$PM25)
 
-leaflet(cvilleshapes) %>%
+leaflet(cvilleshapestr) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
+  addPolygons(data = cvilleshapestr,
               fillColor = ~pal(PM25),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
-                             "PM2.5 Level: ", cvilleshapes$T_PM25)) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$PM25,
+              popup = paste0("FIPS Code: ", cvilleshapestr$GEOID, "<br>",
+                             "PM2.5 Level: ", cvilleshapestr$T_PM25)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapestr$PM25,
             title = "PM2.5 Concentrations", opacity = 0.7)
 ```
 
 ### Air toxics cancer risk
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$CANCER)
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapestr$CANCER)
 
-leaflet(cvilleshapes) %>%
+leaflet(cvilleshapestr) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
+  addPolygons(data = cvilleshapestr,
               fillColor = ~pal(CANCER),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
-                             "Cancer Risk: ", cvilleshapes$T_CANCR)) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$CANCER,
+              popup = paste0("FIPS Code: ", cvilleshapestr$GEOID, "<br>",
+                             "Cancer Risk: ", cvilleshapestr$T_CANCR)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapestr$CANCER,
             title = "Air Toxics Cancer Risk", opacity = 0.7)
 ```
 
 ### Diesel Particulate Matter Level
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapes$DSLPM)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = cvilleshapestr$DSLPM)
 
-leaflet(cvilleshapes) %>%
+leaflet(cvilleshapestr) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
+  addPolygons(data = cvilleshapestr,
               fillColor = ~pal(DSLPM),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
-                             "DSLPM: ", cvilleshapes$T_DSLPM)) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$DSLPM,
+              popup = paste0("FIPS Code: ", cvilleshapestr$GEOID, "<br>",
+                             "DSLPM: ", cvilleshapestr$T_DSLPM)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapestr$DSLPM,
             title = "Diesel Particulate Matter Level", opacity = 0.7)
 ```
 
 ### Ozone Levels
 ```{r}
-pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapes$OZONE)
+pal <- colorNumeric("Blues", reverse = TRUE, domain = cvilleshapestr$OZONE)
 
-leaflet(cvilleshapes) %>%
+leaflet(cvilleshapestr) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = cvilleshapes,
+  addPolygons(data = cvilleshapestr,
               fillColor = ~pal(OZONE),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("FIPS Code: ", cvilleshapes$GEOID, "<br>",
-                             "Ozone Level: ", cvilleshapes$T_OZONE)) %>%
-  addLegend("bottomright", pal = pal, values = cvilleshapes$OZONE,
+              popup = paste0("FIPS Code: ", cvilleshapestr$GEOID, "<br>",
+                             "Ozone Level: ", cvilleshapestr$T_OZONE)) %>%
+  addLegend("bottomright", pal = pal, values = cvilleshapestr$OZONE,
             title = "Ozone Levels in the Air", opacity = 0.7)
 ```
 
