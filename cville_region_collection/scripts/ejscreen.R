@@ -1,6 +1,6 @@
 # Get EJSCREEN data
-# Marisa Lemma
-# Last updated: 2021-11-19
+# Marisa Lemma and Lee LeBoeuf
+# Last updated: 2022-04-01
 
 library(tidyverse)
 
@@ -46,3 +46,40 @@ cville_area <- ejscreen_clean %>%
 
 # Export to .csv
 write.csv(cville_area, "data/ejscreen_cville_blkgps.csv", row.names = F)
+
+
+# Aggregating to tract level
+# PM2.5 (PM25), ozone (OZONE), and NATA indicators (cancer risk [CANCER], respiratory hazard index [RESP], and diesel particulate matter [DSLPM]) 
+# are measured at the census tract level, and the same value is assigned to each block group 
+# within that tract. So for those variables, the values are the same. 
+# For other variables, I took the average across the block groups. 
+
+cville_area$tract <- paste0(cville_area$statefips, cville_area$countyfips, cville_area$tractfips)
+
+cville_tract <- cville_area %>%
+  group_by(tract) %>%
+  summarise(PM25 = PM25,
+            OZONE = OZONE,
+            CANCER = CANCER,
+            RESP = RESP,
+            DSLPM = DSLPM,
+            Avg_PRE1960PCT = mean(PRE1960PCT),
+            Avg_PTRAF = mean(PTRAF, na.rm = T),
+            Avg_PWDIS = mean(PWDIS),
+            Avg_PNPL = mean(PNPL),
+            Avg_PRMP = mean(PRMP),
+            Avg_PTSDF = mean(PTSDF),
+            P_PM25 = P_PM25,
+            P_OZONE = P_OZONE,
+            P_CANCR = P_CANCR,
+            P_RESP = P_RESP,
+            P_DSLPM = P_DSLPM,
+            T_PM25 = T_PM25,
+            T_OZONE = T_OZONE,
+            T_CANCR = T_CANCR,
+            T_RESP, T_RESP,
+            T_DSLPM = T_DSLPM) %>%
+  distinct()
+
+# Export to .csv
+write.csv(cville_tract, "data/ejscreen_cville_tract.csv", row.names = F)

@@ -1,8 +1,8 @@
 ---
 title: "EJSCREEN Exploration File"
 subtitle: "Data for Charlottesville Region"
-author: "Marisa Lemma"
-date: "7/20/2021"
+author: "Marisa Lemma and Lee LeBoeuf"
+date: "04/01/2022"
 output: 
   html_document: 
     toc: true
@@ -292,4 +292,4 @@ ejscreen %>%
 
 ## Important Notes
 
-PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract. All other variables were deriived for the block group level.
+PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract. All other variables were derived for the block group level.
