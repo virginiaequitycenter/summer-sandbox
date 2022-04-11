@@ -1,7 +1,7 @@
 ---
 title: "National Walkability Index Score"
 author: "Helena Lindsay, Michele Claibourn, Lee LeBoeuf"
-date: "03/31/2022"
+date: "04/11/2022"
 output:
   html_document: 
     toc: TRUE
@@ -124,7 +124,7 @@ meta %>%
 walk %>% 
   ggplot(aes(x = walkability_index, fill = COUNTYFP)) + 
   geom_histogram() + 
-  facet_wrap(~COUNTYFP, scales = "free")  +
+  facet_wrap(~COUNTYFP)  +
   guides(fill = "none")
 ```
 
@@ -215,7 +215,9 @@ leaflet(cville_maps) %>%
             title = "Employment-Housing Mix", opacity = 0.7)
 ```
 
-### Proportion Carpooling
+### Proximity to transit
+
+* Note: The proximity to transit values for the block groups outside Charlottesville City are NA's because the EPA's National Walkability index does not recognize any public transportation stops in these areas from which to calculate distances. However, the Charlottesville Area Transit's [service area](https://www.charlottesville.gov/DocumentCenter/View/1121/System-Map-PDF) does include some areas outside of Charlottesville City, so these are not entirely accurate calculations. 
 
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_maps$proximity_transit)
@@ -325,7 +327,9 @@ leaflet(cville_maps2) %>%
             title = "Average <br> Employment-Housing <br> Mix", opacity = 0.7)
 ```
 
-### Proportion Carpooling
+### Proximity to transit
+
+* Note: The proximity to transit values for the block groups outside Charlottesville City are NA's because the EPA's National Walkability index does not recognize any public transportation stops in these areas from which to calculate distances. However, the Charlottesville Area Transit's [service area](https://www.charlottesville.gov/DocumentCenter/View/1121/System-Map-PDF) does include some areas outside of Charlottesville City, so these are not entirely accurate calculations. 
 
 ```{r}
 pal <- colorNumeric("plasma", reverse = TRUE, domain = cville_maps2$proximity_transit)

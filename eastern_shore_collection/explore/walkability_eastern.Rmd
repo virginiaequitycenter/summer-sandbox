@@ -1,7 +1,7 @@
 ---
 title: "National Walkability Index Score"
-author: "Helena Lindsay, Michele Claibourn"
-date: "11/29/2021"
+author: "Helena Lindsay, Michele Claibourn, Lee LeBoeuf"
+date: "04/11/2022"
 output:
   html_document: 
     toc: TRUE
@@ -20,13 +20,18 @@ library(sf)
 library(googlesheets4)
 library(plotly)
 
-walk <- read_csv("../data/eastern_walk.csv")
+walk <- read_csv("../data/walk_eastern_blkgr.csv")
 walk <- walk %>% 
   mutate(FIPS_BLKGP = as.character(FIPS_BLKGP))
 
 eastshore_blkgps <- readRDS("../data/eastshore_blkgps.RDS")
+eastshore_tract <- readRDS("../data/eastshore_tracts.RDS")
 
 meta <- read_sheet("https://docs.google.com/spreadsheets/d/1nqm3DuVXD1ObbVe_deacvT7uSLdBXfQJo3mkbqDwrVo/edit#gid=627666074", sheet="walkability", gs4_deauth())
+
+tract <- read_csv("../data/walk_eastern_tract.csv")
+tract <- tract %>% 
+  mutate(FIPS_TRACT = as.character(FIPS_TRACT))
 
 ```
 
@@ -103,12 +108,14 @@ walk %>%
   guides(fill = "none")
 ```
 
+* Note: The proximity to transit values for all Eastern Shore tracts and block groups was missing in the data source, meaning that the EPA's National Walkability index does not recognize any public transportation stops in these areas from which to calculate distances.
+
 ```{r}
 meta %>% 
   filter(varname %in% c("walkability_index", "intersection_density",
                         "proximity_transit", "employment_mix", 
                         "emp_housing_mix")) %>%
-  mutate(label = paste0(varname, ": ", about)) %>% 
+  mutate(label = paste0(varname, ": ", description)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -119,95 +126,183 @@ meta %>%
 walk %>% 
   ggplot(aes(x = walkability_index, fill = COUNTYFP)) + 
   geom_histogram() + 
-  facet_wrap(~COUNTYFP, scales = "free")  +
+  facet_wrap(~COUNTYFP)  +
   guides(fill = "none")
 ```
 
-## Spatial Distributions{.tabset}
+## Block Group Distributions{.tabset}
 
 ```{r, include = F}
-eastern_maps <- left_join(eastshore_blkgps, walk, by = c('GEOID'= "FIPS_BLKGP"))
-eastern_maps <- st_transform(eastern_maps, crs = 4326) # to WGS84, given error
+east_maps <- left_join(eastshore_blkgps, walk, by = c('GEOID'= "FIPS_BLKGP"))
+east_maps <- st_transform(east_maps, crs = 4326) # to WGS84, given error
 ```
 
 ### Walkability
 
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$walkability_index)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps$walkability_index)
 
-leaflet(eastern_maps) %>%
+leaflet(east_maps) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = eastern_maps,
+  addPolygons(data = east_maps,
               fillColor = ~pal(walkability_index),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
-                             "Walkability Index: ", round(eastern_maps$walkability_index, 2))) %>%
-  addLegend("bottomright", pal = pal, values = eastern_maps$walkability_index,
+              popup = paste0("Tract Number: ", east_maps$GEOID, "<br>",
+                             "Walkability Index: ", round(east_maps$walkability_index, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps$walkability_index,
             title = "Walkability Index", opacity = 0.7)
 ```
 
 ### Intersection Density
 
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$intersection_density)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps$intersection_density)
 
-leaflet(eastern_maps) %>%
+leaflet(east_maps) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = eastern_maps,
+  addPolygons(data = east_maps,
               fillColor = ~pal(intersection_density),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
-                             "Intersection Density: ", round(eastern_maps$intersection_density, 2))) %>%
-  addLegend("bottomright", pal = pal, values = eastern_maps$intersection_density,
+              popup = paste0("Tract Number: ", east_maps$GEOID, "<br>",
+                             "Intersection Density: ", round(east_maps$intersection_density, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps$intersection_density,
             title = "Intersection Density", opacity = 0.7)
 ```
 
 ### Employment Mix
 
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$employment_mix)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps$employment_mix)
 
-leaflet(eastern_maps) %>%
+leaflet(east_maps) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = eastern_maps,
+  addPolygons(data = east_maps,
               fillColor = ~pal(employment_mix),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
-                             "Employment Mix: ", round(eastern_maps$employment_mix, 2))) %>%
-  addLegend("bottomright", pal = pal, values = eastern_maps$employment_mix,
+              popup = paste0("Tract Number: ", east_maps$GEOID, "<br>",
+                             "Employment Mix: ", round(east_maps$employment_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps$employment_mix,
             title = "Employment Mix", opacity = 0.7)
 ```
 
 ### Employment-Housing Mix
 
 ```{r}
-pal <- colorNumeric("plasma", reverse = TRUE, domain = eastern_maps$emp_housing_mix)
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps$emp_housing_mix)
 
-leaflet(eastern_maps) %>%
+leaflet(east_maps) %>%
   addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(data = eastern_maps,
+  addPolygons(data = east_maps,
               fillColor = ~pal(emp_housing_mix),
               weight = 1,
               opacity = 1,
               color = "white",
               fillOpacity = 0.6,
               highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
-              popup = paste0("Tract Number: ", eastern_maps$GEOID, "<br>",
-                             "Employment-Housing Mix: ", round(eastern_maps$emp_housing_mix, 2))) %>%
-  addLegend("bottomright", pal = pal, values = eastern_maps$emp_housing_mix,
+              popup = paste0("Tract Number: ", east_maps$GEOID, "<br>",
+                             "Employment-Housing Mix: ", round(east_maps$emp_housing_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps$emp_housing_mix,
             title = "Employment-Housing Mix", opacity = 0.7)
 ```
 
+## Tract Distributions{.tabset}
 
+* Values shown here are based on averages of the block groups within each tract. 
+
+```{r, include = F}
+east_maps2 <- left_join(eastshore_tract, tract, by = c('GEOID'= "FIPS_TRACT"))
+east_maps2 <- st_transform(east_maps2, crs = 4326) # to WGS84, given error
+```
+
+### Walkability
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps2$avg_walkability_index)
+
+leaflet(east_maps2) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = east_maps2,
+              fillColor = ~pal(avg_walkability_index),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", east_maps2$GEOID, "<br>",
+                             "Average Walkability Index: ", round(east_maps2$avg_walkability_index, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps2$avg_walkability_index,
+            title = "Average <br> Walkability <br> Index", opacity = 0.7)
+```
+
+### Intersection Density
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps2$avg_intersection_density)
+
+leaflet(east_maps2) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = east_maps2,
+              fillColor = ~pal(avg_intersection_density),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", east_maps2$GEOID, "<br>",
+                             "Intersection Density: ", round(east_maps2$avg_intersection_density, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps2$avg_intersection_density,
+            title = "Intersection Density", opacity = 0.7)
+```
+
+### Employment Mix
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps2$avg_employment_mix)
+
+leaflet(east_maps2) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = east_maps2,
+              fillColor = ~pal(avg_employment_mix),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", east_maps2$GEOID, "<br>",
+                             " Average Employment-Housing Mix: ", round(east_maps2$avg_employment_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps2$avg_employment_mix,
+            title = "Average <br> Employment-Housing <br> Mix", opacity = 0.7)
+```
+
+
+### Employment-Housing Mix
+
+```{r}
+pal <- colorNumeric("plasma", reverse = TRUE, domain = east_maps2$avg_emp_housing_mix)
+
+leaflet(east_maps2) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = east_maps2,
+              fillColor = ~pal(avg_emp_housing_mix),
+              weight = 1,
+              opacity = 1,
+              color = "white",
+              fillOpacity = 0.6,
+              highlight = highlightOptions(weight = 2, fillOpacity = 0.8, bringToFront = T),
+              popup = paste0("Tract Number: ", east_maps2$GEOID, "<br>",
+                             " Average Employment-Housing Mix: ", round(east_maps2$avg_emp_housing_mix, 2))) %>%
+  addLegend("bottomright", pal = pal, values = east_maps2$avg_emp_housing_mix,
+            title = "Average <br> Employment-Housing <br> Mix", opacity = 0.7)
+```
