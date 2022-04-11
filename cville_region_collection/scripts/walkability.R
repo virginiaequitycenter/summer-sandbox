@@ -1,7 +1,7 @@
 # Get EPA Walkability Scores
-# Helena Lindsay, Michele Claibourn
+# Helena Lindsay, Michele Claibourn, Lee LeBoeuf
 # Created: 2021-07-01
-# Last updated: 2021-11-12
+# Last updated: 2022-04-11
 
 library(tidyverse)
 
@@ -56,9 +56,9 @@ local <- local %>%
                                                            "Above Average Walkable", "Most Walkable")))
 
 
-# Save data block group data ----
+# Save block group data ----
 # Cville area
-write.csv(local, "data/cville_walk_blkgr.csv", row.names = F)
+write.csv(local, "data/walk_cville_blkgr.csv", row.names = F)
 # Eastern shore area
 # write_csv(local, "data/eastern_walk.csv")
 
@@ -82,6 +82,6 @@ tract <- local %>%
     walkability_bins = factor(walkability_bins, levels = c("Least Walkable", "Below Average Walkable",
                                                                      "Above Average Walkable", "Most Walkable")))
 ## Saving tract data   
-write.csv(tract, "data/cville_walk_tract.csv", row.names = F)
+write.csv(tract, "data/walk_cville_tract.csv", row.names = F)
 
 
