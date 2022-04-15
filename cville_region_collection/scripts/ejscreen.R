@@ -3,6 +3,7 @@
 # Last updated: 2022-04-01
 
 library(tidyverse)
+library(stats)
 
 # Import data from source ----
 # url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
@@ -52,23 +53,38 @@ write.csv(cville_area, "data/ejscreen_cville_blkgps.csv", row.names = F)
 # PM2.5 (PM25), ozone (OZONE), and NATA indicators (cancer risk [CANCER], respiratory hazard index [RESP], and diesel particulate matter [DSLPM]) 
 # are measured at the census tract level, and the same value is assigned to each block group 
 # within that tract. So for those variables, the values are the same. 
-# For other variables, I took the average across the block groups. 
+# For proximity variables, I copied the EJSCREEN procedure for aggregating their original 
+# proximity estimates based on blocks to block groups: taking a population-weighted average 
+# (this requires reading in the population estimates for the block groups)
+# For the remaining variables, I took the average across the block groups. 
 
-cville_area$tract <- paste0(cville_area$statefips, cville_area$countyfips, cville_area$tractfips)
+# reading in the population data
+pop <- read_csv("data/acs_cville_blkgp.csv") %>%
+  mutate(geoid = as.character(GEOID)) %>%
+  select(geoid, totalpopE)
 
-cville_tract <- cville_area %>%
+# reading in block group data
+blkgr <- read_csv("data/ejscreen_cville_blkgps.csv")
+
+blkgr <- blkgr %>%
+  mutate(geoid = as.character(ID)) %>%
+  left_join(pop)
+
+blkgr$tract <- paste0(blkgr$statefips, blkgr$countyfips, blkgr$tractfips)
+
+cville_tract <- blkgr %>%
   group_by(tract) %>%
   summarise(PM25 = PM25,
             OZONE = OZONE,
             CANCER = CANCER,
             RESP = RESP,
             DSLPM = DSLPM,
+            PTRAF = weighted.mean(PTRAF, totalpopE, na.rm = T),
             Avg_PRE1960PCT = mean(PRE1960PCT),
-            Avg_PTRAF = mean(PTRAF, na.rm = T),
-            Avg_PWDIS = mean(PWDIS),
-            Avg_PNPL = mean(PNPL),
-            Avg_PRMP = mean(PRMP),
-            Avg_PTSDF = mean(PTSDF),
+            PWDIS = weighted.mean(PWDIS, totalpopE, na.rm = T),
+            PNPL = weighted.mean(PNPL, totalpopE, na.rm = T),
+            PRMP = weighted.mean(PRMP, totalpopE, na.rm = T),
+            PTSDF = weighted.mean(PTSDF, totalpopE, na.rm = T),
             P_PM25 = P_PM25,
             P_OZONE = P_OZONE,
             P_CANCR = P_CANCR,
