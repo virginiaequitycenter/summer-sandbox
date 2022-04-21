@@ -3,6 +3,7 @@
 # Last updated: 2021-11-19
 
 library(tidyverse)
+library(stats)
 
 # # Import data from source ----
 # url <- "https://gaftp.epa.gov/EJSCREEN/2020/EJSCREEN_2020_USPR.csv.zip"
@@ -57,12 +58,12 @@ write.csv(eastern_area, "data/ejscreen_eastern_blkgps.csv", row.names = F)
 # For the remaining variables, I took the average across the block groups. 
 
 # reading in the population data
-# pop <- read_csv("") %>% ## Don't have the eastern shore population data yet 
-#   mutate(geoid = as.character(GEOID)) %>%
-#   select(geoid, totalpopE)
+pop <- read_csv("acs_eastern_tract.csv") %>%
+  mutate(geoid = as.character(GEOID)) %>%
+  select(geoid, totalpopE)
 
 # reading in block group data
-blkgr <- read_csv("data/ejscreen_cville_blkgps.csv")
+blkgr <- read_csv("../data/ejscreen_eastern_blkgps.csv")
 
 blkgr <- blkgr %>%
   mutate(geoid = as.character(ID)) %>%
@@ -96,4 +97,4 @@ east_tract <- blkgr %>%
   distinct()
 
 # Export to .csv
-write.csv(cville_tract, "data/ejscreen_eastern_tract.csv", row.names = F)
+write.csv(east_tract, "../data/ejscreen_eastern_tract.csv", row.names = F)
