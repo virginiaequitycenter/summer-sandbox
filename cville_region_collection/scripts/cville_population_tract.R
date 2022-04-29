@@ -88,6 +88,7 @@ library(tidycensus)
 ##  - Percent of housing units built between 1960 and 1979 -- B25034_008 + B25034_007
 ##  - Percent of housing units built between 1980 and 1999 -- B25034_006 + B25034_005
 ##  - Percent of housing units built after 2000 -- B25034_004 + B25034_003 + B25034_002
+##  - Number of households who receive cash public assistance/SNAP benefits -- B19058_002
 
 # ....................................................
 # 2. Define localities, variables, pull data ----
@@ -128,7 +129,8 @@ varlist_b = c("B01003_001", # totalpop
               "B25002_003",  # vacant housing units
               "B25002_001",  # housing units
               "B28002_004", # Broadband of any type
-              "B28003_004") # Have a computer and broadband
+              "B28003_004", # Have a computer and broadband
+              "B19058_002") # SNAP
 
 # pull variables
 tract_data_s <- get_acs(geography = "tract",
@@ -173,7 +175,8 @@ names(tract_data_b) = c("GEOID", "NAME",
                         "vachseE", "vachseM",
                         "allhseE", "allhseM",
                         "broadE", "broadM",
-                        "compbroadE", "compbroadM")
+                        "compbroadE", "compbroadM",
+                        "snapE", "snapM")
 
 # Derive some variables
 tract_data_b <- tract_data_b %>% 
@@ -189,7 +192,7 @@ tract_data_b <- tract_data_b %>%
   mutate(vacrateE = round((vachseE/allhseE)*100,1),
          vacrateM = moe_prop(vachseE, allhseE, vachseM, allhseM),
          vacrateM = round(vacrateM*100, 1)) %>% 
-  select(-c(rentersumE, rentersumM,rent30E:occhseM))
+  dplyr::select(-c(rentersumE, rentersumM,rent30E:occhseM))
 
 # Derive broadband variables 
 tract_data_b <- tract_data_b %>% 
@@ -199,7 +202,13 @@ tract_data_b <- tract_data_b %>%
          pcompbroadE = round(compbroadE/ allhseE* 100, 1),
          pcompbroadM = moe_prop(compbroadE, allhseE, compbroadE, allhseM),
          pcompbroadM = round(pcompbroadM*100, 1)) %>% 
-  select(-c(broadE, broadM, compbroadE, compbroadM))
+  dplyr::select(-c(broadE, broadM, compbroadE, compbroadM))
+
+# Derive snap variables
+tract_data_b <- tract_data_b %>% 
+  mutate(perc_snaphseE = round((snapE / allhseE)*100,1),
+         perc_snaphseM = round(moe_prop(snapE, allhseE, snapM, allhseM), 2),
+         .keep = "all")
 
 # for commute variables  
 varlist_c = c("B08134_001", # total workers
@@ -263,7 +272,7 @@ tract_data_c <- tract_data_c %>%
          perc_cgreater_60minE = round(cgreater_60minE / totalworkersE * 100, 1),
          perc_cgreater_60minM = moe_prop(cgreater_60minE, totalworkersE, cgreater_60minM, totalworkersM),
          perc_cgreater_60minM = round(perc_cgreater_60minM*100, 1)) %>%
-  select(GEOID, NAME, perc_cUnder20minE, perc_cUnder20minM, perc_c20to34minE, 
+  dplyr::select(GEOID, NAME, perc_cUnder20minE, perc_cUnder20minM, perc_c20to34minE, 
          perc_c20to34minM, perc_c35to59minE, perc_c35to59minM,
          perc_cgreater_60minE, perc_cgreater_60minM)
 
@@ -338,7 +347,7 @@ tract_data_ha <- tract_data_ha %>%
          ba2000E = round((ba2000sumE / tothousinguE)*100, 1),
          ba2000M = moe_prop(ba2000sumE, tothousinguE, ba2000sumM, tothousinguM),
          ba2000M = round(sqrt(ba2000M)*1.645, 2)) %>%
-  select(GEOID, NAME, tothousinguE, tothousinguM, bbefore1940E, bbefore1940M, bb1940_1959E, bb1940_1959M, bb1960_1979E, 
+  dplyr::select(GEOID, NAME, tothousinguE, tothousinguM, bbefore1940E, bbefore1940M, bb1940_1959E, bb1940_1959M, bb1960_1979E, 
          bb1960_1979M, bb1980_1999E, bb1980_1999M, ba2000E, ba2000M)
 
 
@@ -375,13 +384,13 @@ tract_age17 <- tract_age %>%
   filter(variable == "S0101_C02_022") %>% 
   rename(age17E = estimate,
          age17M = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_age24 <- tract_age %>% 
   filter(variable == "S0101_C02_023") %>% 
   rename(age24E = estimate,
          age24M = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_age64 <- tract_age %>% 
   filter(variable %in% c("S0101_C02_007", "S0101_C02_008", "S0101_C02_009",
@@ -395,7 +404,7 @@ tract_age65 <- tract_age %>%
   filter(variable == "S0101_C02_030") %>% 
   rename(age65E = estimate,
          age65M = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 # tract_race: all groups present as rows in the table
 #             but other race and native hawaiian/pacific islander combined
@@ -404,25 +413,25 @@ tract_white <- tract_race %>%
   filter(variable == "DP05_0077P") %>% 
   rename(whiteE = estimate,
          whiteM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_black <- tract_race %>% 
   filter(variable == "DP05_0078P") %>% 
   rename(blackE = estimate,
          blackM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_indig <- tract_race %>% 
   filter(variable == "DP05_0079P") %>% 
   rename(indigE = estimate,
          indigM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_asian <- tract_race %>% 
   filter(variable == "DP05_0080P") %>% 
   rename(asianE = estimate,
          asianM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_othrace <- tract_race %>% 
   filter(variable %in% c("DP05_0081P", "DP05_0082P")) %>% 
@@ -434,13 +443,13 @@ tract_multi <- tract_race %>%
   filter(variable == "DP05_0083P") %>% 
   rename(multiE = estimate,
          multiM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 tract_ltnx <- tract_race %>% 
   filter(variable == "DP05_0071P") %>% 
   rename(ltnxE = estimate,
          ltnxM = moe) %>% 
-  select(-variable)
+  dplyr::select(-variable)
 
 # tract_schl: 6 groups (3-4, 5-9, 10-14, 15-17, 18-19, 20-24) must be summed
 #             population and enrolled, and divided
@@ -485,7 +494,7 @@ tract_data <- tract_data_s %>%
 
 tract_data <- tract_data %>% 
   mutate(year = "2019") %>% 
-  select(GEOID, NAME, year, totalpopE, totalpopM, whiteE, whiteM, blackE, blackM, asianE, asianM, indigE, indigM, othraceE, othraceM, multiE, multiM, ltnxE, ltnxM, everything())
+  dplyr::select(GEOID, NAME, year, totalpopE, totalpopM, whiteE, whiteM, blackE, blackM, asianE, asianM, indigE, indigM, othraceE, othraceM, multiE, multiM, ltnxE, ltnxM, everything())
 
 tract_data <- tract_data %>% 
   mutate(geoid = GEOID) %>% 
