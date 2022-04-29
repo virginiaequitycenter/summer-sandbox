@@ -80,6 +80,7 @@ library(tidycensus)
 # B17020_001 - Poverty status in the last 12 months by age
 # B19083_001 - Gini Index of Income Inequality
 # B14001_001 - School enrollment for the population 3 years and over
+# B05002_013 - Number of foreign-born residents (only see this at the tract level)
 
 # ....................................................
 # 2. Define localities, variables, pull tables ----
@@ -101,7 +102,7 @@ varlist_b = c("B01003_001",  # totalpop
               "B25003_001",  # occupied housing units 
               "B25002_003",  # vacant housing units
               "B25002_001",  # housing units
-              "B19058_002")  # SNAP benefits 
+              "B19058_002")  # SNAP Benefits
 
 # Pull variables
 blkgrp_data_b <- get_acs(geography = "block group",

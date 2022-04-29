@@ -89,6 +89,7 @@ library(tidycensus)
 ##  - Percent of housing units built between 1980 and 1999 -- B25034_006 + B25034_005
 ##  - Percent of housing units built after 2000 -- B25034_004 + B25034_003 + B25034_002
 ##  - Number of households who receive cash public assistance/SNAP benefits -- B19058_002
+##  - Number of foreign-born residents -- B05002_013
 
 # ....................................................
 # 2. Define localities, variables, pull data ----
@@ -130,7 +131,8 @@ varlist_b = c("B01003_001", # totalpop
               "B25002_001",  # housing units
               "B28002_004", # Broadband of any type
               "B28003_004", # Have a computer and broadband
-              "B19058_002") # SNAP
+              "B19058_002", # SNAP
+              "B05002_013") # Foreign-born
 
 # pull variables
 tract_data_s <- get_acs(geography = "tract",
@@ -176,7 +178,8 @@ names(tract_data_b) = c("GEOID", "NAME",
                         "allhseE", "allhseM",
                         "broadE", "broadM",
                         "compbroadE", "compbroadM",
-                        "snapE", "snapM")
+                        "snapE", "snapM",
+                        "foreignbE", "foreignbM")
 
 # Derive some variables
 tract_data_b <- tract_data_b %>% 
