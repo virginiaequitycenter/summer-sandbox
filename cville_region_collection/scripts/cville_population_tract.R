@@ -213,6 +213,12 @@ tract_data_b <- tract_data_b %>%
          perc_snaphseM = round(moe_prop(snapE, allhseE, snapM, allhseM), 2),
          .keep = "all")
 
+# Derive foreign born variables
+tract_data_b <- tract_data_b %>% 
+  mutate(perc_forbE = round((foreignbE / totalpopE)*100,1),
+         perc_forbM = round(moe_prop(foreignbE, totalpopE, foreignbM, totalpopM), 2),
+         .keep = "all")
+
 # for commute variables  
 varlist_c = c("B08134_001", # total workers
               "B08134_002",  # < 10 min commute to work
