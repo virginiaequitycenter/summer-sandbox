@@ -292,4 +292,4 @@ ejscreen %>%
 
 ## Important Notes
 
-PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, and the same value is assigned to each block group within that tract. All other variables were deriived for the block group level.
+PM~2.5~, ozone, and NATA indicators (cancer risk, respiratory hazard index, and diesel particulate matter) are measured at the census tract level, so the same value is assigned to each block group within that tract. All other variables were derived for the block group level. Proximity variables (Proximity to Traffic, Major Direct Dischargers to Water, Proximity to NPL Sites, Proximity to RMP Facilities, and Proximity to TSDF Facilities) are also available at the tract level---we calculated a population-weighted for these variables based on the ACS population estimates. 
