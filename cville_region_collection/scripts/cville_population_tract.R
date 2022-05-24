@@ -527,4 +527,4 @@ ggplot(tract_data, aes(x = bamoreE, y = giniE)) +
 
 # ....................................................
 # 5. Save ----
-write.csv(tract_data, "acs_cville_tract.csv", row.names = F) 
+write.csv(tract_data, "acs_tract_cville.csv", row.names = F) 
