@@ -2,7 +2,7 @@
 # Greater Charlottesville Region Equity Profile
 ####################################################
 # Acquire ACS data
-# Last updated: 10/29/2020
+# Last updated: 05/24/2022
 # Metrics from ACS (in common with locality level): 
 # * Total population
 # * Poverty, child poverty 
