@@ -1,8 +1,8 @@
 ---
 title: "EJSCREEN Exploration File"
 subtitle: "Data for Charlottesville Region"
-author: "Marisa Lemma"
-date: "7/20/2021"
+author: "Marisa Lemma and Lee LeBoeuf"
+date: "5/24/2022"
 output: 
   html_document: 
     toc: true
@@ -89,10 +89,11 @@ ejscreen %>% select(ID, PRE1960PCT:PM25) %>%
   geom_histogram() + 
   facet_wrap(~measure, scales = "free")
 ```
+
 ```{r}
 meta %>% 
   filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
+  mutate(label = paste0(varname, ": ", description)) %>% 
   select(label) %>% 
   as.list()
 ```
@@ -109,7 +110,7 @@ ejscreen %>% select(PRE1960PCT:PM25) %>%
 ```{r}
 meta %>% 
   filter(varname %in% c("PRE1960PCT", "DSLPM", "CANCER", "RESP", "PTRAF", "PWDIS", "PNPL", "PRMP", "PTSDF", "OZONE", "PM25")) %>% 
-  mutate(label = paste0(varname, ": ", about)) %>% 
+  mutate(label = paste0(varname, ": ", description)) %>% 
   select(label) %>% 
   as.list()
 ```
