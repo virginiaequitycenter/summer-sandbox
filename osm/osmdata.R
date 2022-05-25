@@ -90,7 +90,7 @@ leaflet(cville_bounds) %>%
   addPolygons(data = parks2, color = "orange") %>% 
   addPolygons(data = parks3, color = "turquoise")
 
-# remove entities ouside of county bounds
+# remove entities outside of county bounds
 parks1_bounds <- st_intersection(parks1, cville_bounds)
 parks2_bounds <- st_intersection(parks2, cville_bounds)
 parks3_bounds <- st_intersection(st_make_valid(parks3), cville_bounds)
