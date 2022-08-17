@@ -12,7 +12,7 @@ library(leaflet)
 # a data frame with locations of interest in the Charlottesville region like:
 # schools -- pulls 91
 # parks -- pulls 87
-# library -- only pulls 15
+# library -- pulls 15
 # college -- pulls 2 (but one of them is a building at UVA)
 # university -- maybe (basically just pulls multiple obs that are all just UVA)
 # kindergarten (For children too young for a regular school (also known as preschool, playschool or nursery school) -- only pulls 2
@@ -110,8 +110,10 @@ parks <- rbind(parks1_bounds, parks2_bounds, parks3_bounds)
 leaflet(cville_bounds) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(weight = 1, fill = 0, color = "black") %>% 
-  addCircles(data = st_collection_extract(parks, "POINT"), color = "blue") %>% 
-  addPolygons(data = st_collection_extract(parks, "POLYGON"), color = "orange")
+  addCircles(data = st_collection_extract(parks, "POINT"), color = "blue",
+             popup = st_collection_extract(parks, "POINT")$name) %>% 
+  addPolygons(data = st_collection_extract(parks, "POLYGON"), color = "orange",
+              popup = st_collection_extract(parks, "POLYGON")$name)
 
 ## Notes/questions about parks:
 # parks 1 has a lot of "districts"? Not sure what those are
